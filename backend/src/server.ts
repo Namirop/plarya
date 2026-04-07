@@ -8,11 +8,17 @@ import tipsterRoutes from "./routes/tipsters";
 import pronoRoutes from "./routes/pronos";
 import subscriptionRoutes from "./routes/subscriptions";
 import adminRoutes from "./routes/admin";
+import checkoutRoutes from "./routes/checkout";
+import webhookRoutes from "./routes/webhooks";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
+
+// Webhook route MUST be before express.json() (needs raw body for signature verification)
+app.use("/webhooks", webhookRoutes);
+
 app.use(express.json());
 
 // Rate limiting on auth routes (10 req/min)
@@ -38,6 +44,7 @@ app.use("/tipsters", tipsterRoutes);
 app.use("/pronos", pronoRoutes);
 app.use("/subscriptions", subscriptionRoutes);
 app.use("/admin", adminRoutes);
+app.use("/checkout", checkoutRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

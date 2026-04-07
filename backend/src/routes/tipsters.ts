@@ -47,8 +47,8 @@ router.get("/me", authMiddleware, tipsterMiddleware, async (req, res) => {
   }
 });
 
-// GET /tipsters — Top 6 tipsters sorted by win rate
-router.get("/", async (_req, res) => {
+// GET /tipsters — Tipsters sorted by win rate. ?all=true for classement (no limit).
+router.get("/", async (req, res) => {
   try {
     const tipsters = await prisma.tipster.findMany({
       include: {
@@ -102,9 +102,10 @@ router.get("/", async (_req, res) => {
       })
     );
 
-    // Sort by win rate desc, take top 6
+    // Sort by win rate desc
     enriched.sort((a, b) => b.winRate - a.winRate);
-    res.json(enriched.slice(0, 6));
+    const all = req.query.all === "true";
+    res.json(all ? enriched : enriched.slice(0, 6));
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur" });
   }
@@ -134,8 +135,8 @@ router.get("/:id", async (req, res) => {
       where: { tipsterId: tipster.id, createdAt: { gte: today } },
     });
 
-    // Pronos without pick/argument (blurred)
-    const pronos = await prisma.prono.findMany({
+    // Past pronos: show pick (public track record). Pending: hide pick (blurred).
+    const rawPronos = await prisma.prono.findMany({
       where: { tipsterId: tipster.id },
       orderBy: { createdAt: "desc" },
       take: 20,
@@ -143,6 +144,7 @@ router.get("/:id", async (req, res) => {
         id: true,
         matchName: true,
         league: true,
+        pick: true,
         odds: true,
         teasing: true,
         result: true,
@@ -150,6 +152,12 @@ router.get("/:id", async (req, res) => {
         createdAt: true,
       },
     });
+
+    // Strip pick from PENDING pronos
+    const pronos = rawPronos.map((p) => ({
+      ...p,
+      pick: p.result === "PENDING" ? null : p.pick,
+    }));
 
     res.json({
       id: tipster.id,

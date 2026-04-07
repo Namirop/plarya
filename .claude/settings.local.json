@@ -20,7 +20,9 @@
       "Bash(npx tsx:*)",
       "Bash(tasklist:*)",
       "Bash(PORT=4002 npx tsx:*)",
-      "Bash(netstat:*)"
+      "Bash(netstat:*)",
+      "Bash(xargs grep:*)",
+      "Bash(node:*)"
     ]
   }
 }
