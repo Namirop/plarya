@@ -5,7 +5,22 @@
       "Bash(rm:*)",
       "Bash(npm ls:*)",
       "Bash(npx shadcn@latest:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)",
+      "WebSearch",
+      "Bash(pg_isready:*)",
+      "Bash(psql:*)",
+      "Bash(timeout 8 npx tsx:*)",
+      "Bash(curl:*)",
+      "Bash(PORT=4001 npx tsx:*)",
+      "Bash(npx tsx:*)",
+      "Bash(tasklist:*)",
+      "Bash(PORT=4002 npx tsx:*)",
+      "Bash(netstat:*)"
     ]
   }
 }
