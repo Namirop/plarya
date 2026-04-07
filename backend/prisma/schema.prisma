@@ -90,7 +90,10 @@ model Tipster {
   monthlyPrice    Int             @default(1900) // centimes (19€)
   subStatus       TipsterSubStatus @default(FREE)
   subExpiresAt    DateTime?
+  stripeSubId     String?          // Stripe subscription for tipster quarterly plan
   warningMessage  String?
+  dailyNote       String?
+  dailyNoteDate   DateTime?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 

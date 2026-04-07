@@ -3,7 +3,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../lib/jwt";
 import { validate } from "../middleware/validate";
-import { registerSchema, loginSchema, refreshSchema } from "../validators/auth";
+import { authMiddleware } from "../middleware/auth";
+import { registerSchema, loginSchema, refreshSchema, changePasswordSchema } from "../validators/auth";
 
 const router = Router();
 
@@ -84,6 +85,36 @@ router.post("/refresh", validate(refreshSchema), async (req, res) => {
     res.json({ accessToken });
   } catch {
     res.status(401).json({ error: "Refresh token invalide" });
+  }
+});
+
+// PATCH /auth/password — Change password
+router.patch("/password", authMiddleware, validate(changePasswordSchema), async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user!.userId;
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      res.status(404).json({ error: "Utilisateur introuvable" });
+      return;
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      res.status(400).json({ error: "Mot de passe actuel incorrect" });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    res.json({ message: "Mot de passe mis à jour" });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur" });
   }
 });
 

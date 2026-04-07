@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { calcWinRate, calcStreak, streakBadge } from "../lib/stats";
 import { authMiddleware } from "../middleware/auth";
 import { tipsterMiddleware } from "../middleware/tipster";
+import { updateTipsterSchema } from "../validators/tipsters";
 
 const router = Router();
 
@@ -32,6 +33,8 @@ router.get("/me", authMiddleware, tipsterMiddleware, async (req, res) => {
       id: tipster.id,
       pseudo: tipster.pseudo,
       bio: tipster.bio,
+      dailyNote: tipster.dailyNote,
+      dailyNoteDate: tipster.dailyNoteDate,
       photoUrl: tipster.photoUrl,
       sports: tipster.sports,
       dayPassPrice: tipster.dayPassPrice,
@@ -41,6 +44,62 @@ router.get("/me", authMiddleware, tipsterMiddleware, async (req, res) => {
       streak,
       streakBadge: streakBadge(streak),
       pronosToday,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+// PATCH /tipsters/me — Update tipster profile
+router.patch("/me", authMiddleware, tipsterMiddleware, async (req, res) => {
+  try {
+    const parsed = updateTipsterSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Données invalides" });
+      return;
+    }
+
+    const tipster = await prisma.tipster.findUnique({
+      where: { userId: req.user!.userId },
+    });
+
+    if (!tipster) {
+      res.status(404).json({ error: "Profil tipster introuvable" });
+      return;
+    }
+
+    const { pseudo, bio, dailyNote, sports } = parsed.data;
+
+    // Check pseudo uniqueness if changed
+    if (pseudo && pseudo !== tipster.pseudo) {
+      const existing = await prisma.tipster.findUnique({ where: { pseudo } });
+      if (existing) {
+        res.status(400).json({ error: "Ce pseudo est déjà pris" });
+        return;
+      }
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (pseudo !== undefined) updateData.pseudo = pseudo;
+    if (bio !== undefined) updateData.bio = bio;
+    if (sports !== undefined) updateData.sports = sports;
+    if (dailyNote !== undefined) {
+      updateData.dailyNote = dailyNote;
+      updateData.dailyNoteDate = new Date();
+    }
+
+    const updated = await prisma.tipster.update({
+      where: { id: tipster.id },
+      data: updateData,
+    });
+
+    res.json({
+      id: updated.id,
+      pseudo: updated.pseudo,
+      bio: updated.bio,
+      dailyNote: updated.dailyNote,
+      dailyNoteDate: updated.dailyNoteDate,
+      sports: updated.sports,
     });
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur" });
@@ -88,6 +147,7 @@ router.get("/", async (req, res) => {
           id: t.id,
           pseudo: t.pseudo,
           bio: t.bio,
+          dailyNote: t.dailyNote,
           photoUrl: t.photoUrl,
           sports: t.sports,
           dayPassPrice: t.dayPassPrice,
@@ -163,6 +223,7 @@ router.get("/:id", async (req, res) => {
       id: tipster.id,
       pseudo: tipster.pseudo,
       bio: tipster.bio,
+      dailyNote: tipster.dailyNote,
       photoUrl: tipster.photoUrl,
       sports: tipster.sports,
       dayPassPrice: tipster.dayPassPrice,
