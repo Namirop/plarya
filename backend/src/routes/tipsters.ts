@@ -2,8 +2,50 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { calcWinRate, calcStreak, streakBadge } from "../lib/stats";
 import { authMiddleware } from "../middleware/auth";
+import { tipsterMiddleware } from "../middleware/tipster";
 
 const router = Router();
+
+// GET /tipsters/me — Tipster's own profile + stats (must be before /:id)
+router.get("/me", authMiddleware, tipsterMiddleware, async (req, res) => {
+  try {
+    const tipster = await prisma.tipster.findUnique({
+      where: { userId: req.user!.userId },
+    });
+
+    if (!tipster) {
+      res.status(404).json({ error: "Profil tipster introuvable" });
+      return;
+    }
+
+    const winRate = await calcWinRate(tipster.id);
+    const streak = await calcStreak(tipster.id);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const pronosToday = await prisma.prono.count({
+      where: { tipsterId: tipster.id, createdAt: { gte: today } },
+    });
+
+    res.json({
+      id: tipster.id,
+      pseudo: tipster.pseudo,
+      bio: tipster.bio,
+      photoUrl: tipster.photoUrl,
+      sports: tipster.sports,
+      dayPassPrice: tipster.dayPassPrice,
+      monthlyPrice: tipster.monthlyPrice,
+      warningMessage: tipster.warningMessage,
+      winRate,
+      streak,
+      streakBadge: streakBadge(streak),
+      pronosToday,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
 
 // GET /tipsters — Top 6 tipsters sorted by win rate
 router.get("/", async (_req, res) => {

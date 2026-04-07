@@ -45,6 +45,30 @@ router.post(
   }
 );
 
+// GET /pronos/mine — Tipster's own pronos (must be before /:id)
+router.get("/mine", authMiddleware, tipsterMiddleware, async (req, res) => {
+  try {
+    const tipster = await prisma.tipster.findUnique({
+      where: { userId: req.user!.userId },
+      select: { id: true },
+    });
+
+    if (!tipster) {
+      res.status(404).json({ error: "Profil tipster introuvable" });
+      return;
+    }
+
+    const pronos = await prisma.prono.findMany({
+      where: { tipsterId: tipster.id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.json(pronos);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 // PATCH /pronos/:id/result — Tipster validates won/lost
 router.patch(
   "/:id/result",
