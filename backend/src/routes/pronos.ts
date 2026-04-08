@@ -7,6 +7,17 @@ import { createPronoSchema, updateResultSchema } from "../validators/prono";
 
 const router = Router();
 
+// Reusable include for bookmaker odds
+const bookmakerOddsInclude = {
+  bookmakerOdds: {
+    include: {
+      bookmaker: {
+        include: { affiliateLinks: true },
+      },
+    },
+  },
+} as const;
+
 // POST /pronos — Tipster publishes a prono
 router.post(
   "/",
@@ -25,17 +36,32 @@ router.post(
         return;
       }
 
+      const { bookmakerOdds, ...pronoData } = req.body;
+
       const prono = await prisma.prono.create({
         data: {
           tipsterId: tipster.id,
-          matchName: req.body.matchName,
-          league: req.body.league,
-          pick: req.body.pick,
-          odds: req.body.odds,
-          teasing: req.body.teasing,
-          argument: req.body.argument,
-          matchDate: req.body.matchDate ? new Date(req.body.matchDate) : undefined,
+          matchName: pronoData.matchName,
+          league: pronoData.league,
+          pick: pronoData.pick,
+          odds: pronoData.odds,
+          teasing: pronoData.teasing,
+          argument: pronoData.argument,
+          matchDate: pronoData.matchDate ? new Date(pronoData.matchDate) : undefined,
+          ...(bookmakerOdds && bookmakerOdds.length > 0
+            ? {
+                bookmakerOdds: {
+                  create: bookmakerOdds.map(
+                    (bo: { bookmakerId: string; odds: number }) => ({
+                      bookmakerId: bo.bookmakerId,
+                      odds: bo.odds,
+                    })
+                  ),
+                },
+              }
+            : {}),
         },
+        include: bookmakerOddsInclude,
       });
 
       res.status(201).json(prono);
@@ -61,6 +87,7 @@ router.get("/mine", authMiddleware, tipsterMiddleware, async (req, res) => {
     const pronos = await prisma.prono.findMany({
       where: { tipsterId: tipster.id },
       orderBy: { createdAt: "desc" },
+      include: bookmakerOddsInclude,
     });
 
     res.json(pronos);
@@ -112,7 +139,10 @@ router.get("/:id", authMiddleware, async (req, res) => {
     const id = req.params.id as string;
     const prono = await prisma.prono.findUnique({
       where: { id },
-      include: { tipster: { select: { userId: true, pseudo: true } } },
+      include: {
+        tipster: { select: { userId: true, pseudo: true } },
+        ...bookmakerOddsInclude,
+      },
     });
 
     if (!prono) {

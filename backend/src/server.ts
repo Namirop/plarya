@@ -10,6 +10,7 @@ import subscriptionRoutes from "./routes/subscriptions";
 import adminRoutes from "./routes/admin";
 import checkoutRoutes from "./routes/checkout";
 import webhookRoutes from "./routes/webhooks";
+import bookmakerRoutes from "./routes/bookmakers";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -45,6 +46,7 @@ app.use("/pronos", pronoRoutes);
 app.use("/subscriptions", subscriptionRoutes);
 app.use("/admin", adminRoutes);
 app.use("/checkout", checkoutRoutes);
+app.use("/bookmakers", bookmakerRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

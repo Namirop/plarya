@@ -86,7 +86,7 @@ model Tipster {
   bio             String?
   photoUrl        String?
   sports          Sport[]
-  dayPassPrice    Int             @default(300)  // centimes (3€)
+  dayPassPrice    Int             @default(350)  // centimes (3.50€)
   monthlyPrice    Int             @default(1900) // centimes (19€)
   subStatus       TipsterSubStatus @default(FREE)
   subExpiresAt    DateTime?
@@ -118,7 +118,8 @@ model Prono {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  tipster     Tipster      @relation(fields: [tipsterId], references: [id], onDelete: Cascade)
+  tipster       Tipster              @relation(fields: [tipsterId], references: [id], onDelete: Cascade)
+  bookmakerOdds PronoBookmakerOdds[]
 
   @@index([tipsterId, createdAt(sort: Desc)])
   @@map("pronos")
@@ -152,6 +153,7 @@ model Bookmaker {
   createdAt      DateTime        @default(now())
 
   affiliateLinks AffiliateLink[]
+  pronoOdds      PronoBookmakerOdds[]
 
   @@map("bookmakers")
 }
@@ -166,4 +168,18 @@ model AffiliateLink {
   bookmaker    Bookmaker @relation(fields: [bookmakerId], references: [id], onDelete: Cascade)
 
   @@map("affiliate_links")
+}
+
+model PronoBookmakerOdds {
+  id           String    @id @default(cuid())
+  pronoId      String
+  bookmakerId  String
+  odds         Float
+
+  prono        Prono     @relation(fields: [pronoId], references: [id], onDelete: Cascade)
+  bookmaker    Bookmaker @relation(fields: [bookmakerId], references: [id], onDelete: Cascade)
+
+  @@unique([pronoId, bookmakerId])
+  @@index([pronoId])
+  @@map("prono_bookmaker_odds")
 }

@@ -174,7 +174,7 @@ async function main() {
     // Upsert tipster profile
     const tipster = await prisma.tipster.upsert({
       where: { userId: user.id },
-      update: {},
+      update: { dayPassPrice: 350 },
       create: {
         userId: user.id,
         pseudo: t.pseudo,
@@ -184,49 +184,93 @@ async function main() {
       },
     });
 
-    // Create pronos only if tipster has none
-    const existingCount = await prisma.prono.count({
-      where: { tipsterId: tipster.id },
+    // Delete existing pronos and recreate with fresh dates
+    await prisma.prono.deleteMany({ where: { tipsterId: tipster.id } });
+
+    // Historical pronos
+    const historyData = t.history.map(
+      ([matchName, league, pick, odds, teasing, result, daysAgo]) => ({
+        tipsterId: tipster.id,
+        matchName,
+        league,
+        pick,
+        odds,
+        teasing: teasing as "PICK_SOLIDE" | "VALUE" | "SAFE" | "OPPORTUNITE" | "PICK_DU_JOUR" | "A_NE_PAS_RATER",
+        argument: `Analyse détaillée pour ${matchName}.`,
+        result: result as "WON" | "LOST",
+        createdAt: new Date(now - daysAgo * DAY),
+      })
+    );
+
+    // Today's pronos
+    const todayData = t.today.map(
+      ([matchName, league, pick, odds, teasing], i) => ({
+        tipsterId: tipster.id,
+        matchName,
+        league,
+        pick,
+        odds,
+        teasing: teasing as "PICK_SOLIDE" | "VALUE" | "SAFE" | "OPPORTUNITE" | "PICK_DU_JOUR" | "A_NE_PAS_RATER",
+        argument: `Argumentaire pour ${matchName}.`,
+        result: "PENDING" as const,
+        createdAt: new Date(now - (t.today.length - i) * HOUR),
+      })
+    );
+
+    await prisma.prono.createMany({ data: [...historyData, ...todayData] });
+    console.log(`  ${t.pseudo}: ${historyData.length} history + ${todayData.length} today`);
+  }
+
+  // ── Seed Bookmakers ──
+  console.log("\nSeeding bookmakers...");
+
+  const bookmakerData = [
+    { name: "Winamax", logoUrl: "/bookmakers/winamax.svg", affiliateUrl: "https://www.winamax.fr/?ref=pronotips", label: "Parier +100€" },
+    { name: "Betclic", logoUrl: "/bookmakers/betclic.svg", affiliateUrl: "https://www.betclic.fr/?ref=pronotips", label: "Parier +100€" },
+    { name: "PMU",     logoUrl: "/bookmakers/pmu.svg",     affiliateUrl: "https://www.pmu.fr/?ref=pronotips",     label: "Parier +100€" },
+  ];
+
+  const bookmakers = [];
+  for (const bm of bookmakerData) {
+    const bookmaker = await prisma.bookmaker.upsert({
+      where: { name: bm.name },
+      update: { logoUrl: bm.logoUrl },
+      create: { name: bm.name, logoUrl: bm.logoUrl },
     });
 
-    if (existingCount === 0) {
-      // Historical pronos
-      const historyData = t.history.map(
-        ([matchName, league, pick, odds, teasing, result, daysAgo]) => ({
-          tipsterId: tipster.id,
-          matchName,
-          league,
-          pick,
-          odds,
-          teasing: teasing as "PICK_SOLIDE" | "VALUE" | "SAFE" | "OPPORTUNITE" | "PICK_DU_JOUR" | "A_NE_PAS_RATER",
-          argument: `Analyse détaillée pour ${matchName}.`,
-          result: result as "WON" | "LOST",
-          createdAt: new Date(now - daysAgo * DAY),
-        })
-      );
+    await prisma.affiliateLink.deleteMany({ where: { bookmakerId: bookmaker.id } });
+    await prisma.affiliateLink.create({
+      data: {
+        bookmakerId: bookmaker.id,
+        url: bm.affiliateUrl,
+        label: bm.label,
+      },
+    });
 
-      // Today's pronos
-      const todayData = t.today.map(
-        ([matchName, league, pick, odds, teasing], i) => ({
-          tipsterId: tipster.id,
-          matchName,
-          league,
-          pick,
-          odds,
-          teasing: teasing as "PICK_SOLIDE" | "VALUE" | "SAFE" | "OPPORTUNITE" | "PICK_DU_JOUR" | "A_NE_PAS_RATER",
-          argument: `Argumentaire pour ${matchName}.`,
-          result: "PENDING" as const,
-          createdAt: new Date(now - (t.today.length - i) * HOUR),
-        })
-      );
+    bookmakers.push(bookmaker);
+    console.log(`  Bookmaker: ${bm.name}`);
+  }
 
-      await prisma.prono.createMany({ data: [...historyData, ...todayData] });
-      console.log(`  ${t.pseudo}: ${historyData.length} history + ${todayData.length} today`);
-    } else {
-      console.log(`  ${t.pseudo}: already has ${existingCount} pronos, skipping`);
+  // ── Seed PronoBookmakerOdds for all existing pronos ──
+  console.log("\nSeeding bookmaker odds...");
+
+  const allPronos = await prisma.prono.findMany({ select: { id: true, odds: true } });
+  await prisma.pronoBookmakerOdds.deleteMany({});
+
+  const oddsVariations = [0.02, -0.03, -0.05]; // Winamax slightly higher, others lower
+  for (const prono of allPronos) {
+    for (let i = 0; i < bookmakers.length; i++) {
+      await prisma.pronoBookmakerOdds.create({
+        data: {
+          pronoId: prono.id,
+          bookmakerId: bookmakers[i].id,
+          odds: Math.round((prono.odds + oddsVariations[i]) * 100) / 100,
+        },
+      });
     }
   }
 
+  console.log(`  Added bookmaker odds for ${allPronos.length} pronos`);
   console.log("\nSeed complete! Login: tipster@test.com / 123456");
 }
 

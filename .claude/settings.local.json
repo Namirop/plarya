@@ -22,7 +22,9 @@
       "Bash(PORT=4002 npx tsx:*)",
       "Bash(netstat:*)",
       "Bash(xargs grep:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npx next:*)",
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"Oui, reset la DB\" npx prisma:*)"
     ]
   }
 }

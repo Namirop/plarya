@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+const bookmakerOddsItemSchema = z.object({
+  bookmakerId: z.string().min(1, "ID bookmaker requis"),
+  odds: z.number().positive("La cote doit être positive"),
+});
+
 export const createPronoSchema = z.object({
   matchName: z.string().min(1, "Nom du match requis"),
   league: z.string().optional(),
@@ -15,6 +20,7 @@ export const createPronoSchema = z.object({
   ]),
   argument: z.string().optional(),
   matchDate: z.string().datetime().optional(),
+  bookmakerOdds: z.array(bookmakerOddsItemSchema).optional(),
 });
 
 export const updateResultSchema = z.object({

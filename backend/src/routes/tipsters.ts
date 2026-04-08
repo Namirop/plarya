@@ -273,6 +273,15 @@ router.get("/:id/pronos", authMiddleware, async (req, res) => {
     const pronos = await prisma.prono.findMany({
       where: { tipsterId },
       orderBy: { createdAt: "desc" },
+      include: {
+        bookmakerOdds: {
+          include: {
+            bookmaker: {
+              include: { affiliateLinks: true },
+            },
+          },
+        },
+      },
     });
 
     res.json(pronos);
