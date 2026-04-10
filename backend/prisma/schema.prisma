@@ -68,15 +68,42 @@ enum Sport {
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
-  passwordHash  String
   role          UserRole @default(USER)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   tipster       Tipster?
   subscriptions Subscription[]
+  sessions      Session[]
 
   @@map("users")
+}
+
+model MagicLink {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+  @@index([token])
+  @@map("magic_links")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("sessions")
 }
 
 model Tipster {
@@ -94,6 +121,7 @@ model Tipster {
   warningMessage  String?
   dailyNote       String?
   dailyNoteDate   DateTime?
+  displayOrder    Int             @default(0)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 

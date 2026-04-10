@@ -106,14 +106,11 @@ router.patch("/me", authMiddleware, tipsterMiddleware, async (req, res) => {
   }
 });
 
-// GET /tipsters — Tipsters sorted by win rate. ?all=true for classement (no limit).
+// GET /tipsters — Experts sorted by displayOrder ASC, createdAt DESC.
 router.get("/", async (req, res) => {
   try {
     const tipsters = await prisma.tipster.findMany({
-      include: {
-        _count: { select: { pronos: true } },
-        user: { select: { email: true } },
-      },
+      orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }],
     });
 
     const today = new Date();
@@ -121,9 +118,6 @@ router.get("/", async (req, res) => {
 
     const enriched = await Promise.all(
       tipsters.map(async (t) => {
-        const winRate = await calcWinRate(t.id);
-        const streak = await calcStreak(t.id);
-
         const pronosToday = await prisma.prono.count({
           where: { tipsterId: t.id, createdAt: { gte: today } },
         });
@@ -153,19 +147,14 @@ router.get("/", async (req, res) => {
           dayPassPrice: t.dayPassPrice,
           monthlyPrice: t.monthlyPrice,
           warningMessage: t.warningMessage,
-          winRate,
-          streak,
-          streakBadge: streakBadge(streak),
           pronosToday,
           todayPronos,
         };
       })
     );
 
-    // Sort by win rate desc
-    enriched.sort((a, b) => b.winRate - a.winRate);
-    const all = req.query.all === "true";
-    res.json(all ? enriched : enriched.slice(0, 6));
+    const limit = req.query.all === "true" ? enriched.length : 6;
+    res.json(enriched.slice(0, limit));
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur" });
   }
@@ -184,9 +173,6 @@ router.get("/:id", async (req, res) => {
       res.status(404).json({ error: "Tipster introuvable" });
       return;
     }
-
-    const winRate = await calcWinRate(tipster.id);
-    const streak = await calcStreak(tipster.id);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -229,9 +215,6 @@ router.get("/:id", async (req, res) => {
       dayPassPrice: tipster.dayPassPrice,
       monthlyPrice: tipster.monthlyPrice,
       warningMessage: tipster.warningMessage,
-      winRate,
-      streak,
-      streakBadge: streakBadge(streak),
       pronosToday,
       pronos,
     });

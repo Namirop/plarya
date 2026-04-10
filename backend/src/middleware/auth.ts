@@ -1,26 +1,36 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyAccessToken, TokenPayload } from "../lib/jwt";
+import { verifySession } from "../lib/magic-link";
+
+export interface SessionUser {
+  userId: string;
+  role: string;
+}
 
 declare global {
   namespace Express {
     interface Request {
-      user?: TokenPayload;
+      user?: SessionUser;
     }
   }
 }
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "Token manquant" });
+  const token = req.cookies?.session_token;
+  if (!token) {
+    res.status(401).json({ error: "Non authentifié" });
     return;
   }
 
-  try {
-    const token = header.slice(7);
-    req.user = verifyAccessToken(token);
-    next();
-  } catch {
-    res.status(401).json({ error: "Token invalide ou expiré" });
-  }
+  verifySession(token)
+    .then((sessionUser) => {
+      if (!sessionUser) {
+        res.status(401).json({ error: "Session invalide ou expirée" });
+        return;
+      }
+      req.user = sessionUser;
+      next();
+    })
+    .catch(() => {
+      res.status(401).json({ error: "Erreur d'authentification" });
+    });
 }

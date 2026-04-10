@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { prisma } from "./lib/prisma";
@@ -33,6 +34,7 @@ app.use(
 app.use("/webhooks", webhookRoutes);
 
 app.use(express.json());
+app.use(cookieParser());
 
 // --- Rate limiters ---
 
@@ -44,11 +46,11 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
-// Auth: 10 req/min
+// Auth: 5 req per 15 min (magic link requests)
 const authLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 10,
-  message: { error: "Trop de requêtes, réessayez dans une minute" },
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Trop de demandes de connexion, réessayez dans quelques minutes" },
 });
 
 // Checkout: 5 req/min

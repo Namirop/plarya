@@ -2,7 +2,6 @@ import { z } from "zod";
 
 export const createTipsterSchema = z.object({
   email: z.string().email("Email invalide"),
-  password: z.string().min(6, "Mot de passe minimum 6 caractères"),
   pseudo: z.string().min(2).max(30),
   bio: z.string().optional(),
   sports: z

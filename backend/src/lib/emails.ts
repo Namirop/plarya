@@ -25,17 +25,40 @@ function emailLayout(content: string): string {
 <body>
   <div class="container">
     <div class="header">
-      <a href="${FRONTEND_URL}" class="logo">Prono<span>Tips</span></a>
+      <a href="${FRONTEND_URL}" class="logo">Plarya</a>
     </div>
     <div class="content">
       ${content}
     </div>
     <div class="footer">
-      <p class="muted">PronoTips &mdash; Les meilleures analyses sportives</p>
+      <p class="muted">Plarya &mdash; Plateforme d'analyses sportives premium</p>
     </div>
   </div>
 </body>
 </html>`;
+}
+
+/** Email magic link de connexion */
+export async function sendMagicLinkEmail(email: string, link: string): Promise<void> {
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: email,
+      subject: "Votre lien de connexion Plarya",
+      html: emailLayout(`
+        <h1 style="color: #FFFFFF; font-size: 24px;">Votre lien de connexion</h1>
+        <p>Cliquez sur le bouton ci-dessous pour vous connecter &agrave; Plarya :</p>
+        <p style="text-align: center; margin: 32px 0;">
+          <a href="${link}" class="btn">Se connecter</a>
+        </p>
+        <p class="muted" style="font-size: 14px;">Ce lien expire dans 15 minutes et ne peut &ecirc;tre utilis&eacute; qu'une seule fois.</p>
+        <p class="muted" style="font-size: 14px;">Si vous n'avez pas demand&eacute; ce lien, ignorez cet email.</p>
+      `),
+    });
+    console.log(`[EMAIL] Magic link sent to ${email}`);
+  } catch (err) {
+    console.error(`[EMAIL] Failed to send magic link to ${email}:`, err);
+  }
 }
 
 /** Email de bienvenue après inscription */
@@ -44,9 +67,9 @@ export async function sendWelcomeEmail(email: string): Promise<void> {
     await resend.emails.send({
       from: EMAIL_FROM,
       to: email,
-      subject: "Bienvenue sur PronoTips !",
+      subject: "Bienvenue sur Plarya !",
       html: emailLayout(`
-        <h1 style="color: #FFFFFF; font-size: 24px;">Bienvenue sur PronoTips !</h1>
+        <h1 style="color: #FFFFFF; font-size: 24px;">Bienvenue sur Plarya !</h1>
         <p>Votre compte a bien &eacute;t&eacute; cr&eacute;&eacute;.</p>
         <p>D&eacute;couvrez les meilleures analyses sportives de nos experts et commencez &agrave; gagner d&egrave;s maintenant.</p>
         <p style="text-align: center; margin: 32px 0;">

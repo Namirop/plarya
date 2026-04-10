@@ -1,5 +1,4 @@
 import { Router } from "express";
-import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/auth";
 import { adminMiddleware } from "../middleware/admin";
@@ -53,7 +52,7 @@ router.get("/users", async (_req, res) => {
 // POST /admin/tipsters — Create a tipster account
 router.post("/tipsters", validate(createTipsterSchema), async (req, res) => {
   try {
-    const { email, password, pseudo, bio, sports, subStatus } = req.body;
+    const { email, pseudo, bio, sports, subStatus } = req.body;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -61,12 +60,9 @@ router.post("/tipsters", validate(createTipsterSchema), async (req, res) => {
       return;
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-
     const user = await prisma.user.create({
       data: {
         email,
-        passwordHash,
         role: "TIPSTER",
         tipster: {
           create: {

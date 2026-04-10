@@ -23,12 +23,34 @@ CREATE TYPE "Sport" AS ENUM ('FOOTBALL', 'TENNIS', 'BASKETBALL', 'RUGBY', 'HOCKE
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "passwordHash" TEXT NOT NULL,
     "role" "UserRole" NOT NULL DEFAULT 'USER',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "magic_links" (
+    "id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "usedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "magic_links_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "sessions" (
+    "id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "sessions_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -39,11 +61,15 @@ CREATE TABLE "tipsters" (
     "bio" TEXT,
     "photoUrl" TEXT,
     "sports" "Sport"[],
-    "dayPassPrice" INTEGER NOT NULL DEFAULT 300,
+    "dayPassPrice" INTEGER NOT NULL DEFAULT 350,
     "monthlyPrice" INTEGER NOT NULL DEFAULT 1900,
     "subStatus" "TipsterSubStatus" NOT NULL DEFAULT 'FREE',
     "subExpiresAt" TIMESTAMP(3),
+    "stripeSubId" TEXT,
     "warningMessage" TEXT,
+    "dailyNote" TEXT,
+    "dailyNoteDate" TIMESTAMP(3),
+    "displayOrder" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -105,8 +131,36 @@ CREATE TABLE "affiliate_links" (
     CONSTRAINT "affiliate_links_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "prono_bookmaker_odds" (
+    "id" TEXT NOT NULL,
+    "pronoId" TEXT NOT NULL,
+    "bookmakerId" TEXT NOT NULL,
+    "odds" DOUBLE PRECISION NOT NULL,
+
+    CONSTRAINT "prono_bookmaker_odds_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "magic_links_token_key" ON "magic_links"("token");
+
+-- CreateIndex
+CREATE INDEX "magic_links_email_idx" ON "magic_links"("email");
+
+-- CreateIndex
+CREATE INDEX "magic_links_token_idx" ON "magic_links"("token");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "sessions_token_key" ON "sessions"("token");
+
+-- CreateIndex
+CREATE INDEX "sessions_token_idx" ON "sessions"("token");
+
+-- CreateIndex
+CREATE INDEX "sessions_userId_idx" ON "sessions"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "tipsters_userId_key" ON "tipsters"("userId");
@@ -129,6 +183,15 @@ CREATE INDEX "subscriptions_expiresAt_idx" ON "subscriptions"("expiresAt");
 -- CreateIndex
 CREATE UNIQUE INDEX "bookmakers_name_key" ON "bookmakers"("name");
 
+-- CreateIndex
+CREATE INDEX "prono_bookmaker_odds_pronoId_idx" ON "prono_bookmaker_odds"("pronoId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "prono_bookmaker_odds_pronoId_bookmakerId_key" ON "prono_bookmaker_odds"("pronoId", "bookmakerId");
+
+-- AddForeignKey
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
 -- AddForeignKey
 ALTER TABLE "tipsters" ADD CONSTRAINT "tipsters_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -143,3 +206,9 @@ ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_tipsterId_fkey" FOREIG
 
 -- AddForeignKey
 ALTER TABLE "affiliate_links" ADD CONSTRAINT "affiliate_links_bookmakerId_fkey" FOREIGN KEY ("bookmakerId") REFERENCES "bookmakers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "prono_bookmaker_odds" ADD CONSTRAINT "prono_bookmaker_odds_pronoId_fkey" FOREIGN KEY ("pronoId") REFERENCES "pronos"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "prono_bookmaker_odds" ADD CONSTRAINT "prono_bookmaker_odds_bookmakerId_fkey" FOREIGN KEY ("bookmakerId") REFERENCES "bookmakers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
