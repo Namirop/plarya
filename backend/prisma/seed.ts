@@ -296,6 +296,73 @@ async function main() {
     );
   }
 
+  // ── Seed Test Subscriptions ──
+  console.log("\nSeeding test subscriptions...");
+
+  // Delete existing test subscriptions
+  await prisma.subscription.deleteMany({});
+
+  // Get all tipsters and the test user
+  const allTipsters = await prisma.tipster.findMany({ select: { id: true, pseudo: true, dayPassPrice: true, monthlyPrice: true } });
+  const testUser = await prisma.user.findUnique({ where: { email: "user@test.com" } });
+
+  if (testUser && allTipsters.length >= 3) {
+    const subData = [
+      // Recent day passes (varying dates over the last 30 days)
+      { userId: testUser.id, tipsterId: allTipsters[0].id, type: "DAY_PASS" as const, daysAgo: 1 },
+      { userId: testUser.id, tipsterId: allTipsters[1].id, type: "DAY_PASS" as const, daysAgo: 3 },
+      { userId: testUser.id, tipsterId: allTipsters[0].id, type: "DAY_PASS" as const, daysAgo: 5 },
+      { userId: testUser.id, tipsterId: allTipsters[2].id, type: "MONTHLY" as const, daysAgo: 7 },
+      { userId: testUser.id, tipsterId: allTipsters[0].id, type: "DAY_PASS" as const, daysAgo: 10 },
+      { userId: testUser.id, tipsterId: allTipsters[1].id, type: "DAY_PASS" as const, daysAgo: 12 },
+      { userId: testUser.id, tipsterId: allTipsters[3].id, type: "DAY_PASS" as const, daysAgo: 15 },
+      { userId: testUser.id, tipsterId: allTipsters[2].id, type: "DAY_PASS" as const, daysAgo: 18 },
+      { userId: testUser.id, tipsterId: allTipsters[0].id, type: "DAY_PASS" as const, daysAgo: 20 },
+      { userId: testUser.id, tipsterId: allTipsters[4].id, type: "MONTHLY" as const, daysAgo: 22 },
+      { userId: testUser.id, tipsterId: allTipsters[1].id, type: "DAY_PASS" as const, daysAgo: 25 },
+      { userId: testUser.id, tipsterId: allTipsters[0].id, type: "DAY_PASS" as const, daysAgo: 28 },
+    ];
+
+    // Also add purchases from tipster accounts (simulating other users buying)
+    for (const t of allTipsters.slice(0, 3)) {
+      const tipsterUser = await prisma.user.findFirst({
+        where: { tipster: { id: t.id } },
+        select: { id: true },
+      });
+      if (!tipsterUser) continue;
+      // Each tipster buys from other tipsters
+      for (const other of allTipsters.filter((o) => o.id !== t.id).slice(0, 2)) {
+        subData.push({
+          userId: tipsterUser.id,
+          tipsterId: other.id,
+          type: "DAY_PASS" as const,
+          daysAgo: Math.floor(Math.random() * 25) + 1,
+        });
+      }
+    }
+
+    for (const sub of subData) {
+      const createdAt = new Date(now - sub.daysAgo * DAY);
+      const expiresAt = sub.type === "DAY_PASS"
+        ? new Date(createdAt.getTime() + DAY)
+        : new Date(createdAt.getTime() + 30 * DAY);
+      const isActive = expiresAt > new Date();
+
+      await prisma.subscription.create({
+        data: {
+          userId: sub.userId,
+          tipsterId: sub.tipsterId,
+          type: sub.type,
+          status: isActive ? "ACTIVE" : "EXPIRED",
+          expiresAt,
+          createdAt,
+        },
+      });
+    }
+
+    console.log(`  Created ${subData.length} test subscriptions`);
+  }
+
   // ── Seed Bookmakers ──
   console.log("\nSeeding bookmakers...");
 

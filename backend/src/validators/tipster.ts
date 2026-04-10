@@ -25,3 +25,7 @@ export const createTipsterSchema = z.object({
 export const warningSchema = z.object({
   warningMessage: z.string().nullable(),
 });
+
+export const displayOrderSchema = z.object({
+  displayOrder: z.number().int().min(0),
+});
