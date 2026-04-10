@@ -6,9 +6,9 @@ const bookmakerOddsItemSchema = z.object({
 });
 
 export const createPronoSchema = z.object({
-  matchName: z.string().min(1, "Nom du match requis"),
-  league: z.string().optional(),
-  pick: z.string().min(1, "Pick requis"),
+  matchName: z.string().min(1, "Nom du match requis").max(200),
+  league: z.string().max(100).optional(),
+  pick: z.string().min(1, "Pick requis").max(200),
   odds: z.number().positive("Cote doit être positive"),
   teasing: z.enum([
     "PICK_SOLIDE",
@@ -18,7 +18,7 @@ export const createPronoSchema = z.object({
     "PICK_DU_JOUR",
     "A_NE_PAS_RATER",
   ]),
-  argument: z.string().optional(),
+  argument: z.string().max(2000).optional(),
   matchDate: z.string().datetime().optional(),
   bookmakerOdds: z.array(bookmakerOddsItemSchema).optional(),
 });

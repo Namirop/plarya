@@ -6,6 +6,7 @@ import { adminMiddleware } from "../middleware/admin";
 import { validate } from "../middleware/validate";
 import { createTipsterSchema, warningSchema } from "../validators/tipster";
 import { updateResultSchema } from "../validators/prono";
+import { sendDailyWinningEmails } from "../lib/cron";
 
 const router = Router();
 
@@ -85,6 +86,22 @@ router.post("/tipsters", validate(createTipsterSchema), async (req, res) => {
   }
 });
 
+// GET /admin/pronos — List all pronos
+router.get("/pronos", async (_req, res) => {
+  try {
+    const pronos = await prisma.prono.findMany({
+      include: {
+        tipster: { select: { pseudo: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.json(pronos);
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 // PATCH /admin/pronos/:id/result — Override prono result
 router.patch("/pronos/:id/result", validate(updateResultSchema), async (req, res) => {
   try {
@@ -157,6 +174,17 @@ router.get("/stats", async (_req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+// POST /admin/send-daily-emails — Manually trigger J+1 emails
+router.post("/send-daily-emails", async (_req, res) => {
+  try {
+    await sendDailyWinningEmails();
+    res.json({ message: "Emails J+1 envoyés avec succès" });
+  } catch (err) {
+    console.error("Manual J+1 email trigger failed:", err);
+    res.status(500).json({ error: "Erreur lors de l'envoi des emails" });
   }
 });
 

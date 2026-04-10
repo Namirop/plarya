@@ -2,6 +2,7 @@ import { Router } from "express";
 import express from "express";
 import { stripe } from "../lib/stripe";
 import { prisma } from "../lib/prisma";
+import { sendPaymentConfirmationEmail } from "../lib/emails";
 
 const router = Router();
 
@@ -101,6 +102,20 @@ router.post(
                 },
               });
               console.log(`Monthly sub created for user ${userId} → tipster ${tipsterId}`);
+            }
+
+            // Fire-and-forget payment confirmation email
+            const [buyer, tipsterRecord] = await Promise.all([
+              prisma.user.findUnique({ where: { id: userId }, select: { email: true } }),
+              prisma.tipster.findUnique({ where: { id: tipsterId }, select: { pseudo: true } }),
+            ]);
+            if (buyer && tipsterRecord) {
+              sendPaymentConfirmationEmail(
+                buyer.email,
+                tipsterRecord.pseudo,
+                tipsterId,
+                type as "DAY_PASS" | "MONTHLY"
+              );
             }
           }
           break;

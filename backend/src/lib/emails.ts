@@ -1,0 +1,124 @@
+import { resend, EMAIL_FROM } from "./resend";
+
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+
+function emailLayout(content: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; padding: 0; background-color: #000000; font-family: 'Inter', Arial, sans-serif; color: #FFFFFF; }
+    .container { max-width: 600px; margin: 0 auto; padding: 40px 24px; }
+    .header { text-align: center; padding-bottom: 32px; border-bottom: 1px solid #18181B; margin-bottom: 32px; }
+    .logo { font-size: 24px; font-weight: 700; color: #FFFFFF; text-decoration: none; }
+    .logo span { color: #00FF41; }
+    .content { padding: 0; }
+    .btn { display: inline-block; background-color: #00FF41; color: #000000; padding: 14px 28px; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 6px; }
+    .footer { margin-top: 40px; padding-top: 24px; border-top: 1px solid #18181B; text-align: center; color: #71717A; font-size: 12px; }
+    p { color: #FFFFFF; line-height: 1.6; font-size: 16px; }
+    .muted { color: #71717A; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="${FRONTEND_URL}" class="logo">Prono<span>Tips</span></a>
+    </div>
+    <div class="content">
+      ${content}
+    </div>
+    <div class="footer">
+      <p class="muted">PronoTips &mdash; Les meilleures analyses sportives</p>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+/** Email de bienvenue après inscription */
+export async function sendWelcomeEmail(email: string): Promise<void> {
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: email,
+      subject: "Bienvenue sur PronoTips !",
+      html: emailLayout(`
+        <h1 style="color: #FFFFFF; font-size: 24px;">Bienvenue sur PronoTips !</h1>
+        <p>Votre compte a bien &eacute;t&eacute; cr&eacute;&eacute;.</p>
+        <p>D&eacute;couvrez les meilleures analyses sportives de nos experts et commencez &agrave; gagner d&egrave;s maintenant.</p>
+        <p style="text-align: center; margin: 32px 0;">
+          <a href="${FRONTEND_URL}/classement" class="btn">Voir les experts</a>
+        </p>
+        <p class="muted" style="font-size: 14px;">Des questions ? R&eacute;pondez directement &agrave; cet email.</p>
+      `),
+    });
+    console.log(`[EMAIL] Welcome email sent to ${email}`);
+  } catch (err) {
+    console.error(`[EMAIL] Failed to send welcome email to ${email}:`, err);
+  }
+}
+
+/** Email de confirmation de paiement */
+export async function sendPaymentConfirmationEmail(
+  email: string,
+  tipsterPseudo: string,
+  tipsterId: string,
+  type: "DAY_PASS" | "MONTHLY"
+): Promise<void> {
+  try {
+    const typeLabel = type === "DAY_PASS" ? "Day Pass" : "Abonnement mensuel";
+    const priceLabel = type === "DAY_PASS" ? "3,50\u20AC" : "19\u20AC/mois";
+
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: email,
+      subject: `Acc\u00e8s confirm\u00e9 \u2014 ${tipsterPseudo}`,
+      html: emailLayout(`
+        <h1 style="color: #FFFFFF; font-size: 24px;">Paiement confirm&eacute; !</h1>
+        <p>Votre <strong>${typeLabel}</strong> (${priceLabel}) pour <strong>${tipsterPseudo}</strong> est maintenant actif.</p>
+        <p>Vous avez d&eacute;sormais acc&egrave;s &agrave; toutes ses analyses sportives.</p>
+        <p style="text-align: center; margin: 32px 0;">
+          <a href="${FRONTEND_URL}/tipsters/${tipsterId}" class="btn">Voir les analyses</a>
+        </p>
+        <p class="muted" style="font-size: 14px;">Merci pour votre confiance !</p>
+      `),
+    });
+    console.log(`[EMAIL] Payment confirmation sent to ${email} (${typeLabel} for ${tipsterPseudo})`);
+  } catch (err) {
+    console.error(`[EMAIL] Failed to send payment confirmation to ${email}:`, err);
+  }
+}
+
+/** Email J+1 — analyse gagnante de la veille */
+export async function sendWinningPronoEmail(
+  email: string,
+  tipsterPseudo: string,
+  tipsterId: string,
+  matchName: string
+): Promise<void> {
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: email,
+      subject: "L'analyse d'hier a gagn\u00e9 ! \u2705",
+      html: emailLayout(`
+        <h1 style="color: #FFFFFF; font-size: 24px;">L'analyse d'hier est pass&eacute;e ! &#127919;</h1>
+        <p>L'analyse de <strong>${tipsterPseudo}</strong> sur <strong>${matchName}</strong> a &eacute;t&eacute; gagnante hier !</p>
+        <p>D&eacute;couvrez ses s&eacute;lections du jour :</p>
+        <p style="text-align: center; margin: 32px 0;">
+          <a href="${FRONTEND_URL}/tipsters/${tipsterId}" class="btn">Voir les analyses du jour</a>
+        </p>
+        <p>Ou explorez d'autres experts :</p>
+        <p style="text-align: center; margin: 24px 0;">
+          <a href="${FRONTEND_URL}/classement" style="color: #00FF41; text-decoration: underline; font-weight: 600;">Voir le classement</a>
+        </p>
+      `),
+    });
+    console.log(`[EMAIL] Winning prono email sent to ${email} (${tipsterPseudo} - ${matchName})`);
+  } catch (err) {
+    console.error(`[EMAIL] Failed to send winning prono email to ${email}:`, err);
+  }
+}

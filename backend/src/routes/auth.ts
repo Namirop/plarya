@@ -5,6 +5,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../lib/jw
 import { validate } from "../middleware/validate";
 import { authMiddleware } from "../middleware/auth";
 import { registerSchema, loginSchema, refreshSchema, changePasswordSchema } from "../validators/auth";
+import { sendWelcomeEmail } from "../lib/emails";
 
 const router = Router();
 
@@ -24,6 +25,9 @@ router.post("/register", validate(registerSchema), async (req, res) => {
       data: { email, passwordHash, ...(pseudo && { tipster: undefined }) },
       select: { id: true, email: true, role: true, createdAt: true },
     });
+
+    // Fire-and-forget welcome email
+    sendWelcomeEmail(email);
 
     const accessToken = signAccessToken({ userId: user.id, role: user.role });
     const refreshToken = signRefreshToken({ userId: user.id, role: user.role });

@@ -1,17 +1,15 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/auth";
+import { validate } from "../middleware/validate";
+import { checkSubscriptionSchema } from "../validators/checkout";
 
 const router = Router();
 
 // POST /subscriptions/check — Check if user has access to a tipster's pronos
-router.post("/check", authMiddleware, async (req, res) => {
+router.post("/check", authMiddleware, validate(checkSubscriptionSchema), async (req, res) => {
   try {
     const { tipsterId } = req.body;
-    if (!tipsterId) {
-      res.status(400).json({ error: "tipsterId requis" });
-      return;
-    }
 
     const subscription = await prisma.subscription.findFirst({
       where: {
