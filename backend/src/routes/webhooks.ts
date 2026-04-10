@@ -2,7 +2,8 @@ import { Router } from "express";
 import express from "express";
 import { stripe } from "../lib/stripe";
 import { prisma } from "../lib/prisma";
-import { sendPaymentConfirmationEmail } from "../lib/emails";
+import { sendAccessUnlockedEmail } from "../lib/emails";
+import { createMagicLink } from "../lib/magic-link";
 
 const router = Router();
 

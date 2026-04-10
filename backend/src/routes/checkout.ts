@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { stripe } from "../lib/stripe";
 import { prisma } from "../lib/prisma";
-import { authMiddleware } from "../middleware/auth";
+import { authMiddleware, optionalAuthMiddleware } from "../middleware/auth";
 import { createCheckoutSchema, becomeTipsterSchema } from "../validators/checkout";
 
 const router = Router();
 
 // POST /checkout/create-session
-router.post("/create-session", authMiddleware, async (req, res) => {
+router.post("/create-session", optionalAuthMiddleware, async (req, res) => {
   try {
     const parsed = createCheckoutSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -15,22 +15,49 @@ router.post("/create-session", authMiddleware, async (req, res) => {
       return;
     }
 
-    const { tipsterId, type } = parsed.data;
-    const userId = req.user!.userId;
+    const { tipsterId, type, email: bodyEmail } = parsed.data;
 
-    // Check existing active subscription
-    const existing = await prisma.subscription.findFirst({
-      where: {
-        userId,
-        tipsterId,
-        status: "ACTIVE",
-        expiresAt: { gt: new Date() },
-      },
-    });
+    // Resolve userId and email
+    let userId: string | undefined;
+    let customerEmail: string | undefined;
 
-    if (existing) {
-      res.status(400).json({ error: "Vous avez déjà un accès actif pour ce tipster" });
+    if (req.user) {
+      // Authenticated user
+      userId = req.user.userId;
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true },
+      });
+      customerEmail = dbUser?.email;
+    } else if (bodyEmail) {
+      // Non-authenticated: email provided in body
+      customerEmail = bodyEmail.toLowerCase();
+      const existingUser = await prisma.user.findUnique({
+        where: { email: customerEmail },
+      });
+      if (existingUser) {
+        userId = existingUser.id;
+      }
+    } else {
+      res.status(401).json({ error: "Email requis" });
       return;
+    }
+
+    // Check existing active subscription if we have a userId
+    if (userId) {
+      const existing = await prisma.subscription.findFirst({
+        where: {
+          userId,
+          tipsterId,
+          status: "ACTIVE",
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (existing) {
+        res.status(400).json({ error: "Vous avez déjà un accès actif pour cet expert" });
+        return;
+      }
     }
 
     const tipster = await prisma.tipster.findUnique({ where: { id: tipsterId } });
@@ -39,13 +66,44 @@ router.post("/create-session", authMiddleware, async (req, res) => {
       return;
     }
 
+    // For day pass: check that at least one analysis hasn't started yet
+    if (type === "DAY_PASS") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const upcomingCount = await prisma.prono.count({
+        where: {
+          tipsterId,
+          createdAt: { gte: today },
+          startTime: { gt: new Date() },
+        },
+      });
+
+      if (upcomingCount === 0) {
+        res.status(400).json({
+          error: "Les analyses de cet expert sont déjà terminées pour aujourd'hui.",
+        });
+        return;
+      }
+    }
+
     const isSubscription = type === "MONTHLY";
     const amount = isSubscription ? tipster.monthlyPrice : tipster.dayPassPrice;
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
+    // Build metadata
+    const metadata: Record<string, string> = { tipsterId, type };
+    if (userId) {
+      metadata.userId = userId;
+    }
+    if (customerEmail) {
+      metadata.email = customerEmail;
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: isSubscription ? "subscription" : "payment",
       payment_method_types: ["card"],
+      customer_email: customerEmail,
       line_items: [
         {
           price_data: {
@@ -61,8 +119,8 @@ router.post("/create-session", authMiddleware, async (req, res) => {
           quantity: 1,
         },
       ],
-      metadata: { userId, tipsterId, type },
-      success_url: `${frontendUrl}/tipsters/${tipsterId}?checkout=success`,
+      metadata,
+      success_url: `${frontendUrl}/tipsters/${tipsterId}?checkout=success&stripe_session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${frontendUrl}/tipsters/${tipsterId}?checkout=cancel`,
     });
 

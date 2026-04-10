@@ -132,6 +132,8 @@ router.get("/", async (req, res) => {
             odds: true,
             teasing: true,
             result: true,
+            startTime: true,
+            isFeatured: true,
             matchDate: true,
             createdAt: true,
           },
@@ -147,6 +149,7 @@ router.get("/", async (req, res) => {
           dayPassPrice: t.dayPassPrice,
           monthlyPrice: t.monthlyPrice,
           warningMessage: t.warningMessage,
+          viewsToday: t.viewsToday,
           pronosToday,
           todayPronos,
         };
@@ -156,6 +159,7 @@ router.get("/", async (req, res) => {
     const limit = req.query.all === "true" ? enriched.length : 6;
     res.json(enriched.slice(0, limit));
   } catch (err) {
+    console.error("GET /tipsters error:", err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
@@ -194,6 +198,8 @@ router.get("/:id", async (req, res) => {
         odds: true,
         teasing: true,
         result: true,
+        startTime: true,
+        isFeatured: true,
         matchDate: true,
         createdAt: true,
       },
@@ -215,11 +221,25 @@ router.get("/:id", async (req, res) => {
       dayPassPrice: tipster.dayPassPrice,
       monthlyPrice: tipster.monthlyPrice,
       warningMessage: tipster.warningMessage,
+      viewsToday: tipster.viewsToday,
       pronosToday,
       pronos,
     });
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+// POST /tipsters/:id/view — Increment view counter
+router.post("/:id/view", async (req, res) => {
+  try {
+    await prisma.tipster.update({
+      where: { id: req.params.id as string },
+      data: { viewsToday: { increment: 1 } },
+    });
+    res.json({ ok: true });
+  } catch {
+    res.status(404).json({ error: "Tipster introuvable" });
   }
 });
 

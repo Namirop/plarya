@@ -220,41 +220,54 @@ async function main() {
     // Upsert tipster profile
     const tipster = await prisma.tipster.upsert({
       where: { userId: user.id },
-      update: { dayPassPrice: 350 },
+      update: { dayPassPrice: 350, viewsToday: Math.floor(Math.random() * 300) },
       create: {
         userId: user.id,
         pseudo: t.pseudo,
         bio: t.bio,
         sports: t.sports,
         subStatus: "FREE",
+        viewsToday: Math.floor(Math.random() * 300),
       },
     });
 
     // Delete existing pronos and recreate with fresh dates
     await prisma.prono.deleteMany({ where: { tipsterId: tipster.id } });
 
-    // Historical pronos
+    // Historical pronos — startTime = createdAt (already past)
     const historyData = t.history.map(
-      ([matchName, league, pick, odds, teasing, result, daysAgo]) => ({
-        tipsterId: tipster.id,
-        matchName,
-        league,
-        pick,
-        odds,
-        teasing: teasing as
-          | "PICK_SOLIDE"
-          | "VALUE"
-          | "SAFE"
-          | "OPPORTUNITE"
-          | "PICK_DU_JOUR"
-          | "A_NE_PAS_RATER",
-        argument: `Analyse détaillée pour ${matchName}.`,
-        result: result as "WON" | "LOST",
-        createdAt: new Date(now - daysAgo * DAY),
-      }),
+      ([matchName, league, pick, odds, teasing, result, daysAgo]) => {
+        const createdAt = new Date(now - daysAgo * DAY);
+        return {
+          tipsterId: tipster.id,
+          matchName,
+          league,
+          pick,
+          odds,
+          teasing: teasing as
+            | "PICK_SOLIDE"
+            | "VALUE"
+            | "SAFE"
+            | "OPPORTUNITE"
+            | "PICK_DU_JOUR"
+            | "A_NE_PAS_RATER",
+          argument: `Analyse détaillée pour ${matchName}.`,
+          result: result as "WON" | "LOST",
+          startTime: createdAt,
+          createdAt,
+        };
+      },
     );
 
-    // Today's pronos
+    // Today's pronos — varied startTime
+    // EsportGuru (last tipster): all analyses in the past (to test "terminated" state)
+    const allPast = t.email === "esportguru@test.com";
+    // startTime offsets from now: alternate between past and future
+    // For most tipsters: first prono in the past (-1h), rest in the future (+2h, +6h, etc.)
+    const startTimeOffsets = allPast
+      ? t.today.map((_, i) => -(i + 1) * HOUR) // all in the past
+      : t.today.map((_, i) => (i === 0 ? -1 * HOUR : (i * 3 + 1) * HOUR)); // first past, rest future
+
     const todayData = t.today.map(
       ([matchName, league, pick, odds, teasing], i) => ({
         tipsterId: tipster.id,
@@ -271,6 +284,8 @@ async function main() {
           | "A_NE_PAS_RATER",
         argument: `Argumentaire pour ${matchName}.`,
         result: "PENDING" as const,
+        startTime: new Date(now + startTimeOffsets[i]),
+        isFeatured: i === 0,
         createdAt: new Date(now - (t.today.length - i) * HOUR),
       }),
     );

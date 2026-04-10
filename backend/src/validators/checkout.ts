@@ -3,6 +3,7 @@ import { z } from "zod";
 export const createCheckoutSchema = z.object({
   tipsterId: z.string().min(1),
   type: z.enum(["DAY_PASS", "MONTHLY"]),
+  email: z.string().email().optional(),
 });
 
 export const becomeTipsterSchema = z.object({

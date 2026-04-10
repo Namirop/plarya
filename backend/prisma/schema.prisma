@@ -122,6 +122,7 @@ model Tipster {
   dailyNote       String?
   dailyNoteDate   DateTime?
   displayOrder    Int             @default(0)
+  viewsToday      Int             @default(0)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -142,6 +143,8 @@ model Prono {
   teasing     PronoTeasing
   result      PronoResult  @default(PENDING)
   argument    String?      // argumentaire (visible après achat)
+  startTime   DateTime     // heure de début du match
+  isFeatured  Boolean      @default(false)
   matchDate   DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt

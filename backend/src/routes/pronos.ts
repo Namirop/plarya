@@ -38,6 +38,20 @@ router.post(
 
       const { bookmakerOdds, ...pronoData } = req.body;
 
+      // Auto-deflag previous featured prono for this tipster today
+      if (pronoData.isFeatured) {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        await prisma.prono.updateMany({
+          where: {
+            tipsterId: tipster.id,
+            isFeatured: true,
+            createdAt: { gte: todayStart },
+          },
+          data: { isFeatured: false },
+        });
+      }
+
       const prono = await prisma.prono.create({
         data: {
           tipsterId: tipster.id,
@@ -47,6 +61,8 @@ router.post(
           odds: pronoData.odds,
           teasing: pronoData.teasing,
           argument: pronoData.argument,
+          startTime: new Date(pronoData.startTime),
+          isFeatured: pronoData.isFeatured ?? false,
           matchDate: pronoData.matchDate ? new Date(pronoData.matchDate) : undefined,
           ...(bookmakerOdds && bookmakerOdds.length > 0
             ? {

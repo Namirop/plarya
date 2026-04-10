@@ -13,7 +13,23 @@ export function initCronJobs(): void {
     }
   });
 
+  // Chaque jour à minuit : reset viewsToday + isFeatured
+  cron.schedule("0 0 * * *", async () => {
+    console.log("[CRON] Midnight reset job started");
+    try {
+      await prisma.tipster.updateMany({ data: { viewsToday: 0 } });
+      await prisma.prono.updateMany({
+        where: { isFeatured: true },
+        data: { isFeatured: false },
+      });
+      console.log("[CRON] Midnight reset done (viewsToday + isFeatured)");
+    } catch (err) {
+      console.error("[CRON] Midnight reset failed:", err);
+    }
+  });
+
   console.log("[CRON] Daily J+1 email job scheduled (10:00 AM)");
+  console.log("[CRON] Midnight reset job scheduled (00:00)");
 }
 
 export async function sendDailyWinningEmails(): Promise<void> {
