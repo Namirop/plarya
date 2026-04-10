@@ -115,6 +115,42 @@ export async function sendPaymentConfirmationEmail(
   }
 }
 
+/** Email "Accès débloqué" avec magic link */
+export async function sendAccessUnlockedEmail(
+  email: string,
+  expertPseudo: string,
+  expertId: string,
+  magicLinkUrl: string
+): Promise<void> {
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: email,
+      subject: `Votre acc\u00e8s aux analyses de ${expertPseudo} est d\u00e9bloqu\u00e9 !`,
+      html: emailLayout(`
+        <h1 style="color: #FFFFFF; font-size: 24px;">Acc&egrave;s d&eacute;bloqu&eacute; !</h1>
+        <p>Votre acc&egrave;s aux analyses de <strong>${expertPseudo}</strong> est maintenant actif.</p>
+        <p>Consultez ses analyses d&egrave;s maintenant :</p>
+        <p style="text-align: center; margin: 32px 0;">
+          <a href="${FRONTEND_URL}/tipsters/${expertId}" class="btn">Voir les analyses</a>
+        </p>
+        <p>Pour vous connecter &agrave; tout moment, utilisez ce lien :</p>
+        <p style="text-align: center; margin: 24px 0;">
+          <a href="${magicLinkUrl}" style="color: #00FF41; text-decoration: underline; font-weight: 600;">Se connecter</a>
+        </p>
+        <p>Ou d&eacute;couvrez d'autres experts :</p>
+        <p style="text-align: center; margin: 24px 0;">
+          <a href="${FRONTEND_URL}" style="color: #00FF41; text-decoration: underline; font-weight: 600;">D&eacute;couvrir d'autres experts</a>
+        </p>
+        <p class="muted" style="font-size: 14px;">Merci pour votre confiance !</p>
+      `),
+    });
+    console.log(`[EMAIL] Access unlocked email sent to ${email} (${expertPseudo})`);
+  } catch (err) {
+    console.error(`[EMAIL] Failed to send access unlocked email to ${email}:`, err);
+  }
+}
+
 /** Email J+1 — analyse gagnante de la veille */
 export async function sendWinningPronoEmail(
   email: string,

@@ -77,10 +77,29 @@ router.post(
             });
             if (existing) break;
 
+            // Resolve userId: from metadata if logged in, or findOrCreate by email
+            let resolvedUserId = metadata.userId;
+            const email = metadata.email || session.customer_details?.email;
+
+            if (!resolvedUserId && email) {
+              const normalizedEmail = email.toLowerCase();
+              let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+              if (!user) {
+                user = await prisma.user.create({ data: { email: normalizedEmail } });
+                console.log(`User auto-created: ${normalizedEmail}`);
+              }
+              resolvedUserId = user.id;
+            }
+
+            if (!resolvedUserId) {
+              console.error("Webhook: no userId and no email in metadata/session");
+              break;
+            }
+
             if (type === "DAY_PASS") {
               await prisma.subscription.create({
                 data: {
-                  userId,
+                  userId: resolvedUserId,
                   tipsterId,
                   type: "DAY_PASS",
                   status: "ACTIVE",
@@ -88,12 +107,12 @@ router.post(
                   expiresAt: new Date(Date.now() + DAY),
                 },
               });
-              console.log(`Day pass created for user ${userId} → tipster ${tipsterId}`);
+              console.log(`Day pass created for user ${resolvedUserId} → tipster ${tipsterId}`);
             } else if (type === "MONTHLY") {
               const stripeSubId = session.subscription as string;
               await prisma.subscription.create({
                 data: {
-                  userId,
+                  userId: resolvedUserId,
                   tipsterId,
                   type: "MONTHLY",
                   status: "ACTIVE",
@@ -102,20 +121,23 @@ router.post(
                   expiresAt: new Date(Date.now() + MONTH),
                 },
               });
-              console.log(`Monthly sub created for user ${userId} → tipster ${tipsterId}`);
+              console.log(`Monthly sub created for user ${resolvedUserId} → tipster ${tipsterId}`);
             }
 
-            // Fire-and-forget payment confirmation email
+            // Fire-and-forget: send access unlocked email with magic link
             const [buyer, tipsterRecord] = await Promise.all([
-              prisma.user.findUnique({ where: { id: userId }, select: { email: true } }),
+              prisma.user.findUnique({ where: { id: resolvedUserId }, select: { email: true } }),
               prisma.tipster.findUnique({ where: { id: tipsterId }, select: { pseudo: true } }),
             ]);
             if (buyer && tipsterRecord) {
-              sendPaymentConfirmationEmail(
+              const backendUrl = process.env.BACKEND_URL || "http://localhost:4000";
+              const magicToken = await createMagicLink(buyer.email);
+              const magicLinkUrl = `${backendUrl}/auth/verify?token=${magicToken}`;
+              sendAccessUnlockedEmail(
                 buyer.email,
                 tipsterRecord.pseudo,
                 tipsterId,
-                type as "DAY_PASS" | "MONTHLY"
+                magicLinkUrl
               );
             }
           }
