@@ -25,7 +25,13 @@
       "Bash(node:*)",
       "Bash(npx next:*)",
       "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"Oui, reset la DB\" npx prisma:*)",
-      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"oui\" npx prisma:*)"
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"oui\" npx prisma:*)",
+      "Read(//c/Users/romai/Desktop/**)",
+      "Bash(mv site-pronos-sportifs *)",
+      "Bash(powershell.exe *)",
+      "Bash(PGPASSWORD=postgres psql *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

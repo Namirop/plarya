@@ -73,7 +73,7 @@ export async function sendWelcomeEmail(email: string): Promise<void> {
         <p>Votre compte a bien &eacute;t&eacute; cr&eacute;&eacute;.</p>
         <p>D&eacute;couvrez les meilleures analyses sportives de nos experts et commencez &agrave; gagner d&egrave;s maintenant.</p>
         <p style="text-align: center; margin: 32px 0;">
-          <a href="${FRONTEND_URL}/classement" class="btn">Voir les experts</a>
+          <a href="${FRONTEND_URL}" class="btn">Voir les experts</a>
         </p>
         <p class="muted" style="font-size: 14px;">Des questions ? R&eacute;pondez directement &agrave; cet email.</p>
       `),
@@ -172,7 +172,7 @@ export async function sendWinningPronoEmail(
         </p>
         <p>Ou explorez d'autres experts :</p>
         <p style="text-align: center; margin: 24px 0;">
-          <a href="${FRONTEND_URL}/classement" style="color: #00FF41; text-decoration: underline; font-weight: 600;">Voir le classement</a>
+          <a href="${FRONTEND_URL}" style="color: #00FF41; text-decoration: underline; font-weight: 600;">Découvrir d'autres experts</a>
         </p>
       `),
     });
