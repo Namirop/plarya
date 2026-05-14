@@ -5,7 +5,79 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* ── Palette Plarya ── */
+  /* ════════════════════════════════════════════════════════════════
+     PLARYA DESIGN SYSTEM — golden-da
+     Source : design-system.md (Figma DFTjdH42nddqFyAtHQ6eac)
+     ════════════════════════════════════════════════════════════════ */
+
+  /* ── Backgrounds ── */
+  --color-background: #000000;          /* page bg (DS: bg-primary) */
+  --color-surface: #131212;             /* surfaces sombres (DS: bg-secondary) */
+  --color-surface-elevated: #181818;    /* boutons/icônes (DS: bg-tertiary) */
+
+  /* ── Texte ── */
+  --color-foreground: #ffffff;          /* DS: text-primary */
+  --color-muted-foreground: #898181;    /* DS: text-secondary/muted */
+  --color-placeholder: #d9d9d9;
+
+  /* ── Accents dorés ── */
+  --color-accent: #dfb968;              /* doré principal (label EXPERT) */
+  --color-accent-strong: #e1aa36;       /* Golden Stroke (bordures CTA) */
+  --color-accent-soft: #dfb968;         /* Shining Effect 2 color */
+  --color-accent-glow: rgba(255, 174, 0, 0.7); /* Shining Effect color */
+
+  /* ── Bordures ── */
+  --color-border-gold: #e1aa36;
+
+  /* ── Fonts ── */
+  --font-display: var(--font-dm-serif), "DM Serif Display", ui-serif, Georgia, serif;
+  --font-body: var(--font-work-sans), "Work Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-work-sans), "Work Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Font sizes desktop (token, line-height, font-weight) ── */
+  --text-h1: 64px;
+  --text-h1--line-height: 60px;
+  --text-h1--font-weight: 400;
+  --text-h2: 32px;
+  --text-h2--line-height: 1;
+  --text-h2--font-weight: 400;
+  --text-h3: 32px;
+  --text-h3--line-height: 1;
+  --text-h3--font-weight: 500;
+  --text-h4: 24px;
+  --text-h4--line-height: 1;
+  --text-h4--font-weight: 400;
+  --text-h5: 20px;
+  --text-h5--line-height: 1;
+  --text-h5--font-weight: 500;
+  --text-body-18: 18px;
+  --text-body-18--line-height: 18px;
+  --text-body-18--font-weight: 400;
+  --text-body-16: 16px;
+  --text-body-16--line-height: 16px;
+  --text-body-16--font-weight: 400;
+  /* Mobile sizes : à mesurer sur la frame "1a. Mobile Homepage" (non extraites du DS) */
+
+  /* ── Border radius ── */
+  --radius: 16px;            /* DS : 16px par défaut partout (cards, boutons) */
+  --radius-sm: 8px;          /* icônes catégorie, swatches */
+
+  /* ── Box shadows ── */
+  --shadow-shine: 0 0 15px 0 rgba(255, 174, 0, 0.7);   /* Shining Effect (CTA glow) */
+  --shadow-shine-soft: 0 0 7px 0 #dfb968;              /* Shining Effect 2 (Domain card glow) */
+
+  /* ── Gradients ── */
+  --background-image-gradient-gold:
+    linear-gradient(to right, rgba(223, 185, 104, 0.8) 0%, rgba(255, 255, 255, 0.8) 100%);
+
+  /* ── Container (max-widths sémantiques) ── */
+  --container-content: 1175px;   /* sections régulières + Devenir créateur card (1169 ≈ 1175) */
+  --container-hero: 1308px;      /* Hero — container plus large, padding horizontal réduit */
+
+  /* ════════════════════════════════════════════════════════════════
+     LEGACY TOKENS — palette V1 (conservés pour les composants pas
+     encore migrés vers la nouvelle DA). À supprimer après migration.
+     ════════════════════════════════════════════════════════════════ */
   --color-noir: #000000;
   --color-blanc: #ffffff;
   --color-gris-fonce: #18181b;
@@ -28,12 +100,6 @@
   --color-texte-principal: #ffffff;
   --color-texte-secondaire: #a1a1aa;
   --color-texte-tertiaire: #71717a;
-
-  --color-background: #0a0a0a;
-  --color-foreground: #ffffff;
-
-  --font-sans: var(--font-archivo);
-  --font-heading: var(--font-instrument-serif);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -67,13 +133,6 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 body {
@@ -130,7 +189,7 @@ body::before {
   --chart-3: #8b7500;
   --chart-4: #a1a1aa;
   --chart-5: #71717a;
-  --radius: 0.625rem;
+  --radius: 1rem; /* 16px — aligné DS (utilisé par shadcn components via var(--radius)) */
   --sidebar: #0a0a0a;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #d4af37;

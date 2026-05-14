@@ -1,20 +1,14 @@
 import type { Metadata } from "next";
-import { Archivo, Instrument_Serif, DM_Serif_Display } from "next/font/google";
+import { Work_Sans, DM_Serif_Display } from "next/font/google";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { UserProvider } from "@/hooks/use-user";
 import "./globals.css";
 
-const archivo = Archivo({
+const workSans = Work_Sans({
   subsets: ["latin"],
-  variable: "--font-archivo",
+  variable: "--font-work-sans",
   weight: ["400", "500", "600", "700"],
-});
-
-const instrumentSerif = Instrument_Serif({
-  subsets: ["latin"],
-  variable: "--font-instrument-serif",
-  weight: ["400"],
 });
 
 const dmSerif = DM_Serif_Display({
@@ -36,7 +30,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${archivo.variable} ${instrumentSerif.variable} ${dmSerif.variable}`}
+      className={`${workSans.variable} ${dmSerif.variable}`}
     >
       <body className="min-h-screen flex flex-col">
         <UserProvider>

@@ -551,3 +551,32 @@ Chaque analyse (Prono) a un champ `startTime: DateTime` obligatoire. Le frontend
 - **Design dark premium doré — JAMAIS de fond blanc sur pages publiques**
 - **Vocabulaire : plateforme d'analyses sportives, PAS un site de paris**
 - **Pas de classement, pas de compétition entre experts**
+
+---
+
+## 9. STRATÉGIE DE MIGRATION VERS LA NOUVELLE DA
+
+- Tokens DS dans `app/globals.css` sous `@theme` (Tailwind v4)
+- Legacy tokens V1 conservés sous le commentaire `LEGACY` dans `globals.css`
+- Migration composant par composant : quand un composant est refait en nouveaux tokens, vérifier qu'il n'utilise plus aucun token LEGACY
+- Quand TOUS les composants sont migrés, supprimer le bloc LEGACY de `globals.css`
+
+## 10. TOKENS PRINCIPAUX
+
+- `bg-background` : noir #000
+- `text-foreground` : blanc
+- `accent` / `bg-accent` : doré #dfb968
+- `accent-strong` : doré profond #e1aa36
+- `font-display` : DM Serif Display (titres H1/H2)
+- `font-body` / `font-sans` : Work Sans (texte courant)
+- `rounded` ou `rounded-2xl` : 16px (par défaut)
+- `shadow-shine` : glow CTA principaux
+- `shadow-shine-soft` : glow cards domaines
+
+## 11. SPECS DE DESIGN
+
+- DS complet : `design-system.md`
+- Homepage desktop : `homepage-spec.md`
+- Homepage mobile : `homepage-mobile-spec.md` (incomplet côté Figma)
+- Dashboard : `dashboard-spec.md` (form fields à designer)
+- Devenir expert : `devenir-expert-spec.md` (form fields à designer)
