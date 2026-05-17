@@ -580,3 +580,9 @@ Chaque analyse (Prono) a un champ `startTime: DateTime` obligatoire. Le frontend
 - Homepage mobile : `homepage-mobile-spec.md` (incomplet côté Figma)
 - Dashboard : `dashboard-spec.md` (form fields à designer)
 - Devenir expert : `devenir-expert-spec.md` (form fields à designer)
+
+## 12. PAGES DE TEST TEMPORAIRES
+
+Pages internes pour valider visuellement les composants pendant la migration. À **supprimer** une fois la migration terminée.
+
+- `app/_test-button/page.tsx` — affiche tous les variants/sizes/états du composant `Button`
