@@ -273,7 +273,8 @@ Référence visuelle : `/docs/references/homepage-reference.png`
 
 **Important :**
 
-- Les noms des matchs sont **visibles** (plus de blur sur les matchs). Seul le pick (la prédiction) reste caché.
+- **La ExpertCard de la homepage est une vitrine** : tous les noms des matchs sont affichés en clair, sans cadenas ni blur ni contenu masqué. La seule variation entre les deux états (Unlocked / Locked) porte sur le bouton du bas (variant `white` : actif "Accéder (3,50€)" ou disabled "Terminé pour aujourd'hui").
+- Le teasing du pick (prédiction spécifique) vit sur le **profil expert** (`/experts/[id]`), **pas sur cette card de homepage**. Voir §"PROFIL EXPERT" plus bas pour le masquage du pick.
 - **PAS de badge streak, PAS de taux de réussite affiché**
 - L'utilisateur doit immédiatement comprendre les sports couverts et les matchs du jour
 
@@ -585,4 +586,7 @@ Chaque analyse (Prono) a un champ `startTime: DateTime` obligatoire. Le frontend
 
 Pages internes pour valider visuellement les composants pendant la migration. À **supprimer** une fois la migration terminée.
 
-- `app/_test-button/page.tsx` — affiche tous les variants/sizes/états du composant `Button`
+- `app/test-button/page.tsx` — affiche tous les variants/sizes/états du composant `Button` (accessible sur `/test-button`)
+- `app/test-expert-card/page.tsx` — affiche le composant `ExpertCard` dans ses deux états Unlocked/Locked + variations (accessible sur `/test-expert-card`)
+- `app/test-domain-card/page.tsx` — affiche le composant `DomainCard` (3 variantes actives + état coming-soon, accessible sur `/test-domain-card`)
+- `app/test-header/page.tsx` — affiche le composant `Header` dans ses deux variants connected / guest (accessible sur `/test-header`)

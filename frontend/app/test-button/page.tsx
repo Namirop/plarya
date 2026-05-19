@@ -1,5 +1,5 @@
 /**
- * Page de test temporaire pour valider visuellement le composant Button
+ * Page de test temporaire (/test-button) pour valider visuellement le composant Button
  * et tous ses variants/sizes avec les tokens du DS golden-da.
  *
  * À SUPPRIMER une fois la migration des composants terminée.
@@ -21,15 +21,38 @@ export default function TestButtonPage() {
           </p>
         </header>
 
-        {/* ─────────────────── DS VARIANTS ─────────────────── */}
-        <Section title="DS — Primary (gradient gold)">
-          <Row label="size default">
-            <Button variant="primary">Voir les analyses</Button>
-            <Button variant="primary" disabled>
-              Disabled
-            </Button>
+        {/* ─────────── COMPARAISON GRADIENT 100% vs 80% ─────────── */}
+        <Section title="Comparaison gradient — 100% (nouveau) vs 80% (ancien)">
+          <Row label="Découvrir les experts — côte à côte sur fond noir">
+            <div className="flex flex-col items-center gap-2">
+              <Button variant="primary" size="lg">
+                Découvrir les experts
+              </Button>
+              <span className="font-body text-body-16 text-muted-foreground">
+                100% (nouveau)
+              </span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <Button
+                variant="primary"
+                size="lg"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(to right, rgba(223, 185, 104, 0.8) 0%, rgba(255, 255, 255, 0.8) 100%)",
+                }}
+              >
+                Découvrir les experts
+              </Button>
+              <span className="font-body text-body-16 text-muted-foreground">
+                80% (ancien)
+              </span>
+            </div>
           </Row>
-          <Row label="size lg (Hero CTA)">
+        </Section>
+
+        {/* ─────────────────── DS VARIANTS ─────────────────── */}
+        <Section title="DS — Primary (gradient gold, shadow-shine constant)">
+          <Row label="primary lg (Hero CTA — text-h5 / Medium 20)">
             <Button variant="primary" size="lg">
               Découvrir les experts
             </Button>
@@ -37,9 +60,40 @@ export default function TestButtonPage() {
               Devenir créateur
             </Button>
           </Row>
-          <Row label="size sm">
+          <Row label="primary default (Domain card — text-body-16 / Regular)">
+            <Button variant="primary">Voir les analyses</Button>
+            <Button variant="primary" disabled>
+              Disabled
+            </Button>
+          </Row>
+          <Row label="primary sm (inline)">
             <Button variant="primary" size="sm">
               S&apos;inscrire
+            </Button>
+          </Row>
+        </Section>
+
+        <Section title="DS — White (CTA card analyse 'Accéder')">
+          <Row label="white default (actif) — fond blanc, texte noir">
+            <Button variant="white">Accéder (3,50€)</Button>
+          </Row>
+          <Row label="white default (disabled) — bouton 'Terminé' #181818 / #898181">
+            <Button variant="white" disabled>
+              Terminé
+            </Button>
+          </Row>
+          <Row label="white actif ↔ disabled (côte à côte)">
+            <Button variant="white">Accéder (3,50€)</Button>
+            <Button variant="white" disabled>
+              Terminé
+            </Button>
+          </Row>
+          <Row label="white sm">
+            <Button variant="white" size="sm">
+              Accéder
+            </Button>
+            <Button variant="white" size="sm" disabled>
+              Terminé
             </Button>
           </Row>
         </Section>

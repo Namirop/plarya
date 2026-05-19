@@ -1,12 +1,12 @@
-import { Button as ButtonPrimitive } from "@base-ui/react/button"
-import { cva, type VariantProps } from "class-variance-authority"
+import { Button as ButtonPrimitive } from "@base-ui/react/button";
+import { cva, type VariantProps } from "class-variance-authority";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
   // Base : transitions douces 200ms, focus-visible accent, disabled opacity-50.
   // rounded-2xl = 16px (DS).
-  "group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl whitespace-nowrap font-body font-medium transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none select-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center gap-4 rounded-2xl whitespace-nowrap font-body transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none select-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -14,9 +14,9 @@ const buttonVariants = cva(
 
         // CTA principal : "Découvrir les experts", "Devenir créateur",
         // "Voir les analyses" (Domain card). Gradient doré + bordure
-        // Golden Stroke, glow uniquement au hover.
+        // Golden Stroke + glow doré constant (visible au repos dans Figma).
         primary:
-          "bg-gradient-gold text-black border border-accent-strong hover:shadow-shine",
+          "bg-gradient-gold text-black border border-accent-strong shadow-shine hover:brightness-105",
 
         // CTA secondaire : transparent avec bordure dorée.
         // Pour les actions secondaires "Voir toutes les analyses", etc.
@@ -28,9 +28,14 @@ const buttonVariants = cva(
         ghost:
           "bg-transparent text-accent border border-transparent hover:underline underline-offset-4",
 
+        // CTA "Accéder (3,50€)" — bouton blanc sur card analyse.
+        // Disabled = bouton gris "Terminé" (bg #181818, texte #898181).
+        // disabled:opacity-100 annule l'opacity-50 de la base.
+        white:
+          "bg-white text-black hover:bg-white/90 disabled:opacity-100 disabled:bg-surface-elevated disabled:text-muted-foreground disabled:hover:bg-surface-elevated",
+
         // ──────────── Legacy shadcn variants (conservés) ────────────
-        default:
-          "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
         outline:
           "border border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         destructive:
@@ -44,7 +49,8 @@ const buttonVariants = cva(
 
         // Version Medium 20 : padding 16/32, text-h5 → h ≈ 55px
         // (= "Découvrir les experts" Hero 304×55, "Devenir créateur" 258×55)
-        lg: "px-8 py-4 text-h5 font-medium",
+        // font-weight Medium porté par le token text-h5 (cf. globals.css).
+        lg: "px-8 py-4 text-h5",
 
         // Bouton inline plus petit
         sm: "px-4 py-2 text-body-16",
@@ -54,8 +60,7 @@ const buttonVariants = cva(
         icon: "size-10",
         "icon-xs":
           "size-6 rounded-lg in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-8 rounded-lg in-data-[slot=button-group]:rounded-lg",
+        "icon-sm": "size-8 rounded-lg in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-12",
       },
     },
@@ -63,8 +68,8 @@ const buttonVariants = cva(
       variant: "default",
       size: "default",
     },
-  }
-)
+  },
+);
 
 function Button({
   className,
@@ -78,7 +83,7 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
-  )
+  );
 }
 
-export { Button, buttonVariants }
+export { Button, buttonVariants };

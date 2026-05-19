@@ -31,7 +31,22 @@
       "Bash(powershell.exe *)",
       "Bash(PGPASSWORD=postgres psql *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git rm *)",
+      "Bash(git commit *)",
+      "Bash(claude mcp *)",
+      "mcp__figma__get_variable_defs",
+      "mcp__figma__get_metadata",
+      "mcp__figma__whoami",
+      "mcp__figma__get_design_context",
+      "Bash(grep -oE \"name=\\\\\\\\\\\\\\\\\\\\\"[^\\\\\"\\\\\\\\\\\\\\\\]+\\\\\\\\\\\\\\\\\\\\\"\" \"C:\\\\Users\\\\romai\\\\.claude\\\\projects\\\\C--Users-romai-Desktop-Plarya\\\\86f495d9-1adb-4d76-8bb9-4158eff590cc\\\\tool-results\\\\mcp-figma-get_metadata-1778444816475.txt\")",
+      "Bash(grep *)",
+      "Bash(powershell -NoProfile -Command \"\\(Get-Content C:/Users/romai/Desktop/Plarya/CLAUDE.md\\).Length\")",
+      "Bash(findstr \".md\")",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --window-size=1440,900 --screenshot=\"C:\\\\Users\\\\romai\\\\Desktop\\\\Plarya\\\\.tmp-screenshots\\\\hero.png\" \"http://localhost:3000/\")",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --window-size=1440,900 --screenshot=\"C:\\\\Users\\\\romai\\\\Desktop\\\\Plarya\\\\.tmp-screenshots\\\\hero-v2.png\" \"http://localhost:3000/\")",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --window-size=1440,900 --screenshot=\"C:\\\\Users\\\\romai\\\\Desktop\\\\Plarya\\\\.tmp-screenshots\\\\hero-v3.png\" \"http://localhost:3000/\")"
     ]
   }
 }

@@ -21,7 +21,7 @@
 | `text-muted` | `#898181` | Idem (un seul gris dans le DS) |
 | `accent` | `#DFB968` | Doré principal (label "EXPERT", swatch palette) — note : différent du `#DFB698` mentionné dans CLAUDE.md, valeur Figma fait foi |
 | `accent-strong` | `#E1AA36` | Doré fort — `Golden Stroke` (bordures CTA, Domain cards) |
-| `border-default` | — | Pas de bordure neutre dans le DS (containers sans border) |
+| `border-default` | — | Pas de bordure neutre globale (cards sans border) |
 | `border-gold` | `#E1AA36` | `Golden Stroke` — bordure dorée des CTA et Domain cards |
 | `divider` | `#FFFFFF` (faible opacité, voir Notes) | Trait `Divider` dans les cards expert |
 | `placeholder` | `#D9D9D9` | Placeholder image / fond neutre clair |
@@ -225,7 +225,9 @@ Aucune variable typographique mobile-spécifique n'est définie dans la frame De
 #### Ghost / Text
 - Non défini comme variante dédiée dans le DS Figma.
 
-### Card Expert (Locked / Unlocked)
+### Card Expert (Unlocked / Locked)
+
+> **Rôle** : composant vitrine de la homepage. Affiche les noms des matchs en clair — **aucun contenu masqué, aucun cadenas, aucun blur**. La seule variation entre les 2 états porte sur le bouton du bas. Le teasing du pick (prédiction) vit sur le profil expert (`/experts/[id]`), pas ici.
 
 - Background : `rgba(0, 0, 0, 0.4)` (`bg-black/40`)
 - Border : aucune
@@ -238,17 +240,18 @@ Aucune variable typographique mobile-spécifique n'est définie dans la frame De
   - Pseudo expert : Work Sans Medium 20 blanc
   - Label "EXPERT" : Work Sans Regular 16, couleur `#DFB968`
   - Compteur "152 vues" : Work Sans Regular 16, `#898181`
-  - Categories : icônes `21.154 × 21.154`, fond `#181818`, radius `8px`
+  - Categories : icônes `21.154 × 21.154`, fond `#181818`, radius `8px` — **gap horizontal `8px` entre chaque icône**
   - Divider : 247px de large, 1px, blanc faible opacité
   - "2 ANALYSES DU JOUR" : Work Sans Regular 16, `#898181`
-  - Liste analyses (2x) : nom du match en blanc Work Sans 16 + chevron + cadenas
-  - CTA en bas : "Accéder (3,50€)" (unlocked) ou "Terminé pour aujourd'hui" (locked)
+  - Liste analyses (2x) : flèche décorative `→` à gauche + nom du match en blanc Work Sans 16. **Espacement vertical entre les 2 lignes : `24px`.** Une étoile dorée `★` marque la 1ère ligne ("analyse du jour") — ce n'est **pas** un état de verrouillage.
+  - Gap vertical entre la fin de la liste d'analyses et le bouton : **`80px`**
+  - CTA en bas : variant Button `white` — texte "Accéder (3,50€)" (unlocked, fond blanc) ou "Terminé pour aujourd'hui" (locked, état `disabled` → fond `#181818`, texte `#898181`)
 
 ### Card Domaine (Sport / Esport / Hippique)
 
 - Image de fond : `object-cover`, masque `rounded-[16px]`
-- Border : `1px solid #E1AA36` (Golden Stroke)
-- Box-shadow : `Shining Effect 2` (`0 0 7px #DFB968`) — glow doré doux
+- Border : **aucune** (vérifié via extraction MCP du parent — voir `domain-card-spec.md`)
+- Box-shadow : **aucune** sur la card. Le glow doré perçu vient exclusivement du bouton CTA "Voir les analyses" qui projette son `Shining Effect` (`0 0 15px rgba(255,174,0,0.7)`)
 - Border radius : `16px`
 - Dimensions de référence : `381 × 335` (DS) ou `335 × 350` (V1)
 - Padding : `32px`
@@ -261,10 +264,11 @@ Non définis dans la frame Design System extraite.
 
 ### Header / TopBar (mesuré sur Homepage)
 - Hauteur : **70px**, full bleed (`w=1440`, full viewport)
-- Background : transparent (le hero étant visible derrière)
+- Background : `rgba(0, 0, 0, 0.3)` (`bg-black/30`) — voile noir 30% pour la lisibilité par-dessus le hero. Vérifié via extraction MCP — voir `header-spec.md`. **N'EST PAS transparent.**
 - Logo : `152 × 54px`, padding gauche 128px (= colonne layout)
 - Nav (à droite) : items Work Sans 16px, gap **64px** entre chaque (Dashboard, Mon Compte, Déconnexion)
 - Padding vertical interne : ~8px (logo) / 27px (nav text) → centré verticalement
+- État `guest` (Se connecter / Créer un compte) : **non maquetté dans Figma**, designé côté code en réutilisant les variants Button (ghost + primary), gap 16px entre les deux boutons.
 
 ### Footer
 - Hauteur : **69px**, full bleed (`w=1440`)
@@ -277,8 +281,10 @@ Non définis dans la frame Design System extraite.
 - Largeur de la frame titre : variable selon le texte
 
 ### Section eyebrow (Hero uniquement)
-- Format : `[ligne 45px doré] [TEXTE 16px UPPERCASE]`
+- Format : `[ligne 45×1px dorée] [TEXTE 18px UPPERCASE]`
 - Ex : "PLATEFORME D'ANALYSES SPORTIVES"
+- Trait : `45 × 1px`, couleur `accent` (#DFB968)
+- Texte : Work Sans Regular **18px**, couleur **`muted-foreground` (#898181)** — ⚠️ corrigé après extraction MCP du Hero (avant : "16px doré", c'était inexact ; seule la **ligne** est dorée, le texte est muted)
 - Espacement ligne ↔ texte : ~17px
 
 ### Lien "Voir tous" (top-right des sections)
@@ -289,11 +295,18 @@ Non définis dans la frame Design System extraite.
 - Disque `45 × 45px`, rounded-full
 - Position : top-right du bloc cards (overlap absolu)
 
-### Trust row item (Hero) / Why-Plarya item
-- Layout vertical : icône (30 × 30) → titre H5 → body 16
-- Gap icône → titre : ~24px
-- Gap titre → body : ~12-16px
-- Séparateur entre items : `Divider` vertical 1px (sur Hero et "Pourquoi Plarya")
+### Trust row item (Hero)
+- Layout **horizontal** : `[icône] [titre + body empilés à droite]` — ⚠️ corrigé après extraction MCP du Hero (avant : layout "vertical icône → titre → body", c'était faux)
+- Icône : **30 × 30** pour toutes les icônes (Figma a une icône à 35×35 par erreur sur `stash:lock-opened` — on uniformise à 30 en code)
+- Couleur icône : **`accent` (#DFB968)** — icônes dorées (cf. screenshot final)
+- Gap icône → titre (horizontal) : ~9px
+- Titre : H5 (Work Sans Medium 20), blanc
+- Body : Body 16 (Work Sans Regular 16), `muted-foreground`
+- Gap titre → body (vertical) : ~16px
+- Séparateur entre items : trait vertical `1px × 96px`, couleur **`accent` (#DFB968)** — pipette confirmée, doré et non blanc
+
+### Why-Plarya item
+- Layout vertical (icône → titre H4 → body) — distinct du Trust row Hero. À confirmer après extraction MCP de la section "Pourquoi Plarya".
 
 ### Devenir créateur CTA card
 - Card : `1169 × 147`, fond `bg-black/40`, radius 16

@@ -67,8 +67,15 @@
   --shadow-shine-soft: 0 0 7px 0 #dfb968;              /* Shining Effect 2 (Domain card glow) */
 
   /* ── Gradients ── */
+  /* ancienne valeur 80% — voir si besoin de revenir :
+     linear-gradient(to right, rgba(223, 185, 104, 0.8) 0%, rgba(255, 255, 255, 0.8) 100%) */
   --background-image-gradient-gold:
-    linear-gradient(to right, rgba(223, 185, 104, 0.8) 0%, rgba(255, 255, 255, 0.8) 100%);
+    linear-gradient(to right, #dfb968 0%, #ffffff 100%);
+
+  /* Divider doré qui s'estompe aux bords (Expert Card, profil expert).
+     Appliquer opacity-30 sur l'élément pour le rendu final (≈ 30%). */
+  --background-image-divider-gold:
+    linear-gradient(to right, transparent 0%, #dfb968 51%, transparent 100%);
 
   /* ── Container (max-widths sémantiques) ── */
   --container-content: 1175px;   /* sections régulières + Devenir créateur card (1169 ≈ 1175) */
@@ -121,7 +128,7 @@
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
+  /* --color-accent: var(--accent);  ← retiré : écrasait le doré DS (#dfb968 → #1a1a1a) défini plus haut */
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -135,9 +142,22 @@
 
 }
 
+/* Fond de page : noir profond + lueur dorée ambiante en haut-droite.
+   Le radial-gradient simule une lumière chaude diffuse, plus intense
+   vers le coin haut-droit, qui se dissout vers le bas-gauche. Sobre :
+   c'est une ambiance, pas un projecteur. background-attachment: fixed
+   pour que la lueur ne défile pas avec le contenu. */
 body {
-  background: var(--color-fond-principal);
-  color: var(--color-texte-principal);
+  background-color: var(--color-background);
+  background-image: radial-gradient(
+    ellipse 1200px 900px at 90% -5%,
+    rgba(223, 185, 104, 0.15) 0%,
+    rgba(223, 185, 104, 0.05) 30%,
+    transparent 65%
+  );
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  color: var(--color-foreground);
 }
 
 body::before {

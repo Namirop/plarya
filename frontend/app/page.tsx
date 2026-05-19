@@ -9,6 +9,7 @@ import {
 import { SPORT_DOMAIN, ESPORT_DOMAIN } from "@/lib/sports";
 import { ArrowRight, Clock, Zap, CreditCard } from "lucide-react";
 import { SectionDivider } from "@/components/ui/section-divider";
+import { Hero } from "@/components/home/hero";
 
 type Domain = "SPORT" | "ESPORT" | null;
 
@@ -70,60 +71,7 @@ export default function Home() {
 
   return (
     <div className="relative overflow-hidden">
-      {/* ═══ HERO ═══ */}
-      <section className="relative px-6 pt-8 pb-20 sm:px-8 sm:pt-12 sm:pb-20 lg:px-16 lg:pt-16">
-        {/* Subtle radial glow */}
-        <div
-          className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] opacity-30"
-          style={{
-            background:
-              "radial-gradient(ellipse at center, rgba(0,212,126,0.06) 0%, transparent 70%)",
-          }}
-        />
-
-        <div className="relative mx-auto max-w-7xl">
-          {/* Tagline */}
-          <div
-            className="hero-reveal flex items-center gap-3 mb-6"
-            style={{ animationDelay: "0.1s" }}
-          >
-            <div className="h-px w-12 bg-[#00D47E]" />
-            <span className="text-xs font-semibold uppercase tracking-[0.3em] text-[#00D47E]">
-              Plateforme d&apos;analyses sportives
-            </span>
-          </div>
-
-          {/* Main headline — editorial oversized */}
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-[clamp(3rem,8vw,8rem)] leading-[0.75] tracking-tight text-[#F0EDE8]">
-            <span
-              className="hero-reveal inline-block"
-              style={{ animationDelay: "0.25s" }}
-            >
-              Accède aux
-            </span>
-            <br />
-            <span
-              className="hero-reveal inline-block italic text-[#9A9590]"
-              style={{ animationDelay: "0.45s" }}
-            >
-              meilleurs
-            </span>
-            <br />
-            <span
-              className="hero-reveal inline-block"
-              style={{ animationDelay: "0.65s" }}
-            >
-              analystes<span className="text-[#00D47E]">.</span>
-            </span>
-          </h1>
-
-          {/* Sub-headline offset right */}
-          {/* <p className="mt-8 max-w-md text-lg leading-relaxed text-[#8A8680] sm:ml-auto sm:text-right sm:text-xl">
-            Des experts triés sur le volet partagent leurs analyses sportives.
-            Tu choisis, tu accèdes, tu décides.
-          </p> */}
-        </div>
-      </section>
+      <Hero />
 
       {/* ═══ DOMAIN SELECTOR ═══ */}
       <section className="relative pt-12 pb-20 sm:pt-17 sm:pb-15 sm:px-8 lg:px-16 overflow-hidden">
