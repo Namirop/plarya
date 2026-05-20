@@ -6,25 +6,32 @@ import { DomainCard } from "@/components/domains/domain-card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { cn } from "@/lib/utils";
 
+// Domaines disponibles pour le filtre in-page (cf. V1 logic retrouvée
+// dans bae3a79 : `activeDomain` state, scroll vers #experts, useMemo
+// filteredTipsters sur SPORT_DOMAIN / ESPORT_DOMAIN).
+export type DomainId = "SPORT" | "ESPORT";
+
 // 3 cards Figma frame `87:211` — voir domains-section-spec.md.
 // Note : pas de lien "Voir tous les domaines" (acté avec le client :
 // pas de sens avec seulement 3 domaines, cf. homepage-spec.md §3).
 const DOMAINS = [
   {
+    id: "SPORT" as DomainId,
     title: "SPORT",
     subtitle: "Football, Basketball, Tennis,\nMMA et plus",
     image: "/domains/sport.jpg",
-    href: "/domains/sport",
     state: "active" as const,
   },
   {
+    id: "ESPORT" as DomainId,
     title: "ESPORT",
     subtitle: "CS2, LoL, Valorant, Dota 2,\net plus",
     image: "/domains/esport.jpg",
-    href: "/domains/esport",
     state: "active" as const,
   },
   {
+    // Hippique = coming-soon, pas filtrable. id placeholder ignoré.
+    id: null,
     title: "HIPPIQUE",
     subtitle: "Saut d'obstacles, Horseball",
     image: "/domains/hippique.jpg",
@@ -39,7 +46,20 @@ const DOMAINS = [
 const MOBILE_CARD_GAP = 4;
 const MOBILE_CARD_STEP = 256 + MOBILE_CARD_GAP;
 
-export function DomainsSection() {
+export interface DomainsSectionProps {
+  /** Domaine actuellement sélectionné comme filtre (state contrôlé par
+   *  le parent — la page d'accueil). null = pas de filtre actif. */
+  activeDomain?: DomainId | null;
+  /** Callback déclenché au clic sur une DomainCard active. Le parent
+   *  applique la toggle logic (re-cliquer sur le domaine actif le
+   *  désélectionne) et le scroll vers la section experts. */
+  onDomainSelect?: (domain: DomainId) => void;
+}
+
+export function DomainsSection({
+  activeDomain = null,
+  onDomainSelect,
+}: DomainsSectionProps = {}) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   // Index de la card "centrée" dans le carrousel mobile. Sert à
   // appliquer l'opacity 50 % aux voisines (effet focus + fade Figma).
@@ -99,7 +119,12 @@ export function DomainsSection() {
                 title={d.title}
                 subtitle={d.subtitle}
                 state={d.state}
-                href={d.href}
+                onClick={
+                  d.id && onDomainSelect
+                    ? () => onDomainSelect(d.id as DomainId)
+                    : undefined
+                }
+                isSelected={d.id !== null && d.id === activeDomain}
               />
             </div>
           ))}

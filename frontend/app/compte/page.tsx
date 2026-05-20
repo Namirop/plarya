@@ -40,7 +40,16 @@ export default function ComptePage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (!user || user.role !== "TIPSTER") return;
+    if (!user) return;
+    // Pour les non-TIPSTER, on coupe le spinner immédiatement — la page
+    // affichera le placeholder "réservée aux experts" (vue USER) ou
+    // sera court-circuitée par un redirect (vue ADMIN, géré ailleurs si
+    // besoin). Sans ce reset, fetchLoading restait `true` à vie → spinner
+    // infini (bug observé en login USER/ADMIN).
+    if (user.role !== "TIPSTER") {
+      setFetchLoading(false);
+      return;
+    }
     apiGet<TipsterProfile>("/tipsters/me")
       .then((data) => {
         setTipster(data);

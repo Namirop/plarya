@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Work_Sans, DM_Serif_Display } from "next/font/google";
-import Link from "next/link";
 import { HeaderAuth } from "@/components/layout/header-auth";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { UserProvider } from "@/hooks/use-user";
 import "./globals.css";
 
@@ -36,39 +36,9 @@ export default function RootLayout({
         <UserProvider>
           <HeaderAuth />
           <main className="flex-1">{children}</main>
-          <Footer />
+          <SiteFooter />
         </UserProvider>
       </body>
     </html>
-  );
-}
-
-function Footer() {
-  const linkClass =
-    "font-body text-body-16 text-muted-foreground hover:text-foreground transition-colors";
-  return (
-    <footer className="border-t border-white/5 bg-background">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <p className="font-body text-body-16 text-muted-foreground">
-            &copy; {new Date().getFullYear()} Plarya. Tous droits réservés.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-6">
-            <Link href="/confidentialite" className={linkClass}>
-              Confidentialité
-            </Link>
-            <Link href="/mentions-legales" className={linkClass}>
-              Mentions légales
-            </Link>
-            <Link href="/cgu" className={linkClass}>
-              CGU
-            </Link>
-            <Link href="/contact" className={linkClass}>
-              Contact
-            </Link>
-          </div>
-        </div>
-      </div>
-    </footer>
   );
 }

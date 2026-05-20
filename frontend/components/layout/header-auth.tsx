@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Header } from "@/components/layout/header";
-import { LoginModal } from "@/components/auth/login-modal";
+import { LoginModal, POST_LOGIN_REDIRECT_KEY } from "@/components/auth/login-modal";
 import { useUser } from "@/hooks/use-user";
 
 // Wrapper client qui branche le Header DS sur l'auth maison (magic-link
@@ -21,6 +21,18 @@ export function HeaderAuth() {
   // après hydratation.
   const variant = !loading && user ? "connected" : "guest";
 
+  // Redirect post-login : LoginModal stocke la destination dans
+  // sessionStorage avant d'envoyer le magic-link. Au retour de
+  // `/auth/verify`, le cookie est posé, `useUser` re-fetch et `user`
+  // passe de null à défini → on consomme la destination ici.
+  useEffect(() => {
+    if (loading || !user || typeof window === "undefined") return;
+    const target = sessionStorage.getItem(POST_LOGIN_REDIRECT_KEY);
+    if (!target) return;
+    sessionStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
+    router.push(target);
+  }, [user, loading, router]);
+
   function handleLogout() {
     logout();
     router.push("/");
@@ -30,6 +42,7 @@ export function HeaderAuth() {
     <>
       <Header
         variant={variant}
+        role={user?.role ?? "USER"}
         onSignIn={() => setLoginOpen(true)}
         onLogout={handleLogout}
       />

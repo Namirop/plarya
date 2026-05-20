@@ -46,12 +46,9 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
-// Auth: 5 req per 15 min (magic link requests)
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: { error: "Trop de demandes de connexion, réessayez dans quelques minutes" },
-});
+// Auth : le rate limit pour /auth/request-magic-link est défini dans
+// routes/auth.ts et appliqué uniquement à cette route (anti-spam emails).
+// /verify, /me, /logout ne doivent PAS être rate-limités au niveau auth.
 
 // Checkout: 5 req/min
 const checkoutLimiter = rateLimit({
@@ -78,7 +75,7 @@ app.get("/health", async (_req, res) => {
 });
 
 // Routes
-app.use("/auth", authLimiter, authRoutes);
+app.use("/auth", authRoutes);
 app.use("/tipsters", tipsterRoutes);
 app.use("/pronos", pronoRoutes);
 app.use("/subscriptions", subscriptionRoutes);

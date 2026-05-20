@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { ArrowRight, Star } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,11 @@ export interface ExpertCardAnalysis {
 }
 
 export interface ExpertCardProps {
+  /** ID du tipster pour construire le href `/tipsters/[id]`. Si omis,
+   *  la card est rendue sans wrapper Link (utile pour les pages de
+   *  test interne `/test-expert-card`, qui montrent la card en mode
+   *  vitrine sans navigation). */
+  id?: string;
   avatar: string;
   pseudo: string;
   viewsCount: number;
@@ -28,6 +34,7 @@ export interface ExpertCardProps {
 }
 
 export function ExpertCard({
+  id,
   avatar,
   pseudo,
   viewsCount,
@@ -35,7 +42,7 @@ export function ExpertCard({
   analyses,
   locked = false,
 }: ExpertCardProps) {
-  return (
+  const inner = (
     <div className="w-[322px] rounded-2xl bg-black/40 px-4 py-8">
       {/* Identity row — paddings verticaux par colonne pour positionner
           chaque élément aux coordonnées Figma absolues :
@@ -117,17 +124,48 @@ export function ExpertCard({
           (mobile + desktop) montre un bouton blanc avec texte seul centré.
           Taille `default` (text-body-16, padding 16/32) — version compacte
           demandée pour ne pas dominer la card. */}
+      {/* Boutons rendus en non-interactifs (tabIndex/pointer-events) :
+          la navigation est portée par le Link wrapper, le bouton est
+          purement visuel pour signaler l'état. Sur l'état `locked`,
+          `disabled` ajoute `pointer-events-none` (via le variant
+          button), donc les clics traversent vers le Link wrapper → la
+          card reste cliquable même en "terminé". */}
       <div className="mt-20 flex justify-center">
         {locked ? (
-          <Button variant="white" disabled className="w-[290px]">
+          <Button
+            variant="white"
+            disabled
+            className="w-[290px]"
+            tabIndex={-1}
+          >
             Terminé pour aujourd&apos;hui
           </Button>
         ) : (
-          <Button variant="white" className="w-[290px]">
+          <Button
+            variant="white"
+            className="w-[290px] pointer-events-none"
+            tabIndex={-1}
+          >
             Accéder (3,50€)
           </Button>
         )}
       </div>
     </div>
+  );
+
+  // Si pas d'id (vitrine / tests), on rend la card "nue", sans navigation.
+  if (!id) return inner;
+
+  // Wrapper Link sur toute la card — UX décidée brief Bloc 1 §2 : la
+  // card entière mène au profil expert, y compris en état `locked`
+  // (l'utilisateur peut vouloir voir les analyses futures de l'expert).
+  return (
+    <Link
+      href={`/tipsters/${id}`}
+      aria-label={`Voir le profil de ${pseudo}`}
+      className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-2xl"
+    >
+      {inner}
+    </Link>
   );
 }

@@ -1,19 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { ExpertCard, type ExpertCardProps } from "@/components/experts/expert-card";
 import { SectionTitle } from "@/components/ui/section-title";
+import { SPORT_DOMAIN, ESPORT_DOMAIN } from "@/lib/sports";
+import type { DomainId } from "@/components/home/domains-section";
 import { cn } from "@/lib/utils";
 
 // Mocks de démo — à remplacer par un fetch /tipsters quand la page sera
 // branchée sur l'API. Mix unlocked/locked pour montrer les 2 variants
-// du bouton du bas. Avatars via pravatar (placeholder déterministe).
+// du bouton du bas. Tous les avatars pointent sur le placeholder local
+// `/profile.jpg` en attendant les vraies photos.
 const EXPERTS_MOCK: (ExpertCardProps & { id: string })[] = [
   {
     id: "1",
-    avatar: "https://i.pravatar.cc/68?u=plarya-1",
+    avatar: "/profile.jpg",
     pseudo: "MultiSport",
     viewsCount: 152,
     categories: ["FOOTBALL", "BASKETBALL", "MMA"],
@@ -24,7 +29,7 @@ const EXPERTS_MOCK: (ExpertCardProps & { id: string })[] = [
   },
   {
     id: "2",
-    avatar: "https://i.pravatar.cc/68?u=plarya-2",
+    avatar: "/profile.jpg",
     pseudo: "EsportGuru",
     viewsCount: 218,
     categories: ["ESPORT"],
@@ -36,7 +41,7 @@ const EXPERTS_MOCK: (ExpertCardProps & { id: string })[] = [
   },
   {
     id: "3",
-    avatar: "https://i.pravatar.cc/68?u=plarya-3",
+    avatar: "/profile.jpg",
     pseudo: "TipsterPro",
     viewsCount: 84,
     categories: ["TENNIS", "FOOTBALL"],
@@ -47,7 +52,7 @@ const EXPERTS_MOCK: (ExpertCardProps & { id: string })[] = [
   },
   {
     id: "4",
-    avatar: "https://i.pravatar.cc/68?u=plarya-4",
+    avatar: "/profile.jpg",
     pseudo: "BasketKing",
     viewsCount: 271,
     categories: ["BASKETBALL"],
@@ -59,7 +64,7 @@ const EXPERTS_MOCK: (ExpertCardProps & { id: string })[] = [
   },
   {
     id: "5",
-    avatar: "https://i.pravatar.cc/68?u=plarya-5",
+    avatar: "/profile.jpg",
     pseudo: "FootAnalyst",
     viewsCount: 63,
     categories: ["FOOTBALL", "RUGBY"],
@@ -70,7 +75,7 @@ const EXPERTS_MOCK: (ExpertCardProps & { id: string })[] = [
   },
   {
     id: "6",
-    avatar: "https://i.pravatar.cc/68?u=plarya-6",
+    avatar: "/profile.jpg",
     pseudo: "CombatExpert",
     viewsCount: 197,
     categories: ["MMA", "BOXE"],
@@ -90,16 +95,37 @@ const CARD_STEP = CARD_WIDTH + CARD_GAP;
 // pages de 3 cards (= avance de 3 * CARD_STEP).
 const CARDS_PER_PAGE = 3;
 
-export function ExpertsSection() {
+export interface ExpertsSectionProps {
+  /** Filtre domaine appliqué aux experts (cf. V1 logic retrouvée :
+   *  filtre via SPORT_DOMAIN / ESPORT_DOMAIN constants de lib/sports).
+   *  null = pas de filtre, tous les experts affichés. */
+  filterDomain?: DomainId | null;
+}
+
+export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [activePage, setActivePage] = useState(0);
   const [isAtEnd, setIsAtEnd] = useState(false);
+
+  // Reproduction V1 (bae3a79 page.tsx) : filtre les experts par sports
+  // appartenant au domaine sélectionné. SPORT regroupe tous les sports
+  // physiques (FOOTBALL, TENNIS, BASKETBALL, etc.) ; ESPORT n'a qu'un
+  // sport (ESPORT). Un expert match si AU MOINS UN de ses sports est
+  // dans le domaine.
+  const filteredExperts = useMemo(() => {
+    if (!filterDomain) return EXPERTS_MOCK;
+    const domainSports =
+      filterDomain === "SPORT" ? SPORT_DOMAIN : ESPORT_DOMAIN;
+    return EXPERTS_MOCK.filter((e) =>
+      e.categories.some((s) => domainSports.includes(s)),
+    );
+  }, [filterDomain]);
 
   // Nombre de "pages" = ceil(total / per_page). 6 cards / 3 = 2 pages,
   // mais on garde 3 dots dans la maquette → minimum 3 dots affichés.
   const totalPages = Math.max(
     3,
-    Math.ceil(EXPERTS_MOCK.length / CARDS_PER_PAGE),
+    Math.ceil(filteredExperts.length / CARDS_PER_PAGE),
   );
 
   const updateState = useCallback(() => {
@@ -133,18 +159,56 @@ export function ExpertsSection() {
     scrollToPage(activePage + 1);
   }, [activePage, isAtEnd, scrollToPage]);
 
+  // 2 premières cards en mobile : stack vertical conformément à la spec
+  // mobile (vs carrousel de 6 en desktop). Le slice s'applique sur la
+  // liste filtrée pour que le filtre domaine ait un effet visible en
+  // mobile aussi.
+  const MOBILE_EXPERTS = filteredExperts.slice(0, 2);
+
   return (
     // pt-24 = 96 px (gap depuis Domaines, = section-y-lg du Figma).
-    <section className="pt-24">
-      <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
+    <section id="experts" className="pt-16 md:pt-24">
+      <div className="mx-auto w-full max-w-content px-4 sm:px-8 lg:px-0">
+        {/* CTA top-right masqué en mobile : remplacé par le bouton plein
+            largeur sous les cards (spec mobile §5). */}
         <SectionTitle
           title="Nos experts du jour"
           cta={{ text: "Voir tous les experts", href: "/experts" }}
+          ctaClassName="hidden md:inline-flex"
         />
 
+        {/* ──────── Mobile : stack vertical de 2 cards + bouton ──────── */}
+        <div className="md:hidden mt-8 flex flex-col items-center gap-4">
+          {MOBILE_EXPERTS.map((expert) => (
+            <ExpertCard
+              key={expert.id}
+              id={expert.id}
+              avatar={expert.avatar}
+              pseudo={expert.pseudo}
+              viewsCount={expert.viewsCount}
+              categories={expert.categories}
+              analyses={expert.analyses}
+              locked={expert.locked}
+            />
+          ))}
+
+          {/* Bouton "Voir tous les experts" — outline blanc, plein
+              largeur de la card (353 px ≈ 360-7), conforme à la spec
+              mobile §5 (bouton 353×51 px=72 py=16). */}
+          <Button
+            variant="secondary"
+            size="lg"
+            render={<Link href="/experts" />}
+            className="w-full max-w-[353px] border-white hover:border-white"
+          >
+            Voir tous les experts
+          </Button>
+        </div>
+
+        {/* ──────── Desktop : carrousel original ──────── */}
         {/* Bloc carrousel — relative pour positionner le Next Btn en
             overlay top-right. mt-16 = 64 px (gap header → carrousel). */}
-        <div className="relative mt-16">
+        <div className="hidden md:block relative mt-16">
           <div
             ref={scrollerRef}
             onScroll={updateState}
@@ -157,13 +221,14 @@ export function ExpertsSection() {
               "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
             )}
           >
-            {EXPERTS_MOCK.map((expert) => (
+            {filteredExperts.map((expert) => (
               <div
                 key={expert.id}
                 className="shrink-0 snap-start"
                 style={{ width: CARD_WIDTH }}
               >
                 <ExpertCard
+                  id={expert.id}
                   avatar={expert.avatar}
                   pseudo={expert.pseudo}
                   viewsCount={expert.viewsCount}
@@ -198,8 +263,9 @@ export function ExpertsSection() {
 
         {/* Dots — centrés horizontalement, 35 px sous les cards (cf.
             experts-section-spec.md §5). pb-2 du scroller donne déjà 8 px,
-            donc mt-[27px] = 35 px effectifs depuis le bas des cards. */}
-        <div className="mt-[27px] flex justify-center gap-2">
+            donc mt-[27px] = 35 px effectifs depuis le bas des cards.
+            Desktop-only : alignés avec le carrousel ci-dessus. */}
+        <div className="hidden md:flex mt-[27px] justify-center gap-2">
           {Array.from({ length: totalPages }).map((_, i) => (
             <button
               key={i}

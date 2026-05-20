@@ -1,4 +1,5 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { prisma } from "../lib/prisma";
 import { stripe } from "../lib/stripe";
 import { createMagicLink, verifyMagicLink, createSession, deleteSession } from "../lib/magic-link";
@@ -8,6 +9,17 @@ import { magicLinkRequestSchema } from "../validators/auth";
 import { sendMagicLinkEmail } from "../lib/emails";
 
 const router = Router();
+
+// Limiteur ciblé : 5 demandes d'envoi de magic-link par IP / 15 min.
+// Appliqué UNIQUEMENT à POST /request-magic-link (anti-spam d'emails).
+// Ne couvre PAS /verify (GET cliqué depuis l'email — 1 seul appel
+// légitime par token) ni /me / /logout (utilisés en boucle par le hook
+// useUser à chaque navigation).
+const magicLinkRequestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Trop de demandes de connexion, réessayez dans quelques minutes" },
+});
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
@@ -24,7 +36,7 @@ function setSessionCookie(res: import("express").Response, token: string) {
 }
 
 // POST /auth/request-magic-link
-router.post("/request-magic-link", validate(magicLinkRequestSchema), async (req, res) => {
+router.post("/request-magic-link", magicLinkRequestLimiter, validate(magicLinkRequestSchema), async (req, res) => {
   try {
     const { email } = req.body;
     const normalizedEmail = email.toLowerCase();
