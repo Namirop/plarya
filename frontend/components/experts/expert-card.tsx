@@ -112,16 +112,19 @@ export function ExpertCard({
         ))}
       </ul>
 
-      {/* Bouton : y=314 → mt-20 (80px) après la fin de la 2e ligne (y=234). */}
+      {/* Bouton : y=314 → mt-20 (80px) après la fin de la 2e ligne (y=234).
+          Pas de flèche sur le bouton "Accéder" : la maquette Figma
+          (mobile + desktop) montre un bouton blanc avec texte seul centré.
+          Taille `default` (text-body-16, padding 16/32) — version compacte
+          demandée pour ne pas dominer la card. */}
       <div className="mt-20 flex justify-center">
         {locked ? (
-          <Button variant="white" size="lg" disabled className="w-[290px]">
+          <Button variant="white" disabled className="w-[290px]">
             Terminé pour aujourd&apos;hui
           </Button>
         ) : (
-          <Button variant="white" size="lg" className="w-[290px]">
+          <Button variant="white" className="w-[290px]">
             Accéder (3,50€)
-            <ArrowRight className="size-4" />
           </Button>
         )}
       </div>
