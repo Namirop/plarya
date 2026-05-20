@@ -142,47 +142,64 @@
 
 }
 
-/* Fond de page : noir profond + lueur dorée ambiante en haut-droite.
-   Le radial-gradient simule une lumière chaude diffuse, plus intense
-   vers le coin haut-droit, qui se dissout vers le bas-gauche. Sobre :
-   c'est une ambiance, pas un projecteur. background-attachment: fixed
-   pour que la lueur ne défile pas avec le contenu. */
+/* ════════════════════════════════════════════════════════════════
+   Fond de page Plarya — décomposition Figma (frame "Gradient Background"
+   `80:735`, cf. extraction MCP) :
+     - Layer 1 (bottom) : `bg-color: #131212`
+     - Layer 2 : image PNG "background-grain.jpg" (2100×3724), couvre
+       le viewport, `mix-blend-mode: overlay`, `opacity: 0.2`
+     - Layer 3 (top) : 3 radial-gradients dorés (#FFAE00 → #000) en SVG,
+       `mix-blend-mode: lighten`, opacity 10 % (bakée dans le SVG)
+   `isolation: isolate` sur body pour contenir le stacking context et
+   permettre aux `mix-blend-mode` des pseudo-éléments de fonctionner.
+   `position: fixed` sur les overlays pour rester en place au scroll.
+   ════════════════════════════════════════════════════════════════ */
 body {
-  background-color: var(--color-background);
-  background-image: radial-gradient(
-    ellipse 1200px 900px at 90% -5%,
-    rgba(223, 185, 104, 0.15) 0%,
-    rgba(223, 185, 104, 0.05) 30%,
-    transparent 65%
-  );
-  background-attachment: fixed;
-  background-repeat: no-repeat;
+  background-color: #131212;
   color: var(--color-foreground);
+  position: relative;
+  isolation: isolate;
 }
 
+/* Layer 2 — Image grain (PNG → JPG en réalité, 2100×3724).
+   Figma (MCP) : `mix-blend-mode: overlay`, `opacity: 0.2`. Mais en CSS,
+   le grain rend plus dense par pixel (le canvas Figma 1440×3141 dilue
+   la texture, le viewport CSS la concentre). Divergence assumée vs
+   Figma : opacity baissée à 0.06 pour matcher visuellement le rendu
+   Figma (valeur validée live en DevTools). `soft-light` également pour
+   adoucir le contraste. */
 body::before {
   content: "";
-  position: fixed;
+  /* `absolute` (au lieu de `fixed`) : le fond défile avec le contenu
+     et couvre toute la hauteur du body (= toute la hauteur du document). */
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background: url("/background-grain.jpg") center top / cover no-repeat;
+  mix-blend-mode: soft-light;
+  opacity: 0.025;
+}
+
+/* Layer 3 — 3 radial-gradients dorés (SVG inline) avec mix-blend-lighten.
+   Les opacités 10 % sont bakées dans chaque SVG (rect fill-opacity).
+   Les positions/transforms reproduisent à l'identique le calque Figma
+   `80:735`. */
+body::after {
+  content: "";
+  /* `absolute` : les gradients défilent avec le contenu sur toute la
+     hauteur du body, comme dans Figma (3 zones réparties verticalement). */
+  position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  opacity: 0.1;
-  mix-blend-mode: screen;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 200px 200px;
-  -webkit-mask-image: radial-gradient(
-    ellipse at center,
-    black 0%,
-    black 10%,
-    transparent 50%
-  );
-  mask-image: radial-gradient(
-    ellipse at center,
-    black 0%,
-    black 30%,
-    transparent 80%
-  );
+  background-image:
+    url("data:image/svg+xml;utf8,<svg viewBox='0 0 1440 3141' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%25' width='100%25' fill='url(%23grad)' opacity='0.10000000149011612'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(58.55 11.49 -2.0243 255.35 170.5 2117.9)'><stop stop-color='rgba(255,174,0,1)' offset='0'/><stop stop-color='rgba(191,130,0,1)' offset='0.17141'/><stop stop-color='rgba(159,108,0,1)' offset='0.25712'/><stop stop-color='rgba(128,87,0,1)' offset='0.34282'/><stop stop-color='rgba(96,65,0,1)' offset='0.42853'/><stop stop-color='rgba(64,43,0,1)' offset='0.51423'/><stop stop-color='rgba(32,22,0,1)' offset='0.59994'/><stop stop-color='rgba(16,11,0,1)' offset='0.64279'/><stop stop-color='rgba(8,5,0,1)' offset='0.66422'/><stop stop-color='rgba(0,0,0,1)' offset='0.68564'/></radialGradient></defs></svg>"),
+    url("data:image/svg+xml;utf8,<svg viewBox='0 0 1440 3141' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%25' width='100%25' fill='url(%23grad)' opacity='0.10000000149011612'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(-13.1 152.75 -70.251 -0.8787 1423.5 487.73)'><stop stop-color='rgba(255,174,0,1)' offset='0'/><stop stop-color='rgba(191,130,0,1)' offset='0.098713'/><stop stop-color='rgba(159,108,0,1)' offset='0.14807'/><stop stop-color='rgba(128,87,0,1)' offset='0.19743'/><stop stop-color='rgba(96,65,0,1)' offset='0.24678'/><stop stop-color='rgba(64,43,0,1)' offset='0.29614'/><stop stop-color='rgba(32,22,0,1)' offset='0.3455'/><stop stop-color='rgba(16,11,0,1)' offset='0.37018'/><stop stop-color='rgba(8,5,0,1)' offset='0.38251'/><stop stop-color='rgba(0,0,0,1)' offset='0.39485'/></radialGradient></defs></svg>"),
+    url("data:image/svg+xml;utf8,<svg viewBox='0 0 1440 3141' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%25' width='100%25' fill='url(%23grad)' opacity='0.10000000149011612'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(79.25 77.792 -101.16 141.88 1542.5 2591.9)'><stop stop-color='rgba(255,174,0,1)' offset='0'/><stop stop-color='rgba(191,130,0,1)' offset='0.13039'/><stop stop-color='rgba(159,108,0,1)' offset='0.19558'/><stop stop-color='rgba(128,87,0,1)' offset='0.26078'/><stop stop-color='rgba(96,65,0,1)' offset='0.32597'/><stop stop-color='rgba(64,43,0,1)' offset='0.39116'/><stop stop-color='rgba(32,22,0,1)' offset='0.45636'/><stop stop-color='rgba(16,11,0,1)' offset='0.48896'/><stop stop-color='rgba(8,5,0,1)' offset='0.50525'/><stop stop-color='rgba(0,0,0,1)' offset='0.52155'/></radialGradient></defs></svg>");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  mix-blend-mode: lighten;
 }
 
 :root {

@@ -117,25 +117,24 @@ Chaque item : icône 30×30 → titre H5 (Work Sans Medium 20) → body (Work Sa
 ### Structure logique
 ```
 section.explore
-├── header-row (flex justify-between items-center)
-│   ├── title "Explore les domaines" (H2 32 DM Serif + ligne dorée verticale gauche)
-│   └── link "Voir tous les domaines" (texte 16 + chevron)
+├── header-row (titre seul — pas de lien "Voir tous")
+│   └── title "Explore les domaines" (H2 32 DM Serif + ligne dorée verticale gauche)
 └── grid (3 cols, gap 16)
     ├── DomainCard "SPORT" (381×335)
     ├── DomainCard "ESPORT" (381×335)
     └── DomainCard "HIPPIQUE" (381×335)
 ```
 
+> ⚠️ Le lien "Voir tous les domaines" présent dans la maquette Figma (frame `87:210`, voir `domains-section-spec.md`) a été **retiré à l'intégration** : acté avec le client, ce lien n'a pas de sens avec seulement 3 domaines.
+
 ### Spacing
 - `padding-top` (depuis section précédente) : **64px** (= `section-y`)
 - Title : `y=790` (texte) + ligne verticale décorative à gauche (1px × 54px)
 - Gap title → cards (`Domains` frame) : **~64px** (cards démarrent à `y=903`)
 - Cards : 3 colonnes égales 381px, **gap 16px**
-- "Voir tous les domaines" : aligné à droite du title, vertical centré sur la baseline H2
 
 ### Tokens
 - Title : `font-display text-h2 text-primary`
-- Lien "Voir tous" : `font-body text-body-16 text-muted` + chevron `accent`
 
 ### Composant `DomainCard`
 Voir `design-system.md §6` (Card Domaine). Variantes :
@@ -175,14 +174,14 @@ section.experts
 - `padding-top` (depuis section précédente) : **96px** (= `section-y-lg`)
 - Title : top de la section
 - Gap title → cards : **64px** (cards démarrent à `y=140` depuis le top de la section)
-- Cards : 4 visibles + 1 partielle, **gap 16px** entre chaque
-- Largeur carrousel : 1336px (overflow horizontal du container 1175px volontaire)
-- Carrousel dots : `y=597` dans la section (50px sous les cards)
-- NextBtn : top-right absolute, `y=182`
+- Cards : **3 entièrement visibles + 1 partielle (~50%)** dans le container 1175px, **gap 16px** entre chaque — l'overflow à droite est **volontaire** (signal visuel qu'il y a plus à scroller)
+- Largeur carrousel : 1336px (= 4×322 + 3×16, overflow horizontal du container 1175px volontaire)
+- Carrousel dots : `y=597` dans la section (**35px** sous les cards — cards bas à y=562 ; voir `experts-section-spec.md`)
+- NextBtn : top-right absolute. `y=182` est relatif à la rangée `94:816` → soit `y=322` relatif à la section. Pas de bouton Previous (absent de la maquette Figma).
 
 ### Tokens
 - Title : `font-display text-h2 text-primary`
-- Lien "Voir tous" : `font-body text-body-16 text-muted`
+- Lien "Voir tous" : `font-body text-body-18 text-foreground` + chevron `accent` (identique au lien "Voir tous les domaines" — cf. correction dans `design-system.md §6 Lien "Voir tous"`)
 
 ### Composant `ExpertCard`
 Voir `design-system.md §6` (Card Expert Locked / Unlocked). Layout interne identique aux 2 variantes, seul change le bouton du bas :
@@ -209,13 +208,13 @@ Sous-éléments mesurés dans la card (322×422, padding 16/32) :
 ### Structure logique
 ```
 section.why
-├── title "Pourquoi Plarya ?" (H2 32 + ligne verticale dorée)
+├── title "Pourquoi Plarya ?" (H2 32 + ligne verticale dorée — "?" en accent doré)
 └── content-row (3 cols equal width, séparées par dividers verticaux)
-    ├── Feature "Gain de temps" (icon weui:time-outlined + H5 + body)
+    ├── Feature "Gain de temps" (icon weui:time-outlined + H4 + body)
     ├── Divider vertical
-    ├── Feature "Simple" (icon mynaui:lightning + H5 + body)
+    ├── Feature "Simple" (icon mynaui:lightning + H4 + body)
     ├── Divider vertical
-    └── Feature "Sans engagements" (icon quill:creditcard + H5 + body)
+    └── Feature "Sans engagements" (icon quill:creditcard + H4 + body)
 ```
 
 ### Spacing
@@ -252,26 +251,28 @@ Layout vertical : icône → titre H4 → body.
 ### Structure logique
 ```
 section.cta-creator (1175 max-width, padding-x ~132)
-└── card (bg-black/40, rounded-2xl, p-vert ~32 / p-horz ~64)
+└── card (transparent, border 1px #181818, rounded-2xl, p-vert 32 / p-horz 64)
     └── flex justify-between items-center
         ├── text (left)
         │   ├── title "Partage ton expertise et génère des revenus" (H4 24)
-        │   └── subtitle "Rejoins Plarya en tant que créateur..." (Body 16, muted)
-        └── button "Devenir créateur" (Primary gradient, 258×55)
+        │   └── subtitle "Rejoins Plarya en tant que créateur et monétise tes analyses auprès d'une communauté engagée." (Body 16, muted, 2 lignes)
+        └── button "Devenir créateur" (Primary gradient lg, 258×55)
 ```
+
+> ⚠️ ⚠️ Card transparente avec **bordure** `1px solid #181818` (≠ Pourquoi Plarya qui a un `bg-black/40` sans bordure). Corrigé après extraction MCP — voir `final-blocks-spec.md §1`.
 
 ### Spacing
 - `padding-top` (depuis "Pourquoi Plarya") : **64px**
-- Card padding interne : **~32px vertical / ~64px horizontal** (mesures non parfaitement alignées)
+- Card padding interne : **32px vertical / 64px horizontal**
 - Hauteur card : **147px**
-- Text frame (gauche) : `518 × 76` (titre 28h + subtitle 32h, gap ~16px)
-- Button (droite) : `258 × 55`
+- Text frame (gauche) : `518 × 76` (titre 28h + subtitle 32h, gap 16px)
+- Button (droite) : `258 × 55`, à 21 px du padding droit (pas collé)
 
 ### Tokens
-- Card : `bg-black/40 rounded-2xl`
-- Title : `font-body text-h4`
-- Subtitle : `font-body text-body-16 text-muted`
-- Button : `Button variant="primary"` (gradient gold, voir DS)
+- Card : `border border-surface-elevated rounded-2xl` (pas de `bg-...`)
+- Title : `font-body text-h4 text-foreground`
+- Subtitle : `font-body text-body-16 text-muted-foreground`
+- Button : `Button variant="primary" size="lg"` (gradient gold, voir DS)
 
 ---
 

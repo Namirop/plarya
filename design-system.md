@@ -288,12 +288,31 @@ Non définis dans la frame Design System extraite.
 - Espacement ligne ↔ texte : ~17px
 
 ### Lien "Voir tous" (top-right des sections)
-- Texte 16px Work Sans Regular + chevron
+- Texte **18px** Work Sans Regular, couleur **`text-foreground` (#FFFFFF)** + chevron couleur `accent` (#DFB968)
 - Position : aligné à droite du contenu de la section, vertical centré sur le titre H2
+- ⚠️ Corrigé après extraction MCP de la section "Explore les domaines" (frame `87:211`, voir `domains-section-spec.md`) — avant : "16px Work Sans Regular" (taille fausse) et couleur muted présumée (fausse aussi)
 
 ### Carrousel "Next" button (Nos Experts)
-- Disque `45 × 45px`, rounded-full
-- Position : top-right du bloc cards (overlap absolu)
+- Disque **`45 × 45px`**, `rounded-full`
+- Position : top-right du bloc cards (overlap absolu), vertical-centré sur les cards (≈ y = card-height / 2)
+- Background : `bg-surface-elevated` (`#181818`)
+- Bordure : `1px solid border-accent-strong` (`#E1AA36`)
+- Icône : flèche `→` (lucide `ArrowRight` 20px), couleur `text-accent` (`#DFB968`)
+- Hover : `shadow-shine` + bordure passe à `accent` (`#DFB968`)
+- Disabled (fin du carrousel) : `opacity-50`, `cursor-not-allowed`, `pointer-events-none`
+- Transition : `200ms ease-out`
+- ⚠️ Couleurs/bordure **définies en code** (l'asset Figma est une image, pas un composant nœud — non extractible via MCP). Voir `experts-section-spec.md §4`.
+- **Pas de bouton "Previous"** dans la maquette : navigation par flèche droite + dots + swipe / wheel natif uniquement.
+
+### Carrousel "Dots" / pagination (Nos Experts)
+- Bloc total : largeur ~`49px`, hauteur `10px` (Figma)
+- Nombre de dots : **3** (déduit du screenshot, valeur Figma non extractible)
+- Chaque dot : `10 × 10 px`, `rounded-full`
+- Gap horizontal entre dots : `8px`
+- Dot actif : `bg-accent` (`#DFB968`)
+- Dot inactif : `bg-muted-foreground` (`#898181`) à `opacity-40`, hover `opacity-70`
+- Position : **centré horizontalement** sous le carrousel, **35px** sous le bas des cards (le DS V1 disait 50px — corrigé suite à `experts-section-spec.md §5`)
+- ⚠️ Couleurs définies en code (asset image dans Figma). Voir `experts-section-spec.md §5`.
 
 ### Trust row item (Hero)
 - Layout **horizontal** : `[icône] [titre + body empilés à droite]` — ⚠️ corrigé après extraction MCP du Hero (avant : layout "vertical icône → titre → body", c'était faux)
@@ -305,15 +324,34 @@ Non définis dans la frame Design System extraite.
 - Gap titre → body (vertical) : ~16px
 - Séparateur entre items : trait vertical `1px × 96px`, couleur **`accent` (#DFB968)** — pipette confirmée, doré et non blanc
 
-### Why-Plarya item
-- Layout vertical (icône → titre H4 → body) — distinct du Trust row Hero. À confirmer après extraction MCP de la section "Pourquoi Plarya".
+### Why-Plarya item (pilier)
+- ✓ **Confirmé** après extraction MCP frame `94:824` — voir `pourquoi-plarya-section-spec.md`.
+- Layout **vertical** : icône (top) → titre → body (stack vertical, aligné gauche). Distinct du Trust row Hero (qui est horizontal).
+- Icône : **30 × 30**, couleur `accent` (#DFB968)
+- Titre : **H4** (Work Sans Regular **24**), blanc — ⚠️ pas H5 comme dans le Trust row Hero
+- Body : Body 16 (Work Sans Regular 16, lh 16), `muted-foreground` (#898181)
+- Gap icône → titre : **24px** (vertical)
+- Gap titre → body : **16px** (vertical)
+- Conteneur des 3 piliers : card `bg-black/40`, `rounded-2xl`, padding `88×40`, flex horizontal `gap-12` (48px), `items-center`
+- Le titre de section "Pourquoi Plarya **?**" a son **"?"** en couleur `accent` (#DFB968) — pattern unique à cette section
+- Séparateur entre piliers : `<DividerVertical height={192} />` (voir bloc dédié plus bas)
+
+### DividerVertical (composant réutilisable)
+- Trait vertical 1px de large, hauteur paramétrable
+- Background : `linear-gradient(to bottom, rgba(223,185,104,0.2) 0%, rgba(223,185,104,1) 51%, rgba(223,185,104,0.2) 100%)` (doré s'estompant en haut/bas)
+- Opacity : 60%
+- Hauteurs utilisées :
+  - **96px** — Trust row du Hero (entre les 3 items)
+  - **192px** — Piliers de "Pourquoi Plarya" (entre les 3 piliers)
+- Implémentation : `components/ui/divider-vertical.tsx`
+- Props : `height` (number, default 96) + `className` (pour masquer en responsive p.ex.)
 
 ### Devenir créateur CTA card
-- Card : `1169 × 147`, fond `bg-black/40`, radius 16
-- Layout horizontal : texte (gauche) | bouton (droite)
-- Padding interne : ~32px vertical / ~64px horizontal
-- Texte : H4 24px (titre) + Body 16 (subtitle)
-- Bouton : `Devenir créateur btn` (gradient gold, voir §6 Boutons)
+- Card : `1169 × 147`, **PAS de fond** (transparent), **bordure `1px solid #181818`** (= `surface-elevated`), radius 16 ⚠️ corrigé après extraction MCP frame `94:860` (cf. `final-blocks-spec.md §1`) — avant : `bg-black/40` (faux, c'est l'inverse de Pourquoi Plarya qui a un fond sans bordure)
+- Layout horizontal : texte (gauche) | bouton (droite), `items-center justify-between`
+- Padding interne : **32px vertical / 64px horizontal**
+- Texte : H4 24px (titre, blanc) + Body 16 (subtitle, muted) — gap titre→subtitle 16px
+- Bouton : `Button variant="primary" size="lg"` (gradient gold, 258×55, voir §6 Boutons)
 
 ### Disclaimer
 - Texte : 16px Work Sans Regular, `#898181`, max-width ~748px, centré

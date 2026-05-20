@@ -160,7 +160,7 @@ Rouge erreur : #EF4444
 
 - **Logo** : fourni, dans `/frontend/public/logo.png`
 - **Photos d'experts** : placeholders pour l'instant — cercle avec initiale en doré sur fond noir nuancé. Seront remplacées par de vraies photos plus tard.
-- **Images de fond des sections domaine (Sport/Esport/Gaming)** : placeholders pour l'instant — gradient doré sombre avec icône emoji centrale et texte. Seront remplacées par de vraies images plus tard.
+- **Images de fond des sections domaine (Sport/Esport/Hippique)** : placeholders pour l'instant — gradient doré sombre avec icône emoji centrale et texte. Seront remplacées par de vraies images plus tard.
 
 ---
 
@@ -224,10 +224,10 @@ Référence visuelle : `/docs/references/homepage-reference.png`
    - Logo Plarya + texte "PLARYA" doré + slogan
    - Navbar avec "Se connecter" (ouvre modal email magic link)
 
-2. **Section "Choisis ton domaine"** (inspirée de la référence)
-   - 3 cards : SPORT, ESPORT, GAMING
+2. **Section "Explore les domaines"** (inspirée de la référence)
+   - 3 cards : SPORT, ESPORT, HIPPIQUE
    - SPORT et ESPORT : cliquables → filtrent les experts affichés en dessous
-   - GAMING : "Arrive bientôt..." (disabled)
+   - HIPPIQUE : "Arrive bientôt..." (disabled)
    - Chaque card : image de fond (placeholder gradient doré pour l'instant), titre en doré, bouton "Voir les analyses"
 
 3. **Section "Nos experts"**
@@ -237,11 +237,11 @@ Référence visuelle : `/docs/references/homepage-reference.png`
    - **PAS de classement, PAS de tri par performance, PAS d'affichage du taux de réussite**
    - Max 10 experts affichés par défaut
 
-4. **Section "Pourquoi Plarya"** (réassurance, bas de homepage)
-   - 3 cards simples :
-     - ⏱ **Gain de temps** — "Accédez directement aux analyses"
-     - ✓ **Simple** — "Tout est prêt, sans recherche"
-     - 🔓 **Sans engagement** — "Paiement à l'acte"
+4. **Section "Pourquoi Plarya ?"** (réassurance, bas de homepage)
+   - 3 piliers dans une card encadrée (`bg-black/40`, radius 16) :
+     - ⏱ **Gain de temps** — "Accédez directement aux analyses. Pas de recherche, pas de bruit."
+     - ⚡ **Simple** — "Tout est prêt. Choisissez un expert, accédez à ses sélections."
+     - 💳 **Sans engagements** — "Paiement à l'acte. 3,50€ le jour, sans abonnement obligatoire."
 
 5. **Footer**
    - Liens : Confidentialité, Mentions légales, CGU, Contact

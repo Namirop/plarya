@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Work_Sans, DM_Serif_Display } from "next/font/google";
 import Link from "next/link";
-import { Navbar } from "@/components/navbar";
+import { HeaderAuth } from "@/components/layout/header-auth";
 import { UserProvider } from "@/hooks/use-user";
 import "./globals.css";
 
@@ -34,7 +34,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen flex flex-col">
         <UserProvider>
-          <Navbar />
+          <HeaderAuth />
           <main className="flex-1">{children}</main>
           <Footer />
         </UserProvider>

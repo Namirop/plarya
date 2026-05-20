@@ -6,6 +6,8 @@ import { Icon } from "@iconify/react";
 import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DividerVertical } from "@/components/ui/divider-vertical";
+import { GoldenBorderOverlay } from "@/components/ui/golden-border-overlay";
 
 const TRUST_ITEMS = [
   {
@@ -33,31 +35,15 @@ export function Hero() {
   }
 
   return (
-    <section className="relative">
+    // pt-8 = 32 px : gap entre le bas du Header (sticky, h=70) et le top
+    // du cadre Hero, conformément à Figma (TopBar y=0..70, Hero Cadre y=102).
+    <section className="relative pt-8">
       <div className="mx-auto max-w-[1308px] px-6 sm:px-10 lg:px-[72px]">
         <div className="relative overflow-visible rounded-2xl">
-          {/* Bordure 1px en dégradé angulaire (conic-gradient) : 50% global,
-              stops dorés 33% (bas-droite) et 75% (haut-gauche), sombres
-              ailleurs. `from 30deg` place ces deux pics dorés sur la
-              diagonale haut-gauche ↔ bas-droite (cf. maquette Figma) ;
-              `from 0deg` les aurait mis sur les bords droite/gauche.
-              Technique : overlay absolu avec padding 1px + mask-composite
-              pour ne garder que le contour. L'intérieur reste transparent
-              (on voit la lueur dorée ambiante du body au travers). */}
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-0 rounded-2xl opacity-50"
-            style={{
-              padding: "1px",
-              background:
-                "conic-gradient(from 30deg, #181818 8%, #DFB968 33%, #100E0E 47%, #181818 63%, #DFB968 75%, #181818 100%)",
-              WebkitMask:
-                "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
-              WebkitMaskComposite: "xor",
-              mask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
-              maskComposite: "exclude",
-            }}
-          />
+          {/* Cadre doré conic-gradient — extrait dans
+              `components/ui/golden-border-overlay.tsx`. Réutilisé sur la
+              card "Devenir créateur" (même pattern visuel). */}
+          <GoldenBorderOverlay />
 
           {/* Visuel hero : déborde au-dessus du cadre, top-right. Masqué
               en mobile et tablette (la composition gauche prime). */}
@@ -116,13 +102,9 @@ export function Hero() {
               {TRUST_ITEMS.map((item, index) => (
                 <Fragment key={item.title}>
                   {index > 0 && (
-                    <span
-                      aria-hidden
-                      className="hidden sm:block h-24 w-px shrink-0 opacity-60"
-                      style={{
-                        background:
-                          "linear-gradient(to bottom, rgba(223,185,104,0.2) 0%, rgba(223,185,104,1) 51%, rgba(223,185,104,0.2) 100%)",
-                      }}
+                    <DividerVertical
+                      height={96}
+                      className="hidden sm:block"
                     />
                   )}
                   <li className="flex flex-1 items-start gap-[9px] sm:px-8">
