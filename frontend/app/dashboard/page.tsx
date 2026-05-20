@@ -105,18 +105,27 @@ export default function DashboardPage() {
   return (
     // Container Dashboard : max-w 872px (cf. dashboard-spec §2),
     // mx-auto pour padding latéral symétrique. py-8 = 32px (multiples
-    // de 8 partout, cf. notes designer). Pas de footer sur cette page —
-    // géré par <SiteFooter /> via usePathname.
-    <div className="mx-auto max-w-[872px] px-6 py-8">
+    // de 8 partout, cf. notes designer).
+    // Mobile : padding latéral 16px (px-4), reste compact (py-6).
+    // Pas de footer sur cette page — géré par <SiteFooter /> via usePathname.
+    <div className="mx-auto max-w-[872px] px-4 py-6 md:px-6 md:py-8">
       {/* Bloc identité + stats — affichés ensemble dès que le profil
-          est chargé. Gap identity → stats = 32px (mt-8). */}
+          est chargé. Gap section → section = 32px mobile (mb-8),
+          64px desktop (mb-16). */}
       {profile && (
-        <div className="mb-16">
-          <h1 className="font-display text-[48px] leading-[60px] text-foreground">
+        <div className="mb-8 md:mb-16">
+          {/* Pseudo : DM Serif Display, taille calibrée plus petite en
+              mobile (32/36) pour éviter le wrap horrible sur les longs
+              pseudos. Desktop reste sur les valeurs Figma (48/60). */}
+          <h1 className="font-display text-[32px] leading-[36px] text-foreground md:text-[48px] md:leading-[60px]">
             {profile.pseudo}
           </h1>
 
-          <div className="mt-8 flex gap-4">
+          {/* Stats : 3 cards en row desktop, stack vertical full-width
+              mobile. flex-1 fonctionne dans les deux directions (row :
+              largeur égale ; col : cards à hauteur naturelle, cross-axis
+              stretch → full width). */}
+          <div className="mt-6 flex flex-col gap-4 md:mt-8 md:flex-row">
             <StatCard
               icon="solar:document-text-bold"
               label="Analyses publiées"
@@ -138,11 +147,11 @@ export default function DashboardPage() {
       )}
 
       {/* ─── Publish form (Bloc 2) ─── */}
-      {/* Gap stats → titre section = 64px (mb-16 sur le bloc identité +
-          stats sert déjà à ça). Titre → form = 32px (mt-8). */}
-      <section className="mb-16">
+      {/* Gap stats → titre section = 32px mobile, 64px desktop.
+          Titre → form = 24px mobile (mt-6), 32px desktop (mt-8). */}
+      <section className="mb-8 md:mb-16">
         <SectionTitle title="Publier une analyse" />
-        <div className="mt-8">
+        <div className="mt-6 md:mt-8">
           <PublishAnalysisForm
             bookmakers={bookmakers}
             onPublished={handlePublished}
@@ -153,7 +162,7 @@ export default function DashboardPage() {
       {/* ─── Mes analyses (Bloc 3) ─── */}
       <section>
         <SectionTitle title={`Mes analyses (${pronos.length})`} />
-        <div className="mt-8">
+        <div className="mt-6 md:mt-8">
           <AnalysesList pronos={pronos} onResult={handleResult} />
         </div>
       </section>

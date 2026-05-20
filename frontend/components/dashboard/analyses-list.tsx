@@ -16,8 +16,12 @@ import type { Prono } from "@/lib/types/dashboard";
 // car non encore exposés comme utilities Tailwind dans le @theme.
 // ───────────────────────────────────────────────────────────────────
 
+// inline-flex + justify-center : sur desktop les boutons gardent leur
+// largeur intrinsèque (justify-center sans effet) ; en mobile on les
+// rend full-width via `flex-1 w-full` au niveau du wrapper et le
+// justify-center recentre alors le contenu (icône + texte).
 const RESULT_BUTTON_BASE =
-  "inline-flex items-center gap-2 rounded-xl border bg-transparent px-4 py-2 " +
+  "inline-flex items-center justify-center gap-2 rounded-xl border bg-transparent px-4 py-2 " +
   "font-body text-body-16 transition-colors duration-200 cursor-pointer " +
   "disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -132,7 +136,8 @@ function AnalysisCard({
   return (
     <li
       className={cn(
-        "flex flex-col gap-6 rounded-2xl border border-[#181818] bg-black/40 p-6",
+        // Padding interne : 16px mobile, 24px desktop.
+        "flex flex-col gap-6 rounded-2xl border border-[#181818] bg-black/40 p-4 md:p-6",
         // Desktop : layout horizontal contenu/actions. Mobile : stack.
         "md:flex-row md:items-start md:justify-between",
       )}
@@ -187,14 +192,20 @@ function AnalysisCard({
       </div>
 
       {/* Zone actions — alignée en haut sur desktop (top de la card),
-          stack en bas du contenu sur mobile. */}
-      <div className="flex shrink-0 items-center gap-3 md:pt-1">
+          stack en bas du contenu sur mobile.
+          Mobile : full-width pour que les boutons Gagné/Perdu prennent
+          50/50 (flex-1). Desktop : width naturelle, boutons à droite. */}
+      <div className="flex w-full shrink-0 items-center gap-3 md:w-auto md:pt-1">
         {showActionButtons ? (
           <>
             <button
               type="button"
               onClick={() => onResult("WON")}
-              className={cn(RESULT_BUTTON_BASE, RESULT_BUTTON_WIN)}
+              className={cn(
+                RESULT_BUTTON_BASE,
+                RESULT_BUTTON_WIN,
+                "flex-1 md:flex-initial",
+              )}
             >
               <Check className="size-4" strokeWidth={2.5} />
               Gagné
@@ -202,7 +213,11 @@ function AnalysisCard({
             <button
               type="button"
               onClick={() => onResult("LOST")}
-              className={cn(RESULT_BUTTON_BASE, RESULT_BUTTON_LOSS)}
+              className={cn(
+                RESULT_BUTTON_BASE,
+                RESULT_BUTTON_LOSS,
+                "flex-1 md:flex-initial",
+              )}
             >
               <X className="size-4" strokeWidth={2.5} />
               Perdu
@@ -239,7 +254,7 @@ function AnalysisCard({
 
 function EmptyState() {
   return (
-    <div className="rounded-2xl border border-[#181818] bg-black/40 px-6 py-12 text-center">
+    <div className="rounded-2xl border border-[#181818] bg-black/40 px-4 py-10 text-center md:px-6 md:py-12">
       <p className="font-body text-body-16 text-foreground">
         Vous n&apos;avez publié aucune analyse pour l&apos;instant.
       </p>

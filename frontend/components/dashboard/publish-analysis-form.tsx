@@ -216,7 +216,9 @@ export function PublishAnalysisForm({
     <form
       onSubmit={handleSubmit}
       noValidate
-      className="rounded-2xl border border-[#181818] bg-black/40 p-8"
+      // Padding interne : 16px mobile, 32px desktop (cf. brief — la
+      // surface card est plus étroite en mobile, on resserre).
+      className="rounded-2xl border border-[#181818] bg-black/40 p-4 md:p-8"
     >
       {formError && (
         <div
