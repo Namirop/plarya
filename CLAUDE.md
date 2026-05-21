@@ -80,12 +80,6 @@ Exemples :
 
 Dark mode premium avec accents dorés. Inspiration : plateformes de trading haut de gamme, sites d'analyses financières/sportives premium. L'esthétique doit transmettre expertise, confiance, exclusivité.
 
-**Références visuelles fournies par le client :**
-
-- `/docs/references/homepage-reference.png` (inspiration homepage)
-- `/docs/references/profile-reference.png` (inspiration profil expert)
-- `/docs/references/logo-reference.png` (logo Plarya)
-
 **PAS** de design minimaliste blanc type SaaS. **PAS** d'apparence "app générique".
 
 Fond principal (noir profond) : #0A0A0A
@@ -216,8 +210,6 @@ Rouge erreur : #EF4444
 
 ### PAGE D'ACCUEIL
 
-Référence visuelle : `/docs/references/homepage-reference.png`
-
 #### Structure
 
 1. **Hero / Header**
@@ -281,8 +273,6 @@ Référence visuelle : `/docs/references/homepage-reference.png`
 ---
 
 ### PROFIL EXPERT (`/experts/[id]`)
-
-Référence visuelle : `/docs/references/profile-reference.png`
 
 #### Header
 
