@@ -3,12 +3,15 @@
 import { Suspense, useState, useEffect, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+
 import { useUser } from "@/hooks/use-user";
 import { createTipsterCheckout } from "@/lib/stripe";
 import { SPORT_LABELS } from "@/lib/constants";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 export default function DevenirTipsterPage() {
   return (
@@ -18,8 +21,36 @@ export default function DevenirTipsterPage() {
   );
 }
 
-const btnCls = "rounded-md bg-[#F0EDE8] px-6 py-2 text-sm font-semibold text-[#080808] transition-all hover:bg-[#00D47E]";
-const inputCls = "bg-[#080808] border-[#1A1A1A] text-[#F0EDE8] placeholder:text-[#8A8680]/40 focus:border-[#00D47E]/50 focus:ring-1 focus:ring-[#00D47E]/30";
+// Styles partagés form (DS). Inputs : fond noir 40 %, bordure subtile
+// surface-elevated, focus accent doré.
+const fieldCls = cn(
+  "h-12 w-full rounded-xl border border-surface-elevated bg-black/40 px-4 py-3",
+  "font-body text-body-16 text-foreground placeholder:text-muted-foreground/50",
+  "transition-colors duration-200",
+  "focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30",
+  "disabled:cursor-not-allowed disabled:opacity-70",
+);
+
+const textareaCls = cn(
+  "min-h-[120px] w-full rounded-xl border border-surface-elevated bg-black/40 px-4 py-3",
+  "font-body text-body-16 text-foreground placeholder:text-muted-foreground/50",
+  "transition-colors duration-200 resize-y",
+  "focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30",
+);
+
+const labelCls = "font-body text-body-16 text-muted-foreground";
+
+// Wrapper layout (max-w 872 = largeur de la card Figma). Padding
+// vertical 64 px. PageShell aussi utilisé par les états
+// alternatifs (déjà tipster / success / cancel) pour cohérence
+// visuelle (même page bg, même container).
+function PageShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mx-auto w-full max-w-[872px] px-6 py-16 sm:px-8">
+      {children}
+    </div>
+  );
+}
 
 function DevenirTipsterContent() {
   const router = useRouter();
@@ -34,126 +65,238 @@ function DevenirTipsterContent() {
 
   const checkoutStatus = searchParams.get("checkout");
 
-  useEffect(() => { if (!loading && !user) router.push("/"); }, [user, loading, router]);
+  // Redirige les non-loggés vers la home (logique V1 inchangée).
+  useEffect(() => {
+    if (!loading && !user) router.push("/");
+  }, [user, loading, router]);
 
   function toggleSport(sport: string) {
-    setSports((prev) => prev.includes(sport) ? prev.filter((s) => s !== sport) : [...prev, sport]);
+    setSports((prev) =>
+      prev.includes(sport) ? prev.filter((s) => s !== sport) : [...prev, sport],
+    );
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
-    if (!pseudo.trim() || pseudo.length < 2) { setError("Le pseudo doit contenir au moins 2 caractères"); return; }
-    if (sports.length === 0) { setError("Sélectionnez au moins un sport"); return; }
+    if (!pseudo.trim() || pseudo.length < 2) {
+      setError("Le pseudo doit contenir au moins 2 caractères");
+      return;
+    }
+    if (sports.length === 0) {
+      setError("Sélectionnez au moins un sport");
+      return;
+    }
     setSubmitting(true);
     try {
       const url = await createTipsterCheckout(pseudo, bio, sports);
       window.location.href = url;
-    } catch (err) { setError(err instanceof Error ? err.message : "Erreur lors du paiement"); }
-    finally { setSubmitting(false); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors du paiement");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
+  // ── État 1 : chargement de la session ────────────────────────
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="size-6 animate-spin rounded-full border-2 border-[#1A1A1A] border-t-[#00D47E]" />
-      </div>
+      <PageShell>
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="size-8 animate-spin rounded-full border-2 border-surface-elevated border-t-accent" />
+        </div>
+      </PageShell>
     );
   }
 
+  // ── État 2 : utilisateur déjà tipster ────────────────────────
   if (user?.role === "TIPSTER") {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4">
-        <p className="text-lg font-semibold text-[#F0EDE8]">Vous êtes déjà expert !</p>
-        <Link href="/dashboard" className={btnCls}>Accéder au dashboard</Link>
-      </div>
+      <PageShell>
+        <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-8 py-10 text-center">
+          <h1 className="font-display text-h2 text-foreground">
+            Vous êtes déjà expert
+          </h1>
+          <p className="font-body text-body-16 text-muted-foreground">
+            Votre compte expert est actif. Rendez-vous sur votre tableau de
+            bord pour publier vos analyses.
+          </p>
+          <Button variant="primary" size="lg" render={<Link href="/dashboard" />}>
+            Accéder au dashboard
+          </Button>
+        </div>
+      </PageShell>
     );
   }
 
+  // ── État 3 : retour Stripe checkout réussi ───────────────────
   if (checkoutStatus === "success") {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4">
-        <h1 className="font-[family-name:var(--font-dm-serif)] text-2xl italic text-[#F0EDE8]">Bienvenue parmi les experts !</h1>
-        <p className="text-sm text-[#8A8680] text-center max-w-sm">
-          Votre compte expert est en cours de création. Vous pourrez accéder à votre dashboard dans quelques instants.
-        </p>
-        <Link href="/dashboard" className={btnCls}>Accéder au dashboard</Link>
-      </div>
+      <PageShell>
+        <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-8 py-10 text-center">
+          <h1 className="font-display text-h2 text-foreground">
+            Bienvenue parmi les experts <span className="text-accent">!</span>
+          </h1>
+          <p className="font-body text-body-16 text-muted-foreground">
+            Votre compte expert est en cours de création. Vous pourrez accéder
+            à votre dashboard dans quelques instants.
+          </p>
+          <Button variant="primary" size="lg" render={<Link href="/dashboard" />}>
+            Accéder au dashboard
+          </Button>
+        </div>
+      </PageShell>
     );
   }
 
+  // ── État 4 : retour Stripe checkout annulé ───────────────────
   if (checkoutStatus === "cancel") {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4">
-        <h1 className="text-xl font-bold text-[#F0EDE8]">Paiement annulé</h1>
-        <p className="text-sm text-[#8A8680]">Vous pouvez réessayer quand vous le souhaitez.</p>
-        <button type="button" onClick={() => { window.history.replaceState({}, "", "/devenir-tipster"); router.refresh(); }} className={`${btnCls} cursor-pointer`}>
-          Réessayer
-        </button>
-      </div>
+      <PageShell>
+        <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-8 py-10 text-center">
+          <h1 className="font-display text-h2 text-foreground">
+            Paiement annulé
+          </h1>
+          <p className="font-body text-body-16 text-muted-foreground">
+            Vous pouvez réessayer quand vous le souhaitez.
+          </p>
+          <Button
+            variant="primary"
+            size="lg"
+            // Logique V1 inchangée : retire le query param sans nav et
+            // refresh pour repartir sur la branche par défaut (form).
+            onClick={() => {
+              window.history.replaceState({}, "", "/devenir-tipster");
+              router.refresh();
+            }}
+          >
+            Réessayer
+          </Button>
+        </div>
+      </PageShell>
     );
   }
 
+  // ── État 5 (default) : formulaire de candidature ────────────
   return (
-    <div className="mx-auto max-w-lg px-6 py-8 sm:px-8">
-      <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl italic text-[#F0EDE8] text-center">
+    <PageShell>
+      {/* Titre de page — DM Serif Display 48/60 (cf. devenir-expert-spec.md §3) */}
+      <h1 className="text-center font-display text-[48px] leading-[60px] text-foreground">
         Devenir Expert
       </h1>
-      <p className="mt-2 text-sm text-[#8A8680] text-center">
+      <p className="mx-auto mt-8 max-w-[635px] text-center font-body text-body-16 text-muted-foreground">
         Publiez vos analyses et monétisez votre expertise — 39€/trimestre
       </p>
 
-      <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-5">
+      {/* Card englobante — bg-black/40 + bordure subtile, radius 16,
+          padding interne 32 px (cf. spec §5 + DS). */}
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        className="mt-16 space-y-6 rounded-2xl border border-surface-elevated bg-black/40 p-8"
+      >
         {error && (
-          <div className="rounded-md ring-1 ring-red-400/30 bg-red-400/5 px-4 py-3 text-sm text-red-400">
+          <div
+            role="alert"
+            className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 font-body text-body-16 text-destructive"
+          >
             {error}
           </div>
         )}
 
+        {/* Pseudo */}
         <div className="space-y-2">
-          <Label htmlFor="pseudo" className="text-[#8A8680]">Pseudo *</Label>
-          <Input id="pseudo" placeholder="TonPseudo" value={pseudo} onChange={(e) => setPseudo(e.target.value)} className={inputCls} />
+          <Label htmlFor="pseudo" className={labelCls}>
+            Pseudo <span className="text-accent">*</span>
+          </Label>
+          <Input
+            id="pseudo"
+            placeholder="TonPseudo"
+            value={pseudo}
+            onChange={(e) => setPseudo(e.target.value)}
+            className={fieldCls}
+          />
         </div>
 
+        {/* Email (auto-rempli depuis la session, disabled) */}
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-[#8A8680]">Email</Label>
-          <Input id="email" type="email" value={user?.email || ""} disabled className={`${inputCls} opacity-50`} />
+          <Label htmlFor="email" className={labelCls}>
+            Email
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            value={user?.email || ""}
+            disabled
+            className={fieldCls}
+          />
         </div>
 
+        {/* Bio */}
         <div className="space-y-2">
-          <Label htmlFor="bio" className="text-[#8A8680]">Bio</Label>
-          <Textarea id="bio" placeholder="Expert Football & Tennis — Analyses pointues"
-            value={bio} onChange={(e) => setBio(e.target.value)} rows={3} className={inputCls} />
+          <Label htmlFor="bio" className={labelCls}>
+            Bio
+          </Label>
+          <Textarea
+            id="bio"
+            placeholder="Expert Football & Tennis — Analyses pointues"
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            rows={3}
+            className={textareaCls}
+          />
         </div>
 
+        {/* Sports couverts — chips toggle multi-select */}
         <div className="space-y-2">
-          <Label className="text-[#8A8680]">Sports couverts *</Label>
-          <div className="flex flex-wrap gap-2 mt-1">
-            {Object.entries(SPORT_LABELS).map(([key, label]) => (
-              <button key={key} type="button" onClick={() => toggleSport(key)}
-                className={`rounded-md px-3 py-1 text-sm transition cursor-pointer ring-1 ${
-                  sports.includes(key)
-                    ? "ring-[#00D47E] bg-[#00D47E]/10 text-[#00D47E] font-medium"
-                    : "ring-[#1A1A1A] text-[#8A8680] hover:ring-[#8A8680]/30"
-                }`}>
-                {label}
-              </button>
-            ))}
+          <Label className={labelCls}>
+            Sports couverts <span className="text-accent">*</span>
+          </Label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {Object.entries(SPORT_LABELS).map(([key, label]) => {
+              const isActive = sports.includes(key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => toggleSport(key)}
+                  aria-pressed={isActive}
+                  className={cn(
+                    "cursor-pointer rounded-full border px-4 py-2 font-body text-body-16 transition-all duration-200",
+                    isActive
+                      ? "border-accent bg-accent/20 text-accent"
+                      : "border-surface-elevated bg-black/40 text-foreground hover:border-accent",
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="rounded-md bg-[#0E0E0E] ring-1 ring-[#1A1A1A] px-4 py-3">
-          <p className="text-sm font-medium text-[#F0EDE8]">39€ / trimestre</p>
-          <p className="text-xs text-[#8A8680] mt-1">
-            Accès au dashboard expert, publication d&apos;analyses, visibilité sur la plateforme. Renouvellement automatique tous les 3 mois.
+        {/* Bloc résumé tarif */}
+        <div className="rounded-xl border border-surface-elevated bg-black/40 p-5">
+          <p className="font-body text-h5 text-foreground">39€ / trimestre</p>
+          <p className="mt-2 font-body text-body-16 text-muted-foreground">
+            Accès au dashboard expert, publication d&apos;analyses, visibilité
+            sur la plateforme. Renouvellement automatique tous les 3 mois.
           </p>
         </div>
 
-        <button type="submit" disabled={submitting}
-          className="w-full h-10 rounded-md bg-[#F0EDE8] text-sm font-bold text-[#080808] transition-all hover:bg-[#00D47E] disabled:opacity-50">
-          {submitting ? "Redirection vers le paiement..." : "Devenir Expert (39€/trimestre)"}
-        </button>
+        {/* Submit — variant white du DS (équivalent CTA "Accéder (3,50€)") */}
+        <Button
+          type="submit"
+          variant="white"
+          size="lg"
+          disabled={submitting}
+          className="w-full"
+        >
+          {submitting
+            ? "Redirection vers le paiement..."
+            : "Devenir Expert (39€/trimestre)"}
+        </Button>
       </form>
-    </div>
+    </PageShell>
   );
 }
