@@ -577,16 +577,3 @@ Chaque analyse (Prono) a un champ `startTime: DateTime` obligatoire. Le frontend
 ## 11. SPECS DE DESIGN
 
 - DS complet : `design-system.md`
-- Homepage desktop : `homepage-spec.md`
-- Homepage mobile : `homepage-mobile-spec.md` (incomplet côté Figma)
-- Dashboard : `dashboard-spec.md` (form fields à designer)
-- Devenir expert : `devenir-expert-spec.md` (form fields à designer)
-
-## 12. PAGES DE TEST TEMPORAIRES
-
-Pages internes pour valider visuellement les composants pendant la migration. À **supprimer** une fois la migration terminée.
-
-- `app/test-button/page.tsx` — affiche tous les variants/sizes/états du composant `Button` (accessible sur `/test-button`)
-- `app/test-expert-card/page.tsx` — affiche le composant `ExpertCard` dans ses deux états Unlocked/Locked + variations (accessible sur `/test-expert-card`)
-- `app/test-domain-card/page.tsx` — affiche le composant `DomainCard` (3 variantes actives + état coming-soon, accessible sur `/test-domain-card`)
-- `app/test-header/page.tsx` — affiche le composant `Header` dans ses deux variants connected / guest (accessible sur `/test-header`)
