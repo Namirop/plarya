@@ -94,7 +94,11 @@ router.post("/create-session", optionalAuthMiddleware, async (req, res) => {
     }
 
     const expert = await prisma.expert.findUnique({ where: { id: expertId } });
-    if (!expert) {
+    // 404 si l'expert n'existe pas OU s'il est soft-deleted : pas
+    // question de prélever de l'argent pour un profile qui a
+    // disparu publiquement (l'user serait débité sans pouvoir
+    // accéder aux analyses — GET /experts/:id renvoie 404).
+    if (!expert || expert.deletedAt) {
       res.status(404).json({ error: "Expert introuvable" });
       return;
     }

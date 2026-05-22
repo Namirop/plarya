@@ -31,8 +31,37 @@ export function initCronJobs(): void {
     }
   });
 
+  // Tous les jours à 3h : cleanup des magic-links et sessions
+  // expirés. Sans ce job, ces 2 tables grossissent linéairement
+  // avec le trafic (cf. audit-final.md §B).
+  cron.schedule(
+    "0 3 * * *",
+    async () => {
+      cronLogger.info({ job: "cleanup_expired_auth" }, "Job started");
+      try {
+        const now = new Date();
+        const [deletedMagicLinks, deletedSessions] = await Promise.all([
+          prisma.magicLink.deleteMany({ where: { expiresAt: { lt: now } } }),
+          prisma.session.deleteMany({ where: { expiresAt: { lt: now } } }),
+        ]);
+        cronLogger.info(
+          {
+            job: "cleanup_expired_auth",
+            magicLinksDeleted: deletedMagicLinks.count,
+            sessionsDeleted: deletedSessions.count,
+          },
+          "Auth tokens cleanup completed",
+        );
+      } catch (err) {
+        cronLogger.error({ err, job: "cleanup_expired_auth" }, "Job failed");
+      }
+    },
+    { timezone: "Europe/Paris" },
+  );
+
   cronLogger.info("Daily J+1 email job scheduled (10:00 AM)");
   cronLogger.info("Midnight reset job scheduled (00:00)");
+  cronLogger.info("Auth tokens cleanup job scheduled (03:00 Europe/Paris)");
 }
 
 export async function sendDailyWinningEmails(): Promise<void> {

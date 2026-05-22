@@ -15,7 +15,11 @@ router.get("/me", authMiddleware, expertMiddleware, async (req, res) => {
       where: { userId: req.user!.userId },
     });
 
-    if (!expert) {
+    // 404 si pas de profile OU si soft-deleted (cohérence RGPD :
+    // un expert qui a supprimé son compte ne doit plus pouvoir
+    // accéder à son ancien profile via /experts/me même si une
+    // session orpheline subsistait).
+    if (!expert || expert.deletedAt) {
       res.status(404).json({ error: "Profil expert introuvable" });
       return;
     }
@@ -108,6 +112,9 @@ router.patch("/me", authMiddleware, expertMiddleware, async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const experts = await prisma.expert.findMany({
+      // Filtrer les experts soft-deleted (RGPD) : leur profile ne
+      // doit plus apparaître dans le listing public.
+      where: { deletedAt: null },
       orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }],
     });
 
@@ -171,7 +178,8 @@ router.get("/:id", async (req, res) => {
       include: { user: { select: { email: true } } },
     });
 
-    if (!expert) {
+    // 404 si l'expert n'existe pas OU s'il est soft-deleted (RGPD).
+    if (!expert || expert.deletedAt) {
       res.status(404).json({ error: "Expert introuvable" });
       return;
     }

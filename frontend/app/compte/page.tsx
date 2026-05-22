@@ -10,6 +10,7 @@ import { apiGet, apiPatch } from "@/lib/api";
 import { SPORT_LABELS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { DangerZone } from "@/components/account/danger-zone";
 import { cn } from "@/lib/utils";
 
 /* ════════════════════════ Types ════════════════════════ */
@@ -465,6 +466,11 @@ function ExpertView(props: ExpertViewProps) {
           </div>
         </section>
       </div>
+
+      {/* Zone dangereuse RGPD — accessible aux experts comme aux
+          users classiques. Inclut export données + suppression compte
+          (modale typed-email pour confirmation). */}
+      <DangerZone />
     </PageShell>
   );
 }
@@ -564,6 +570,9 @@ function UserView({
           )}
         </section>
       </div>
+
+      {/* Zone dangereuse RGPD (cf. ExpertView ci-dessus pour le détail). */}
+      <DangerZone />
     </PageShell>
   );
 }

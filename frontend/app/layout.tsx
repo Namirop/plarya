@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Work_Sans, DM_Serif_Display } from "next/font/google";
 import { HeaderAuth } from "@/components/layout/header-auth";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { CookieBanner } from "@/components/legal/cookie-banner";
 import { UserProvider } from "@/hooks/use-user";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -123,6 +124,7 @@ export default function RootLayout({
           <HeaderAuth />
           <main className="flex-1">{children}</main>
           <SiteFooter />
+          <CookieBanner />
         </UserProvider>
       </body>
     </html>

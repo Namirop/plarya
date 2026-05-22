@@ -30,6 +30,17 @@ const resendAccessLimiter = rateLimit({
   message: { error: "Trop de demandes, réessayez dans quelques minutes" },
 });
 
+// Limiteur pour /me/export : 1 export / 24h / IP. RGPD permet
+// l'export à la demande mais sans cap c'est un vecteur DOS (export
+// d'un user avec 10k pronos = JSON lourd à générer).
+const exportLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 1,
+  message: {
+    error: "Un seul export par 24h. Réessaie demain.",
+  },
+});
+
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 const IS_PROD = process.env.NODE_ENV === "production";
@@ -153,7 +164,39 @@ router.get("/me", authMiddleware, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { id: true, email: true, role: true },
+      select: { id: true, email: true, role: true, deletedAt: true },
+    });
+
+    // En pratique impossible (la suppression de compte wipe les
+    // sessions du user) mais defensive : un User soft-deleted ne
+    // doit pas être exposé via /auth/me.
+    if (!user || user.deletedAt) {
+      res.status(404).json({ error: "Utilisateur introuvable" });
+      return;
+    }
+
+    res.json({ id: user.id, email: user.email, role: user.role });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+/**
+ * GET /auth/me/deletion-status
+ *
+ * Pour piloter l'UI "Zone dangereuse" sur /compte : indique si l'user
+ * peut supprimer son compte maintenant, et sinon pourquoi (raison
+ * structurée pour i18n et debug futur).
+ *
+ * Règle métier : un EXPERT avec des Subscriptions ACTIVE et non
+ * expirées qui pointent vers son profil ne peut PAS supprimer son
+ * compte (obligation contractuelle envers ses abonnés).
+ */
+router.get("/me/deletion-status", authMiddleware, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      select: { id: true, role: true, expert: { select: { id: true } } },
     });
 
     if (!user) {
@@ -161,8 +204,224 @@ router.get("/me", authMiddleware, async (req, res) => {
       return;
     }
 
-    res.json(user);
+    if (user.role === "EXPERT" && user.expert) {
+      const activeSubsCount = await prisma.subscription.count({
+        where: {
+          expertId: user.expert.id,
+          status: "ACTIVE",
+          expiresAt: { gt: new Date() },
+        },
+      });
+      if (activeSubsCount > 0) {
+        res.json({
+          canDelete: false,
+          reason: "active_subscriptions",
+          activeSubscriptions: activeSubsCount,
+        });
+        return;
+      }
+    }
+
+    res.json({ canDelete: true });
   } catch (err) {
+    logger.error({ err }, "Deletion status check failed");
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+/**
+ * DELETE /auth/me
+ *
+ * Suppression de compte RGPD. Soft delete + anonymisation pour
+ * préserver les FK des Subscriptions (obligation comptable 10 ans
+ * en France). Le row User reste en DB mais filtré partout
+ * publiquement.
+ *
+ * Étapes :
+ *  1. Vérifier que l'user n'est pas un EXPERT avec subscriptions
+ *     actives (sinon 400).
+ *  2. Soft delete Expert (deletedAt) si applicable.
+ *  3. Soft delete User + anonymisation email →
+ *     `deleted-{id}@plarya.local`. L'email original disparaît de la
+ *     DB, conforme au droit à l'effacement.
+ *  4. Invalider TOUTES les sessions de cet user (delete row).
+ *  5. Clear le cookie session du caller pour le déconnecter en cours.
+ *
+ * Pas de unique constraint sur stripeCustomerId qu'on doit relâcher :
+ * Stripe Customer reste lié à l'ancien email côté Stripe — info
+ * conservée pour audit Stripe Dashboard, normal.
+ */
+router.delete("/me", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        expert: { select: { id: true } },
+      },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: "Utilisateur introuvable" });
+      return;
+    }
+
+    // Bloque la suppression si EXPERT a des subscriptions actives.
+    if (user.role === "EXPERT" && user.expert) {
+      const activeSubsCount = await prisma.subscription.count({
+        where: {
+          expertId: user.expert.id,
+          status: "ACTIVE",
+          expiresAt: { gt: new Date() },
+        },
+      });
+      if (activeSubsCount > 0) {
+        res.status(400).json({
+          error:
+            "Tu ne peux pas supprimer ton compte tant que tu as des abonnés actifs. Attends que les subscriptions actuelles expirent.",
+        });
+        return;
+      }
+    }
+
+    const now = new Date();
+    const anonymizedEmail = `deleted-${userId}@plarya.local`;
+
+    await prisma.$transaction(async (tx) => {
+      if (user.expert) {
+        await tx.expert.update({
+          where: { id: user.expert.id },
+          data: { deletedAt: now },
+        });
+      }
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          deletedAt: now,
+          email: anonymizedEmail,
+        },
+      });
+      // Invalide toutes les sessions du user supprimé. Le caller
+      // est inclus → son cookie devient orphelin et sera rejeté
+      // au prochain authMiddleware.
+      await tx.session.deleteMany({ where: { userId } });
+    });
+
+    res.clearCookie("session_token", { path: "/" });
+
+    logger.warn(
+      { userId, role: user.role, hadExpert: !!user.expert },
+      "User account deleted (RGPD)",
+    );
+
+    res.json({ message: "Compte supprimé" });
+  } catch (err) {
+    logger.error({ err }, "Account deletion failed");
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+/**
+ * GET /auth/me/export
+ *
+ * Export RGPD des données personnelles de l'user en JSON
+ * téléchargeable. Inclut le profil utilisateur, le profil expert
+ * éventuel, les subscriptions (sans champs Stripe sensibles
+ * au-delà du customerId), et les pronos publiés si EXPERT.
+ *
+ * Rate-limit 1/24h/IP (exportLimiter) pour éviter le DOS.
+ */
+router.get("/me/export", exportLimiter, authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        deletedAt: true,
+        stripeCustomerId: true,
+        expert: {
+          select: {
+            id: true,
+            pseudo: true,
+            bio: true,
+            photoUrl: true,
+            sports: true,
+            dayPassPrice: true,
+            monthlyPrice: true,
+            subStatus: true,
+            subExpiresAt: true,
+            displayOrder: true,
+            viewsToday: true,
+            createdAt: true,
+            updatedAt: true,
+            pronos: {
+              select: {
+                id: true,
+                matchName: true,
+                league: true,
+                pick: true,
+                odds: true,
+                teasing: true,
+                result: true,
+                argument: true,
+                startTime: true,
+                matchDate: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: "desc" },
+            },
+          },
+        },
+        subscriptions: {
+          select: {
+            id: true,
+            type: true,
+            status: true,
+            expiresAt: true,
+            createdAt: true,
+            expert: { select: { id: true, pseudo: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
+    if (!user || user.deletedAt) {
+      res.status(404).json({ error: "Utilisateur introuvable" });
+      return;
+    }
+
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        stripeCustomerId: user.stripeCustomerId,
+      },
+      expertProfile: user.expert ?? null,
+      subscriptions: user.subscriptions,
+    };
+
+    const dateSlug = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="plarya-export-${user.id}-${dateSlug}.json"`,
+    );
+    res.send(JSON.stringify(exportData, null, 2));
+
+    logger.info({ userId }, "User data exported (RGPD)");
+  } catch (err) {
+    logger.error({ err }, "User export failed");
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
