@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Lock, X } from "lucide-react";
+import { CheckCircle2, Lock, X } from "lucide-react";
 import { Icon } from "@iconify/react";
 
 import { useUser } from "@/hooks/use-user";
@@ -69,7 +69,7 @@ interface OwnExpertIdentity {
 export default function ExpertProfilePage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const { user, refreshUser } = useUser();
+  const { user } = useUser();
   const id = params.id as string;
 
   const [expert, setExpert] = useState<ExpertProfile | null>(null);
@@ -92,6 +92,12 @@ export default function ExpertProfilePage() {
   const [fullPronos, setFullPronos] = useState<PronoData[] | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [showUpsell, setShowUpsell] = useState(false);
+  // showEmailGate : modale "Paiement confirmé, vérifie ton email" pour
+  // les acheteurs NON loggés au retour Stripe (cf. sprint refonte 2
+  // phase 2 — on a supprimé /auth/session-from-checkout, donc la
+  // seule voie d'authentification post-paiement est le magic-link
+  // envoyé par email).
+  const [showEmailGate, setShowEmailGate] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [emailModalType, setEmailModalType] = useState<"DAY_PASS" | "MONTHLY">(
     "DAY_PASS",
@@ -160,20 +166,28 @@ export default function ExpertProfilePage() {
 
   useEffect(() => {
     if (searchParams.get("checkout") !== "success" || !id) return;
-    const stripeSessionId = searchParams.get("stripe_session_id");
-
+    // Au retour Stripe, deux branches selon que l'user est déjà loggé
+    // ou pas :
+    //  - LOGGÉ : on poll /subscriptions/check (le webhook backend a
+    //    déjà créé la subscription). Quand hasAccess passe true, on
+    //    ouvre la modale upsell classique. Comportement identique à
+    //    avant, juste sans le pré-call à /auth/session-from-checkout
+    //    (supprimé en sprint refonte 2 phase 2).
+    //  - NON LOGGÉ : on n'a pas de cookie session, et on ne PEUT plus
+    //    en obtenir un via l'URL (vecteur d'élévation supprimé). On
+    //    affiche un message "Paiement confirmé, vérifie ton email"
+    //    pour orienter l'user vers le magic-link envoyé par Resend
+    //    (cf. backend webhooks.ts → sendAccessUnlockedEmail).
     async function handleCheckoutReturn() {
-      if (stripeSessionId) {
-        try {
-          await apiGet(
-            `/auth/session-from-checkout?stripe_session_id=${stripeSessionId}`,
-          );
-          await refreshUser();
-        } catch {
-          /* ignore */
-        }
-      }
       window.history.replaceState({}, "", `/experts/${id}`);
+
+      if (!user) {
+        // Acheteur non-loggé : magic-link email = seule voie d'accès.
+        setShowEmailGate(true);
+        return;
+      }
+
+      // Acheteur loggé : poll jusqu'à voir la Subscription en DB.
       let attempts = 0;
       const maxAttempts = 5;
       async function pollAccess() {
@@ -197,7 +211,10 @@ export default function ExpertProfilePage() {
       await pollAccess();
     }
     handleCheckoutReturn();
-  }, [searchParams, id, refreshUser]);
+    // `user` (du useUser) influe sur la branche choisie. `refreshUser`
+    // n'est plus appelé : on n'essaie plus de poser une session post-
+    // paiement automatique.
+  }, [searchParams, id, user]);
 
   async function handleCheckout(type: "DAY_PASS" | "MONTHLY") {
     if (!user) {
@@ -410,6 +427,57 @@ export default function ExpertProfilePage() {
         expertId={id}
         type={emailModalType}
       />
+
+      {/* ════ MODALE "EMAIL GATE" ════
+          Affichée au retour Stripe quand l'acheteur n'est PAS loggé.
+          Depuis la suppression de /auth/session-from-checkout (sprint
+          refonte 2 phase 2), la SEULE voie d'authentification post-
+          paiement pour un non-loggé est le magic-link envoyé par
+          email. On affiche un message clair pour orienter l'user. */}
+      {showEmailGate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            aria-hidden
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="email-gate-title"
+            className="relative z-10 mx-4 w-full max-w-[480px] rounded-2xl border border-surface-elevated bg-background p-8"
+          >
+            <div className="flex justify-center">
+              <CheckCircle2
+                className="size-12 text-accent"
+                aria-hidden
+              />
+            </div>
+            <h3
+              id="email-gate-title"
+              className="mt-4 text-center font-display text-h4 text-foreground"
+            >
+              Paiement confirmé
+            </h3>
+            <p className="mt-3 text-center font-body text-body-16 text-muted-foreground">
+              Pour accéder à tes analyses, ouvre l&apos;email que nous venons
+              de t&apos;envoyer et clique sur le lien de connexion.
+            </p>
+            <p className="mt-2 text-center font-body text-body-16 text-muted-foreground/70">
+              Pense à vérifier tes spams si tu ne le trouves pas.
+            </p>
+            <div className="mt-6">
+              <Button
+                variant="secondary"
+                size="lg"
+                render={<Link href="/" />}
+                className="w-full"
+              >
+                Retourner à l&apos;accueil
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ════ MODALE UPSELL ════
           Post-checkout Stripe : s'ouvre après poll réussi (hasAccess

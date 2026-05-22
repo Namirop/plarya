@@ -1,7 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../lib/prisma";
-import { stripe } from "../lib/stripe";
 import { createMagicLink, verifyMagicLink, createSession, deleteSession } from "../lib/magic-link";
 import { validate } from "../middleware/validate";
 import { authMiddleware } from "../middleware/auth";
@@ -124,60 +123,11 @@ router.get("/me", authMiddleware, async (req, res) => {
   }
 });
 
-// GET /auth/session-from-checkout?stripe_session_id=xxx
-router.get("/session-from-checkout", async (req, res) => {
-  try {
-    const stripeSessionId = req.query.stripe_session_id as string;
-    if (!stripeSessionId) {
-      res.status(400).json({ error: "stripe_session_id requis" });
-      return;
-    }
-
-    // Verify Stripe session
-    const stripeSession = await stripe.checkout.sessions.retrieve(stripeSessionId);
-    if (stripeSession.payment_status !== "paid" && stripeSession.status !== "complete") {
-      res.status(400).json({ error: "Paiement non confirmé" });
-      return;
-    }
-
-    // Find subscription in DB
-    const subscription = await prisma.subscription.findFirst({
-      where: { stripeSessionId },
-      include: { user: { select: { id: true, email: true, role: true } } },
-    });
-
-    if (!subscription) {
-      res.status(404).json({ error: "pending" });
-      return;
-    }
-
-    // One-time use protection
-    if (subscription.checkoutSessionUsed) {
-      res.status(409).json({ error: "already used" });
-      return;
-    }
-
-    // Mark as used
-    await prisma.subscription.update({
-      where: { id: subscription.id },
-      data: { checkoutSessionUsed: true },
-    });
-
-    // Create session and set cookie
-    const sessionToken = await createSession(subscription.userId);
-    setSessionCookie(res, sessionToken);
-
-    res.json({
-      user: {
-        id: subscription.user.id,
-        email: subscription.user.email,
-        role: subscription.user.role,
-      },
-    });
-  } catch (err) {
-    console.error("Session from checkout error:", err);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-});
+// NB : l'ancien endpoint GET /auth/session-from-checkout a été retiré
+// (sprint refonte 2 phase 2). Il posait un cookie session basé sur
+// un `stripe_session_id` visible en URL → vecteur d'élévation si
+// l'URL fuitait (logs, screenshare). Le nouveau flow exige le
+// magic-link envoyé par email pour authentifier l'acheteur — cf.
+// frontend/app/experts/[id]/page.tsx handleCheckoutReturn.
 
 export default router;

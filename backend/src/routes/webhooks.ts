@@ -238,7 +238,15 @@ async function handleCheckoutSessionCompleted(
   if (buyer && expertRecord) {
     const backendUrl = process.env.BACKEND_URL || "http://localhost:4000";
     const magicToken = await createMagicLink(buyer.email);
-    const magicLinkUrl = `${backendUrl}/auth/verify?token=${magicToken}`;
+    // `redirect=/experts/${expertId}` : après vérification du
+    // magic-link, l'user atterrit directement sur la page de l'expert
+    // qu'il vient d'acheter (au lieu de la home par défaut). Crucial
+    // depuis qu'on a supprimé /auth/session-from-checkout (sprint
+    // refonte 2 phase 2) — le magic-link est la SEULE voie pour
+    // poser une session à un user pas encore loggé qui vient
+    // d'acheter.
+    const redirectTarget = encodeURIComponent(`/experts/${expertId}`);
+    const magicLinkUrl = `${backendUrl}/auth/verify?token=${magicToken}&redirect=${redirectTarget}`;
     sendAccessUnlockedEmail(
       buyer.email,
       expertRecord.pseudo,
