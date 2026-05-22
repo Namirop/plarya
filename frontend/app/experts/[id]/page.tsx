@@ -69,7 +69,7 @@ interface OwnExpertIdentity {
 export default function ExpertProfilePage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const id = params.id as string;
 
   const [expert, setExpert] = useState<ExpertProfile | null>(null);
@@ -166,6 +166,11 @@ export default function ExpertProfilePage() {
 
   useEffect(() => {
     if (searchParams.get("checkout") !== "success" || !id) return;
+    // GUARD : tant que useUser n'a pas fini de résoudre la session,
+    // `user` vaut null par défaut → la branche "non loggé" matchait
+    // à tort pour un user loggé pendant les 50-200 ms d'hydratation.
+    // On attend `userLoading === false` avant de décider quoi afficher.
+    if (userLoading) return;
     // Au retour Stripe, deux branches selon que l'user est déjà loggé
     // ou pas :
     //  - LOGGÉ : on poll /subscriptions/check (le webhook backend a
@@ -211,10 +216,12 @@ export default function ExpertProfilePage() {
       await pollAccess();
     }
     handleCheckoutReturn();
-    // `user` (du useUser) influe sur la branche choisie. `refreshUser`
-    // n'est plus appelé : on n'essaie plus de poser une session post-
-    // paiement automatique.
-  }, [searchParams, id, user]);
+    // `user` (du useUser) influe sur la branche choisie. `userLoading`
+    // dans les deps pour re-run l'effect dès que la session est
+    // résolue (sinon le guard ci-dessus bloque indéfiniment).
+    // `refreshUser` n'est plus appelé : on n'essaie plus de poser une
+    // session post-paiement automatique.
+  }, [searchParams, id, user, userLoading]);
 
   async function handleCheckout(type: "DAY_PASS" | "MONTHLY") {
     if (!user) {
