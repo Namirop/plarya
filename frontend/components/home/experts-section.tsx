@@ -103,10 +103,10 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
     );
   }, [experts, filterDomain]);
 
-  // Nombre de "pages" = ceil(total / per_page). 6 cards / 3 = 2 pages,
-  // mais on garde 3 dots dans la maquette → minimum 3 dots affichés.
+  // Nombre de "pages" = ceil(total / per_page). Minimum 1 pour éviter
+  // un render à 0 dots quand la liste est encore vide (fetch initial).
   const totalPages = Math.max(
-    3,
+    1,
     Math.ceil(filteredExperts.length / CARDS_PER_PAGE),
   );
 
@@ -123,9 +123,13 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
     setIsAtEnd(scrollLeft >= maxScroll - 2);
   }, [totalPages]);
 
+  // Recompute scroll state quand le scroller change : à l'hydratation
+  // ET quand les experts arrivent du fetch API (sans ce 2ᵉ trigger,
+  // `isAtEnd` reste à `true` car maxScroll = scrollWidth(0) -
+  // clientWidth = très négatif au mount initial → flèche désactivée).
   useEffect(() => {
     updateState();
-  }, [updateState]);
+  }, [updateState, filteredExperts]);
 
   const scrollToPage = useCallback((page: number) => {
     const el = scrollerRef.current;
@@ -160,7 +164,7 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
         />
 
         {/* ──────── Mobile : stack vertical de 2 cards + bouton ──────── */}
-        <div className="md:hidden mt-8 flex flex-col items-center gap-4">
+        <div className="md:hidden mt-6 flex flex-col items-center gap-4">
           {MOBILE_EXPERTS.map((expert) => (
             <ExpertCard
               key={expert.id}
@@ -189,8 +193,9 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
 
         {/* ──────── Desktop : carrousel original ──────── */}
         {/* Bloc carrousel — relative pour positionner le Next Btn en
-            overlay top-right. mt-16 = 64 px (gap header → carrousel). */}
-        <div className="hidden md:block relative mt-16">
+            overlay top-right. mt-10 = 40 px (gap header → carrousel,
+            rapproché du SectionTitle vs 64 px précédent). */}
+        <div className="hidden md:block relative mt-10">
           <div
             ref={scrollerRef}
             onScroll={updateState}
@@ -233,7 +238,11 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
             aria-label="Voir les experts suivants"
             className={cn(
               "absolute top-[188px] right-[-22px] flex size-[45px] items-center justify-center rounded-full",
-              "border border-accent-strong bg-surface-elevated text-accent",
+              // bg-background (#000 solide) pour que le bouton "tienne"
+              // visuellement au-dessus du fond #131212 — vs
+              // bg-surface-elevated qui se confondait avec le bg de la
+              // page et donnait une impression de transparence.
+              "border border-accent-strong bg-background text-accent",
               "transition-all duration-200 ease-out cursor-pointer",
               "hover:shadow-shine hover:border-accent",
               "disabled:cursor-not-allowed disabled:opacity-50 disabled:pointer-events-none disabled:hover:shadow-none",

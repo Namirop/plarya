@@ -43,9 +43,9 @@ export function PourquoiPlaryaSection() {
         />
 
         {/* Card encadrée : fond noir 40 %, radius 16, padding 88×40.
-            px-[88px] en valeur arbitraire (22 n'est pas dans la scale
-            Tailwind par défaut). Gap header → card = 32 px (mt-8). */}
-        <div className="mt-8 rounded-2xl bg-black/40 px-[88px] py-10">
+            Gap header → card = 24 px (mt-6, rapproché vs mt-8 précédent
+            pour cohérence avec les autres sections de la home). */}
+        <div className="mt-6 rounded-2xl bg-black/40 px-[88px] py-10">
           {/* 3 piliers — flex horizontal, gap 48 px, centrés, séparés
               par 2 DividerVertical de 192 px. */}
           <div className="flex items-center justify-center gap-12">

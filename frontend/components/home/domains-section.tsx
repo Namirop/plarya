@@ -93,7 +93,7 @@ export function DomainsSection({
           ref={scrollerRef}
           onScroll={updateActive}
           className={cn(
-            "mt-8 md:mt-16",
+            "mt-6 md:mt-10",
             "flex gap-1 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4",
             "px-[calc(50vw-128px)]",
             "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",

@@ -16,10 +16,19 @@ export function HeaderAuth() {
   const { user, loading, logout } = useUser();
   const [loginOpen, setLoginOpen] = useState(false);
 
-  // Tant que la session n'est pas chargée, on rend le variant guest
-  // par défaut — évite un flash "connected → guest" si l'auth échoue
-  // après hydratation.
-  const variant = !loading && user ? "connected" : "guest";
+  // 3 états distincts pour éviter le flash visuel :
+  //  - "loading" : session en cours de résolution (premier appel
+  //    /auth/me). Header rend juste le logo, ni nav ni boutons.
+  //  - "connected" : user résolu, role connu.
+  //  - "guest" : pas de user (anonyme).
+  // Si on rendait "guest" pendant `loading`, on aurait un flash
+  // "Se connecter / Créer un compte" pendant 50-200 ms au refresh
+  // pour les users connectés.
+  const variant: "connected" | "guest" | "loading" = loading
+    ? "loading"
+    : user
+      ? "connected"
+      : "guest";
 
   // Redirect post-login : LoginModal stocke la destination dans
   // sessionStorage avant d'envoyer le magic-link. Au retour de

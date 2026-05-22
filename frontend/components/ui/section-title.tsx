@@ -15,9 +15,12 @@ export interface SectionTitleProps {
   title: ReactNode;
   cta?: SectionTitleCta;
   className?: string;
+  /** Classes appliquées spécifiquement au CTA (Link) — utile pour le
+   *  cacher selon le breakpoint. */
+  ctaClassName?: string;
 }
 
-export function SectionTitle({ title, cta, className }: SectionTitleProps) {
+export function SectionTitle({ title, cta, className, ctaClassName }: SectionTitleProps) {
   return (
     <div
       className={cn(
@@ -36,7 +39,10 @@ export function SectionTitle({ title, cta, className }: SectionTitleProps) {
       {cta && (
         <Link
           href={cta.href}
-          className="group inline-flex items-center gap-2 font-body text-body-18 text-foreground transition-opacity hover:opacity-80"
+          className={cn(
+            "group inline-flex items-center gap-2 font-body text-body-18 text-foreground transition-opacity hover:opacity-80",
+            ctaClassName,
+          )}
         >
           {cta.text}
           <ChevronRight

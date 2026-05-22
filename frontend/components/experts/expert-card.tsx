@@ -93,9 +93,14 @@ export function ExpertCard({
       </p>
 
       {/* Liste analyses : y=194 → mt-4 (16px) après le label (qui finit à y=178).
-          gap-2 entre items = 8px, ce qui donne row-to-row = 16(lh)+8 = 24px (= Figma). */}
-      <ul className="mt-4 flex flex-col gap-2">
-        {analyses.map((a, i) => (
+          gap-2 entre items = 8px, ce qui donne row-to-row = 16(lh)+8 = 24px (= Figma).
+          `min-h-[40px]` réserve la hauteur de 2 lignes (16+8+16) même
+          quand il n'y a qu'une seule analyse → toutes les cards du
+          carrousel ont une hauteur identique. `slice(0, 2)` au cas où
+          un expert pousserait 3+ analyses (on en affiche max 2 dans
+          la vitrine homepage). */}
+      <ul className="mt-4 flex min-h-[40px] flex-col gap-2">
+        {analyses.slice(0, 2).map((a, i) => (
           <li
             key={i}
             className="flex items-center gap-6 font-body text-body-16"
