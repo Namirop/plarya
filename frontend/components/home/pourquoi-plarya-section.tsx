@@ -30,7 +30,7 @@ export function PourquoiPlaryaSection() {
   return (
     // pt-16 = 64 px (gap depuis Experts).
     <section className="pt-16">
-      <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
+      <div className="mx-auto w-full max-w-content px-4 sm:px-8 lg:px-0">
         {/* Header HORS de la card encadrée (conforme à la maquette
             Figma — voir pourquoi-plarya-section-spec.md §2). Le "?"
             est en doré accent — pattern unique à cette section. */}
@@ -42,16 +42,32 @@ export function PourquoiPlaryaSection() {
           }
         />
 
-        {/* Card encadrée : fond noir 40 %, radius 16, padding 88×40.
-            Gap header → card = 24 px (mt-6, rapproché vs mt-8 précédent
-            pour cohérence avec les autres sections de la home). */}
-        <div className="mt-6 rounded-2xl bg-black/40 px-[88px] py-10">
-          {/* 3 piliers — flex horizontal, gap 48 px, centrés, séparés
-              par 2 DividerVertical de 192 px. */}
-          <div className="flex items-center justify-center gap-12">
+        {/* Card encadrée : fond noir 40 %, radius 16.
+            Gap header → card = 24 px (mt-6) pour cohérence avec les autres
+            sections. Mobile : padding 32px + stack vertical. Desktop :
+            padding 88×40 + row horizontale. */}
+        <div className="mt-6 rounded-2xl bg-black/40 p-8 md:px-[88px] md:py-10">
+          {/* Mobile : flex-col + dividers horizontaux. Desktop : flex-row
+              + dividers verticaux. Le DividerVertical accepte une prop
+              orientation pour gérer les deux cas. */}
+          <div className="flex flex-col items-stretch justify-center gap-8 md:flex-row md:items-center md:gap-12">
             {PILLARS.map((pillar, i) => (
               <Fragment key={pillar.title}>
-                {i > 0 && <DividerVertical height={192} />}
+                {i > 0 && (
+                  <>
+                    {/* Divider horizontal mobile (192 px centré) */}
+                    <DividerVertical
+                      height={192}
+                      orientation="horizontal"
+                      className="self-center md:hidden"
+                    />
+                    {/* Divider vertical desktop */}
+                    <DividerVertical
+                      height={192}
+                      className="hidden md:block"
+                    />
+                  </>
+                )}
                 <div className="flex flex-col items-start">
                   <Icon
                     icon={pillar.icon}
@@ -62,7 +78,7 @@ export function PourquoiPlaryaSection() {
                   <h3 className="mt-6 font-body text-h4 text-foreground">
                     {pillar.title}
                   </h3>
-                  <p className="mt-4 font-body text-body-16 text-muted-foreground">
+                  <p className="mt-4 font-body text-body-16 leading-[1.4] text-muted-foreground">
                     {pillar.description}
                   </p>
                 </div>

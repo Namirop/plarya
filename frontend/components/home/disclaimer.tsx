@@ -9,8 +9,11 @@
 export function Disclaimer() {
   return (
     <section className="pb-8">
-      <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
-        <p className="mx-auto max-w-[748px] text-center font-body text-body-16 text-muted-foreground">
+      <div className="mx-auto w-full max-w-content px-4 sm:px-8 lg:px-0">
+        {/* Mobile : largeur ~315 px (max-w-[315px]) pour rester aligné
+            avec le divider décoratif au-dessus. Desktop : 748 px (≈
+            largeur du contenu hero). */}
+        <p className="mx-auto max-w-[315px] md:max-w-[748px] text-center font-body text-body-16 leading-[1.4] text-muted-foreground">
           Les contenus proposés sur Plarya sont des analyses et opinions
           personnelles. Ils ne constituent en aucun cas des conseils
           financiers ou des incitations à parier.

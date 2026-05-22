@@ -1,31 +1,17 @@
 "use client";
 
-import { Fragment } from "react";
 import Image from "next/image";
-import { Icon } from "@iconify/react";
 import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { DividerVertical } from "@/components/ui/divider-vertical";
 import { GoldenBorderOverlay } from "@/components/ui/golden-border-overlay";
+import { TrustRow } from "@/components/home/trust-row";
 
-const TRUST_ITEMS = [
-  {
-    icon: "solar:user-outline",
-    title: "Analyses d'experts",
-    body: "Des créateurs passionnés partagent leurs insights.",
-  },
-  {
-    icon: "stash:lock-opened",
-    title: "Contenu indépendant",
-    body: "Des opinions libres, sans influence extérieure.",
-  },
-  {
-    icon: "f7:creditcard",
-    title: "Paiement sécurisé",
-    body: "Accès simple et rapide à chaque analyse.",
-  },
-];
+// Masque radial doux : l'image fond dans le background sur tous les
+// bords. Même pattern que le visuel hero desktop. Centre opaque jusqu'à
+// 42 %, transparence complète à 80 % → bords totalement fondus.
+const RADIAL_FADE_MASK =
+  "radial-gradient(circle at center, black 38%, transparent 80%)";
 
 export function Hero() {
   function handleCtaClick() {
@@ -34,19 +20,53 @@ export function Hero() {
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  return (
-    // pt-8 = 32 px : gap entre le bas du Header (sticky, h=70) et le top
-    // du cadre Hero, conformément à Figma (TopBar y=0..70, Hero Cadre y=102).
-    <section className="relative pt-8">
-      <div className="mx-auto max-w-[1308px] px-6 sm:px-10 lg:px-[72px]">
-        <div className="relative overflow-visible rounded-2xl">
-          {/* Cadre doré conic-gradient — extrait dans
-              `components/ui/golden-border-overlay.tsx`. Réutilisé sur la
-              card "Devenir créateur" (même pattern visuel). */}
-          <GoldenBorderOverlay />
+  function handleDomainsClick() {
+    document
+      .getElementById("domains")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
-          {/* Visuel hero : déborde au-dessus du cadre, top-right. Masqué
-              en mobile et tablette (la composition gauche prime). */}
+  return (
+    <section className="relative pt-2 md:pt-8">
+      {/* ──────── Mobile : eyebrow tout en haut, sous le header, en
+          overlay sur la zone fondue (top) de l'image. z-10 pour passer
+          au-dessus du masque radial. ──────── */}
+      <div className="md:hidden relative z-10 px-6">
+        <span className="block font-body text-body-16 text-muted-foreground">
+          PLATEFORME D&apos;ANALYSES SPORTIVES
+        </span>
+      </div>
+
+      {/* ──────── Mobile : image fondue dans le bg via masque radial.
+          mt-[-44px] : l'image remonte sous l'eyebrow pour réduire le
+          gap visuel — l'eyebrow se retrouve naturellement dans la zone
+          transparente du masque radial, sans rupture visible. ──────── */}
+      <div className="md:hidden -mt-[44px]">
+        <div className="relative w-full aspect-square">
+          <Image
+            src="/image_hero_section.jpg"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+            style={{
+              WebkitMaskImage: RADIAL_FADE_MASK,
+              maskImage: RADIAL_FADE_MASK,
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-[1308px] px-6 sm:px-10 lg:px-[72px]">
+        <div className="relative overflow-visible md:rounded-2xl">
+          {/* Cadre conic-gradient doré — desktop uniquement (pas dans
+              la maquette Figma mobile). */}
+          <div className="hidden md:block">
+            <GoldenBorderOverlay />
+          </div>
+
+          {/* Visuel hero desktop : déborde au-dessus du cadre, top-right. */}
           <div className="pointer-events-none absolute -top-12 right-0 hidden lg:block">
             <Image
               src="/image_hero_section.jpg"
@@ -64,68 +84,73 @@ export function Hero() {
             />
           </div>
 
-          <div className="relative z-10 px-8 py-16 sm:px-12 lg:px-[59px] lg:py-20">
-            {/* Colonne gauche : eyebrow + H1 + sous-titre + CTA */}
-            <div className="max-w-[605px]">
+          {/* -mt-[64px] mobile : remonte le bloc texte (H1/subtitle/CTAs)
+              dans la zone fondue du bas de l'image, même logique que
+              l'eyebrow en haut — réduit le gap "vide" et donne un
+              flow plus continu, comme dans la maquette Figma. */}
+          <div className="relative z-10 px-0 -mt-[64px] pb-4 sm:mt-0 sm:px-12 sm:py-16 lg:px-[59px] lg:py-20">
+            {/* Eyebrow desktop : avec ligne décorative à gauche */}
+            <div className="hidden md:block max-w-[605px]">
               <div className="flex items-center gap-[17px]">
                 <span aria-hidden className="block h-px w-[45px] bg-accent" />
                 <span className="font-body text-[18px] font-normal text-muted-foreground">
                   PLATEFORME D&apos;ANALYSES SPORTIVES
                 </span>
               </div>
+            </div>
 
-              <h1 className="mt-8 font-display text-h1 text-foreground">
+            {/* Colonne gauche (desktop) / pleine largeur (mobile) :
+                H1 + sous-titre + CTAs */}
+            <div className="md:max-w-[605px]">
+              {/* H1 : mobile 32/30 (= "h1 mobile" Figma). Desktop : token
+                  text-h1 (64/60). Valeur arbitraire `text-[32px]
+                  leading-[30px]` car Tailwind v4 ne génère pas
+                  d'utility pour un token avec suffixe (`-mobile`). */}
+              <h1 className="mt-2 md:mt-8 font-display text-[32px] leading-[30px] md:text-h1 md:leading-[60px] text-foreground">
                 Accède aux <span className="text-accent">meilleurs</span>{" "}
                 analystes.
               </h1>
 
-              <p className="mt-8 max-w-[592px] font-body text-h5 leading-relaxed text-foreground">
+              <p className="mt-4 md:mt-8 md:max-w-[592px] font-body text-body-16 md:text-h5 leading-[1.5] font-medium md:font-normal text-foreground">
                 Découvre des analyses et opinions exclusives dans les domaines
                 qui t&apos;intéressent.
               </p>
 
-              <div className="mt-12">
+              {/* CTAs : taille `default` mobile (text-body-16 16px),
+                  `lg` desktop (text-h5 20px). Spec Figma mobile : btn
+                  mobile = Work Sans Medium 16px. */}
+              <div className="mt-8 md:mt-12 flex flex-col gap-4 md:flex-row md:gap-4">
                 <Button
                   variant="primary"
-                  size="lg"
+                  size="default"
                   onClick={handleCtaClick}
                   aria-label="Découvrir les experts"
+                  className="w-full md:w-auto md:text-h5 md:px-8 md:py-4"
                 >
                   Découvrir les experts
-                  <ArrowRight className="size-4" />
+                  {/* Flèche desktop only (la maquette mobile Figma n'en
+                      montre pas sur ce bouton). */}
+                  <ArrowRight className="size-4 hidden md:inline-block" />
+                </Button>
+
+                {/* CTA secondaire — mobile-only. Outline blanc + shadow doré. */}
+                <Button
+                  variant="secondary"
+                  size="default"
+                  onClick={handleDomainsClick}
+                  aria-label="Explorer les domaines"
+                  className="w-full md:hidden border-white shadow-shine hover:border-white"
+                >
+                  Explorer les domaines
                 </Button>
               </div>
             </div>
 
-            {/* Trust row : pleine largeur du cadre (sous l'image) */}
-            <ul className="mt-16 flex flex-col gap-10 sm:flex-row sm:items-center sm:gap-0">
-              {TRUST_ITEMS.map((item, index) => (
-                <Fragment key={item.title}>
-                  {index > 0 && (
-                    <DividerVertical
-                      height={96}
-                      className="hidden sm:block"
-                    />
-                  )}
-                  <li className="flex flex-1 items-start gap-[9px] sm:px-8">
-                    <Icon
-                      icon={item.icon}
-                      width={30}
-                      height={30}
-                      className="shrink-0 text-accent"
-                    />
-                    <div className="flex flex-col gap-2">
-                      <p className="font-body text-h5 text-foreground">
-                        {item.title}
-                      </p>
-                      <p className="font-body text-body-16 leading-[1.4] text-muted-foreground">
-                        {item.body}
-                      </p>
-                    </div>
-                  </li>
-                </Fragment>
-              ))}
-            </ul>
+            {/* Trust row embed desktop only */}
+            <TrustRow
+              variant="inline"
+              className="hidden md:flex"
+            />
           </div>
         </div>
       </div>
