@@ -98,6 +98,20 @@ export default function ExpertProfilePage() {
   // seule voie d'authentification post-paiement est le magic-link
   // envoyé par email).
   const [showEmailGate, setShowEmailGate] = useState(false);
+  // emailGateSessionId : stocke le stripe_session_id présent dans
+  // l'URL au moment du retour Stripe, pour pouvoir appeler
+  // /auth/resend-access-unlocked depuis la modale email-gate.
+  // (Le query param est nettoyé de l'URL via replaceState juste
+  // après — on conserve donc une copie locale.)
+  const [emailGateSessionId, setEmailGateSessionId] = useState<string | null>(
+    null,
+  );
+  // resendState : pour le bouton "Renvoyer l'email" sur la modale
+  // email-gate. "idle" → cliquable, "sending" → en cours, "sent" →
+  // texte "Email renvoyé" + disable 60s, "error" → message.
+  const [resendState, setResendState] = useState<
+    "idle" | "sending" | "sent" | "error"
+  >("idle");
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [emailModalType, setEmailModalType] = useState<"DAY_PASS" | "MONTHLY">(
     "DAY_PASS",
@@ -184,10 +198,15 @@ export default function ExpertProfilePage() {
     //    pour orienter l'user vers le magic-link envoyé par Resend
     //    (cf. backend webhooks.ts → sendAccessUnlockedEmail).
     async function handleCheckoutReturn() {
+      // Capture le stripe_session_id AVANT de nettoyer l'URL — il
+      // sera nécessaire pour le bouton "Renvoyer l'email" si user
+      // non-loggé.
+      const stripeSessionId = searchParams.get("stripe_session_id");
       window.history.replaceState({}, "", `/experts/${id}`);
 
       if (!user) {
         // Acheteur non-loggé : magic-link email = seule voie d'accès.
+        setEmailGateSessionId(stripeSessionId);
         setShowEmailGate(true);
         return;
       }
@@ -222,6 +241,24 @@ export default function ExpertProfilePage() {
     // `refreshUser` n'est plus appelé : on n'essaie plus de poser une
     // session post-paiement automatique.
   }, [searchParams, id, user, userLoading]);
+
+  // Bouton "Renvoyer l'email" sur la modale email-gate. Throttle 60s
+  // côté client (le backend a aussi un rate-limit 3/15min/IP par
+  // mesure de sécurité).
+  async function handleResendEmail() {
+    if (!emailGateSessionId || resendState !== "idle") return;
+    setResendState("sending");
+    try {
+      await apiPost("/auth/resend-access-unlocked", {
+        stripeSessionId: emailGateSessionId,
+      });
+      setResendState("sent");
+      setTimeout(() => setResendState("idle"), 60000);
+    } catch {
+      setResendState("error");
+      setTimeout(() => setResendState("idle"), 5000);
+    }
+  }
 
   async function handleCheckout(type: "DAY_PASS" | "MONTHLY") {
     if (!user) {
@@ -472,7 +509,25 @@ export default function ExpertProfilePage() {
             <p className="mt-2 text-center font-body text-body-16 text-muted-foreground/70">
               Pense à vérifier tes spams si tu ne le trouves pas.
             </p>
-            <div className="mt-6">
+            <div className="mt-6 space-y-3">
+              {/* Bouton "Renvoyer" — visible uniquement si on a un
+                  stripeSessionId à transmettre. Backend renvoie 200
+                  silencieux même si la session est inconnue, donc
+                  pas de leak d'info. Throttle 60s côté client. */}
+              {emailGateSessionId && (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={handleResendEmail}
+                  disabled={resendState !== "idle"}
+                  className="w-full"
+                >
+                  {resendState === "sending" && "Envoi en cours…"}
+                  {resendState === "sent" && "Email renvoyé ✓"}
+                  {resendState === "error" && "Erreur, réessaie"}
+                  {resendState === "idle" && "Renvoyer l'email"}
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="lg"
