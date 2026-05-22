@@ -242,9 +242,10 @@ export default function ExpertProfilePage() {
     // session post-paiement automatique.
   }, [searchParams, id, user, userLoading]);
 
-  // Bouton "Renvoyer l'email" sur la modale email-gate. Throttle 60s
-  // côté client (le backend a aussi un rate-limit 3/15min/IP par
-  // mesure de sécurité).
+  // Lien "Renvoyer le lien" sur la modale email-gate. Feedback 3s
+  // pour le succès, 5s pour l'erreur, puis retour idle. Le backend
+  // applique un rate-limit 3/15min/IP en filet de sécurité contre
+  // le spam.
   async function handleResendEmail() {
     if (!emailGateSessionId || resendState !== "idle") return;
     setResendState("sending");
@@ -253,7 +254,7 @@ export default function ExpertProfilePage() {
         stripeSessionId: emailGateSessionId,
       });
       setResendState("sent");
-      setTimeout(() => setResendState("idle"), 60000);
+      setTimeout(() => setResendState("idle"), 3000);
     } catch {
       setResendState("error");
       setTimeout(() => setResendState("idle"), 5000);
@@ -509,25 +510,7 @@ export default function ExpertProfilePage() {
             <p className="mt-2 text-center font-body text-body-16 text-muted-foreground/70">
               Pense à vérifier tes spams si tu ne le trouves pas.
             </p>
-            <div className="mt-6 space-y-3">
-              {/* Bouton "Renvoyer" — visible uniquement si on a un
-                  stripeSessionId à transmettre. Backend renvoie 200
-                  silencieux même si la session est inconnue, donc
-                  pas de leak d'info. Throttle 60s côté client. */}
-              {emailGateSessionId && (
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={handleResendEmail}
-                  disabled={resendState !== "idle"}
-                  className="w-full"
-                >
-                  {resendState === "sending" && "Envoi en cours…"}
-                  {resendState === "sent" && "Email renvoyé ✓"}
-                  {resendState === "error" && "Erreur, réessaie"}
-                  {resendState === "idle" && "Renvoyer l'email"}
-                </Button>
-              )}
+            <div className="mt-6">
               <Button
                 variant="secondary"
                 size="lg"
@@ -536,6 +519,30 @@ export default function ExpertProfilePage() {
               >
                 Retourner à l&apos;accueil
               </Button>
+
+              {/* Lien discret "Renvoyer le lien" SOUS le bouton
+                  principal. Visible uniquement si on a un
+                  stripeSessionId à transmettre. Backend renvoie 200
+                  silencieux même si la session est inconnue, donc
+                  pas de leak d'info. */}
+              {emailGateSessionId && (
+                <div className="mt-4 text-center">
+                  <p className="font-body text-body-16 text-muted-foreground/70">
+                    Tu n&apos;as pas reçu l&apos;email ?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleResendEmail}
+                    disabled={resendState !== "idle"}
+                    className="mt-1 cursor-pointer font-body text-body-16 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {resendState === "sending" && "Envoi en cours…"}
+                    {resendState === "sent" && "Email renvoyé !"}
+                    {resendState === "error" && "Erreur, contacte-nous"}
+                    {resendState === "idle" && "Renvoyer le lien"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
