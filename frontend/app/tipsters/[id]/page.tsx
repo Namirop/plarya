@@ -1,20 +1,22 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Lock, X } from "lucide-react";
+import { Icon } from "@iconify/react";
+
 import { useUser } from "@/hooks/use-user";
 import { apiGet, apiPost } from "@/lib/api";
 import { createCheckoutSession } from "@/lib/stripe";
 import { TEASING_LABELS, formatPrice } from "@/lib/constants";
-import { getSportLabel } from "@/lib/sports";
-import { Lock, Star } from "lucide-react";
-import { Icon } from "@iconify/react";
-import { formatStartTime, isStarted, allStarted } from "@/lib/date";
-import { getLeague } from "@/lib/sports";
+import { getSportLabel, getLeague } from "@/lib/sports";
 import { SportIcon } from "@/lib/sports-icons";
+import { formatStartTime, isStarted, allStarted } from "@/lib/date";
 import { EmailCheckoutModal } from "@/components/checkout/email-checkout-modal";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface BookmakerOddsData {
   id: string;
@@ -58,17 +60,35 @@ interface TipsterProfile {
   pronos: PronoData[];
 }
 
+// Shape minimale de /tipsters/me utilisée uniquement pour détecter si
+// le tipster connecté est sur SA propre page publique (bypass paywall).
+interface OwnTipsterIdentity {
+  id: string;
+}
+
 export default function TipsterProfilePage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const router = useRouter();
   const { user, refreshUser } = useUser();
   const id = params.id as string;
 
   const [tipster, setTipster] = useState<TipsterProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [hasAccess, setHasAccess] = useState(false);
+
+  // ── ACCÈS PAYANT (V1) ──────────────────────────────────────
+  // State conservé tel quel pour ne pas casser le flow Stripe :
+  // `setSubscriptionAccess(true)` est appelé après poll réussi
+  // sur le retour checkout. Renommé depuis `hasAccess` pour
+  // libérer ce label au profit du dérivé (cf. plus bas).
+  const [subscriptionAccess, setSubscriptionAccess] = useState(false);
+
+  // ── ACCÈS PROPRIÉTAIRE ─────────────────────────────────────
+  // Si user.role === TIPSTER, on fetch son propre profil pour
+  // détecter s'il est sur SA page publique. Backend inchangé :
+  // /tipsters/me existe déjà, gated TIPSTER via middleware.
+  const [ownTipsterId, setOwnTipsterId] = useState<string | null>(null);
+
   const [fullPronos, setFullPronos] = useState<PronoData[] | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [showUpsell, setShowUpsell] = useState(false);
@@ -77,6 +97,15 @@ export default function TipsterProfilePage() {
     "DAY_PASS",
   );
   const viewTracked = useRef(false);
+
+  // ── hasAccess (DÉRIVÉ, source de vérité UI) ────────────────
+  // Étend la V1 : abonnement actif / day-pass OU tipster
+  // propriétaire de la page OU admin. Tous les consommateurs en
+  // aval (PronoLine, sticky CTA, modale upsell) lisent ce même
+  // `hasAccess` — aucune autre modif d'API n'est nécessaire.
+  const isAdmin = user?.role === "ADMIN";
+  const isOwner = !!user && !!ownTipsterId && ownTipsterId === id;
+  const hasAccess = subscriptionAccess || isAdmin || isOwner;
 
   useEffect(() => {
     if (!id) return;
@@ -92,6 +121,18 @@ export default function TipsterProfilePage() {
     apiPost(`/tipsters/${id}/view`, {}).catch(() => {});
   }, [id]);
 
+  // Fetch /tipsters/me uniquement si l'user est un TIPSTER.
+  // Pour USER/ADMIN, l'endpoint est gated → on skip.
+  useEffect(() => {
+    if (user?.role !== "TIPSTER") {
+      setOwnTipsterId(null);
+      return;
+    }
+    apiGet<OwnTipsterIdentity>("/tipsters/me")
+      .then((data) => setOwnTipsterId(data.id))
+      .catch(() => setOwnTipsterId(null));
+  }, [user]);
+
   const checkAccess = useCallback(async () => {
     if (!user || !id) return false;
     try {
@@ -99,7 +140,7 @@ export default function TipsterProfilePage() {
         "/subscriptions/check",
         { tipsterId: id },
       );
-      setHasAccess(data.hasAccess);
+      setSubscriptionAccess(data.hasAccess);
       return data.hasAccess;
     } catch {
       return false;
@@ -143,7 +184,7 @@ export default function TipsterProfilePage() {
             { tipsterId: id },
           );
           if (data.hasAccess) {
-            setHasAccess(true);
+            setSubscriptionAccess(true);
             setShowUpsell(true);
             return;
           }
@@ -178,7 +219,7 @@ export default function TipsterProfilePage() {
   if (loading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="size-6 animate-spin rounded-full border-2 border-[#1A1A1A] border-t-[#00D47E]" />
+        <div className="size-6 animate-spin rounded-full border-2 border-surface-elevated border-t-accent" />
       </div>
     );
   }
@@ -186,7 +227,9 @@ export default function TipsterProfilePage() {
   if (error || !tipster) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-red-400">{error || "Expert introuvable"}</p>
+        <p className="font-body text-body-16 text-destructive">
+          {error || "Expert introuvable"}
+        </p>
       </div>
     );
   }
@@ -200,155 +243,155 @@ export default function TipsterProfilePage() {
   return (
     <>
       <div className="flex min-h-[calc(100vh-4rem)] flex-col">
-        <div className="mx-auto w-full max-w-4xl flex-1 px-4 pt-20 pb-32 sm:px-6 lg:px-8">
-          {/* Warning */}
+        {/* Container uniformisé 872px (Dashboard / Devenir Expert).
+            pb-32 pour libérer la zone du sticky CTA et éviter qu'il
+            recouvre la fin de la liste d'analyses. */}
+        <div className="mx-auto w-full max-w-[872px] flex-1 px-4 pt-10 pb-32 md:px-6 md:pt-16">
+          {/* Bandeau d'avertissement admin — tokens accent doré
+              (remplace #00D47E vert V1). */}
           {tipster.warningMessage && (
-            <div className="mb-6 rounded-md ring-1 ring-[#00D47E]/30 bg-[#00D47E]/5 px-4 py-3 text-sm text-[#00D47E]">
+            <div className="mb-6 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 font-body text-body-16 text-accent">
               {tipster.warningMessage}
             </div>
           )}
 
-          {/* ═══ PROFILE HEADER ═══ */}
-          <div className="relative rounded-lg bg-[#0E0E0E] ring-1 ring-[#1A1A1A] pt-14 pb-8 px-6 sm:px-10">
-            {/* Photo — overlapping top */}
-            <div className="absolute left-1/2 -translate-x-1/2 -top-[35px]">
-              {tipster.photoUrl ? (
-                <Image
-                  src={tipster.photoUrl}
-                  alt={tipster.pseudo}
-                  width={140}
-                  height={140}
-                  className="size-[140px] rounded-full object-cover ring-2 ring-[#F0EDE8]/10 shadow-[0_8px_40px_rgba(0,0,0,0.6)]"
-                />
-              ) : (
-                <div className="flex size-[140px] items-center justify-center rounded-full bg-[#141414] text-5xl font-bold text-[#F0EDE8] ring-2 ring-[#F0EDE8]/10 shadow-[0_8px_40px_rgba(0,0,0,0.6)]">
-                  {tipster.pseudo.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-
-            <div className="h-[70px]" />
-
-            {/* Pseudo */}
-            <h1 className="text-center font-[family-name:var(--font-dm-serif)] text-5xl font-normal sm:text-6xl italic pb-2 text-[#F0EDE8]">
-              {tipster.pseudo}
-            </h1>
-
-            {/* Badge EXPERT */}
-            <div className="mt-4 flex justify-center">
-              <div className="flex items-center gap-3">
-                <div className="h-px w-8 bg-gradient-to-r from-transparent to-[#00D47E]/40" />
-                <span className="text-sm font-semibold uppercase tracking-[0.25em] text-[#00D47E]">
-                  Expert
-                </span>
-                <div className="h-px w-8 bg-gradient-to-l from-transparent to-[#00D47E]/40" />
-              </div>
-            </div>
-
-            {/* Views */}
-            {tipster.viewsToday > 0 && (
-              <div className="mt-4 flex items-center justify-center gap-2 text-sm text-[#8A8680]">
-                <Icon icon="tabler:eye" className="size-4" />
-                <span>{tipster.viewsToday} vues</span>
-              </div>
-            )}
-
-            {/* Bio */}
-            {tipster.bio && (
-              <p className="mt-5 text-center text-base text-[#8A8680] leading-relaxed">
-                {tipster.bio}
-              </p>
-            )}
-
-            {/* Daily note */}
-            {tipster.dailyNote && (
-              <p className="mt-2 text-center text-base text-[#F0EDE8]/50 italic">
-                {tipster.dailyNote}
-              </p>
-            )}
-
-            {/* Sports */}
-            <div className="mt-5 flex flex-wrap justify-center gap-2.5">
-              {tipster.sports.map((sport) => (
-                <span
-                  key={sport}
-                  className="inline-flex items-center gap-2 rounded-md bg-[#141414] px-3.5 py-1.5 text-sm text-[#8A8680]"
-                >
-                  <SportIcon
-                    sport={sport}
-                    className="size-4.5 text-[#8A8680]"
+          {/* ═══ BLOC IDENTITÉ ═══
+              Card englobante DS : bg-black/40, bordure subtile, radius 16,
+              padding 24/32. Layout horizontal desktop, stack vertical mobile. */}
+          <section className="rounded-2xl border border-surface-elevated bg-black/40 p-6 md:p-8">
+            <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
+              {/* Avatar 96×96, ring doré subtil (remplace ring off-white V1). */}
+              <div className="shrink-0">
+                {tipster.photoUrl ? (
+                  <Image
+                    src={tipster.photoUrl}
+                    alt={tipster.pseudo}
+                    width={96}
+                    height={96}
+                    className="size-24 rounded-full object-cover ring-1 ring-accent/40"
                   />
-                  {getSportLabel(sport)}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* ═══ SECTION TITLE ═══ */}
-          {pendingPronos.length > 0 && (
-            <>
-              <div className="flex items-center gap-4 py-10">
-                <div className="flex-1 flex items-center">
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#1A1A1A] to-[#2A2A2A]" />
-                  <div className="mx-3 flex items-center gap-[6px]">
-                    <div className="w-8 sm:w-12 h-px bg-gradient-to-r from-transparent to-[#00D47E]/50" />
-                    <div className="w-[6px] h-[6px] rounded-full bg-[#00D47E]/70 shadow-[0_0_12px_rgba(0,212,126,0.4)]" />
+                ) : (
+                  <div className="flex size-24 items-center justify-center rounded-full bg-surface-elevated font-display text-h2 text-accent ring-1 ring-accent/40">
+                    {tipster.pseudo.charAt(0).toUpperCase()}
                   </div>
-                </div>
-                <h2 className="whitespace-nowrap font-[family-name:var(--font-dm-serif)] text-xl italic text-[#F0EDE8] md:text-2xl">
-                  {pendingPronos.length}&nbsp;
-                  {pendingPronos.length === 1 ? "sélection" : "sélections"}
-                  &nbsp;aujourd&apos;hui
-                </h2>
-                <div className="flex-1 flex items-center">
-                  <div className="mx-3 flex items-center gap-[6px]">
-                    <div className="w-[6px] h-[6px] rounded-full bg-[#00D47E]/70 shadow-[0_0_12px_rgba(0,212,126,0.4)]" />
-                    <div className="w-8 sm:w-12 h-px bg-gradient-to-l from-transparent to-[#00D47E]/50" />
-                  </div>
-                  <div className="flex-1 h-px bg-gradient-to-l from-transparent via-[#1A1A1A] to-[#2A2A2A]" />
-                </div>
+                )}
               </div>
 
-              {/* ═══ ANALYSES CARD ═══ */}
-              <div className="rounded-lg bg-[#0E0E0E] ring-1 ring-[#1A1A1A] overflow-hidden">
-                {pendingPronos.map((prono, idx) => (
+              {/* Bloc infos. Centré mobile, gauche desktop. */}
+              <div className="flex min-w-0 flex-1 flex-col items-center gap-3 text-center md:items-start md:text-left">
+                {/* Pseudo + badge EXPERT (pill doré, remplace le label
+                    vert V1). */}
+                <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
+                  <h1 className="font-display text-h2 text-foreground">
+                    {tipster.pseudo}
+                  </h1>
+                  <span className="inline-flex items-center rounded-full bg-accent/20 px-3 py-1 font-body text-body-16 text-accent">
+                    EXPERT
+                  </span>
+                </div>
+
+                {/* Compteur vues — affiché uniquement si > 0 (V1 inchangé). */}
+                {tipster.viewsToday > 0 && (
+                  <div className="flex items-center gap-2 font-body text-body-16 text-muted-foreground">
+                    <Icon icon="tabler:eye" className="size-4" />
+                    <span>{tipster.viewsToday} vues aujourd&apos;hui</span>
+                  </div>
+                )}
+
+                {/* Bio. */}
+                {tipster.bio && (
+                  <p className="font-body text-body-16 text-foreground">
+                    {tipster.bio}
+                  </p>
+                )}
+
+                {/* Note du jour (italique V1 retiré — DS golden-da
+                    n'utilise pas d'italique en dehors de cas spécifiques). */}
+                {tipster.dailyNote && (
+                  <p className="font-body text-body-16 text-muted-foreground">
+                    {tipster.dailyNote}
+                  </p>
+                )}
+
+                {/* Sports couverts — chips rounded-full DS (mêmes
+                    tokens que /devenir-tipster, état non-actif). */}
+                {tipster.sports.length > 0 && (
+                  <div className="mt-1 flex flex-wrap justify-center gap-2 md:justify-start">
+                    {tipster.sports.map((sport) => (
+                      <span
+                        key={sport}
+                        className="inline-flex items-center gap-2 rounded-full border border-surface-elevated bg-black/40 px-3 py-1 font-body text-body-16 text-foreground"
+                      >
+                        <SportIcon
+                          sport={sport}
+                          className="size-4 text-accent"
+                        />
+                        {getSportLabel(sport)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* ═══ SECTION ANALYSES ═══
+              Espacement bloc identité → titre = 48px (mt-12). */}
+          {pendingPronos.length > 0 && (
+            <section className="mt-12">
+              <h2 className="font-display text-h3 text-foreground">
+                {pendingPronos.length === 1
+                  ? "Analyse du jour"
+                  : `${pendingPronos.length} analyses du jour`}
+              </h2>
+
+              {/* Cards séparées avec gap-4 (remplace la card unique
+                  V1 avec border-b internes). */}
+              <div className="mt-6 flex flex-col gap-4">
+                {pendingPronos.map((prono) => (
                   <PronoLine
                     key={prono.id}
                     prono={prono}
                     hasAccess={hasAccess}
-                    isLast={idx === pendingPronos.length - 1}
                   />
                 ))}
               </div>
-            </>
+            </section>
           )}
         </div>
 
-        {/* ═══ CTA STICKY ═══ */}
+        {/* ═══ CTA STICKY ═══
+            Visible uniquement quand !hasAccess (donc jamais affiché
+            au propriétaire ni à l'admin grâce au dérivé étendu).
+            Wording "Accéder" remplace "Déverrouiller" (CLAUDE.md §1.1). */}
         {!hasAccess && (
-          <div className="sticky bottom-0 z-40 bg-[#080808]/95 backdrop-blur-md">
-            <div className="mx-auto flex max-w-4xl flex-col items-center gap-1.5 px-6 py-4">
+          <div className="sticky bottom-0 z-40 border-t border-surface-elevated bg-black/80 backdrop-blur-md">
+            <div className="mx-auto flex max-w-[872px] flex-col items-center gap-2 px-4 py-4 md:px-6">
               {allAnalysesStarted ? (
-                <p className="text-center text-sm text-[#8A8680]">
+                <p className="text-center font-body text-body-16 text-muted-foreground">
                   Toutes les analyses du jour sont terminées, reviens demain
                 </p>
               ) : (
                 <>
-                  <button
+                  <Button
                     type="button"
+                    variant="primary"
+                    size="lg"
                     disabled={checkoutLoading}
                     onClick={() => handleCheckout("DAY_PASS")}
-                    className="w-full rounded-md bg-[#00D47E] px-6 py-3.5 text-sm font-bold uppercase tracking-[0.15em] text-[#080808] transition-all hover:bg-[#00F590] disabled:opacity-50 cursor-pointer md:text-base"
+                    className="w-full"
                   >
                     {checkoutLoading
                       ? "..."
-                      : `Déverrouiller les ${pendingPronos.length} sélections (${dayPrice}€)`}
-                  </button>
+                      : `Accéder aux ${pendingPronos.length} ${
+                          pendingPronos.length === 1 ? "analyse" : "analyses"
+                        } (${dayPrice}€)`}
+                  </Button>
                   <button
                     type="button"
                     disabled={checkoutLoading}
                     onClick={() => handleCheckout("MONTHLY")}
-                    className="text-xs text-[#8A8680] hover:text-[#F0EDE8] transition-colors cursor-pointer"
+                    className="cursor-pointer font-body text-body-16 text-muted-foreground transition-colors hover:text-foreground"
                   >
                     ou abonnement mensuel {monthlyPrice}€
                   </button>
@@ -359,7 +402,8 @@ export default function TipsterProfilePage() {
         )}
       </div>
 
-      {/* Email checkout modal */}
+      {/* ════ MODALES — STYLE V1 INCHANGÉ (Bloc 2) ════ */}
+
       <EmailCheckoutModal
         open={emailModalOpen}
         onClose={() => setEmailModalOpen(false)}
@@ -367,42 +411,90 @@ export default function TipsterProfilePage() {
         type={emailModalType}
       />
 
-      {/* Upsell modal */}
+      {/* ════ MODALE UPSELL ════
+          Post-checkout Stripe : s'ouvre après poll réussi (hasAccess
+          true) OU timeout (5×2s). Pas de close par clic overlay
+          (V1 conservée) — l'utilisateur doit utiliser le X ou un des
+          3 boutons d'action. */}
       {showUpsell && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative z-10 mx-4 w-full max-w-sm rounded-lg bg-[#0E0E0E] ring-1 ring-[#1A1A1A] p-6">
-            <h3 className="text-lg font-bold text-[#F0EDE8] text-center">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            aria-hidden
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="upsell-title"
+            className="relative z-10 mx-4 w-full max-w-[480px] rounded-2xl border border-surface-elevated bg-background p-8"
+          >
+            {/* Close X — pattern partagé avec EmailCheckoutModal. */}
+            <button
+              type="button"
+              onClick={() => setShowUpsell(false)}
+              aria-label="Fermer"
+              className="absolute right-4 top-4 cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <X className="size-5" />
+            </button>
+
+            <h3
+              id="upsell-title"
+              className="text-center font-display text-h4 text-foreground"
+            >
               {hasAccess
                 ? "Accès débloqué !"
-                : "Paiement en cours de traitement..."}
+                : "Paiement en cours de traitement…"}
             </h3>
-            <p className="mt-2 text-sm text-[#8A8680] text-center">
-              {hasAccess
-                ? "Envie de découvrir d'autres experts ?"
-                : "Vos sélections seront disponibles dans quelques instants."}
+            {/* Spinner doré inline quand on attend la confirmation (poll
+                timeout) — feedback visuel que quelque chose progresse. */}
+            <p className="mt-2 flex items-center justify-center gap-2 font-body text-body-16 text-muted-foreground">
+              {!hasAccess && (
+                <span
+                  aria-hidden
+                  className="size-4 animate-spin rounded-full border-2 border-surface-elevated border-t-accent"
+                />
+              )}
+              <span>
+                {hasAccess
+                  ? "Envie de découvrir d'autres experts ?"
+                  : "Vos sélections seront disponibles dans quelques instants."}
+              </span>
             </p>
+
             <div className="mt-6 space-y-3">
-              <Link
-                href="/"
-                className="flex h-10 w-full items-center justify-center rounded-md ring-1 ring-[#1A1A1A] text-sm font-medium text-[#8A8680] hover:text-[#F0EDE8] hover:ring-[#8A8680]/30 transition-all"
+              {/* "Voir tous les experts" — variant secondary DS (bordure
+                  dorée transparente). Rendu via Link Next.js. */}
+              <Button
+                variant="secondary"
+                size="lg"
+                render={<Link href="/" />}
+                className="w-full"
               >
                 Voir tous les experts
-              </Link>
-              <button
+              </Button>
+
+              {/* "S'abonner" — primary DS doré. Comportement V1 conservé :
+                  ferme modale + relance checkout MONTHLY si !hasAccess. */}
+              <Button
                 type="button"
+                variant="primary"
+                size="lg"
                 onClick={() => {
                   setShowUpsell(false);
                   if (!hasAccess) handleCheckout("MONTHLY");
                 }}
-                className="flex h-10 w-full items-center justify-center rounded-md bg-[#F0EDE8] text-sm font-bold text-[#080808] hover:bg-[#00D47E] transition-all cursor-pointer"
+                className="w-full"
               >
                 S&apos;abonner ({monthlyPrice}€/mois)
-              </button>
+              </Button>
+
+              {/* "Fermer" — lien texte muted, pas de variant Button (V1
+                  utilisait un simple <button> texte). */}
               <button
                 type="button"
                 onClick={() => setShowUpsell(false)}
-                className="flex h-10 w-full items-center justify-center text-sm text-[#8A8680] hover:text-[#F0EDE8] transition cursor-pointer"
+                className="flex h-10 w-full cursor-pointer items-center justify-center font-body text-body-16 text-muted-foreground transition-colors hover:text-foreground"
               >
                 Fermer
               </button>
@@ -414,19 +506,20 @@ export default function TipsterProfilePage() {
   );
 }
 
-/* ═══ PRONO LINE ═══ */
+/* ════════════════ PRONO LINE — card unique par analyse ════════════════ */
 
 function PronoLine({
   prono,
   hasAccess,
-  isLast,
 }: {
   prono: PronoData;
   hasAccess: boolean;
-  isLast: boolean;
 }) {
   const started = isStarted(prono.startTime);
   const league = prono.league ? getLeague(prono.league) : undefined;
+  // Logos qui sortent transparents/noirs sur fond clair en V1 → on
+  // applique un `invert` Tailwind pour les rendre lisibles sur fond
+  // dark. Liste conservée à l'identique de la V1.
   const INVERT_LOGOS = [
     "ligue-1",
     "la-liga",
@@ -436,92 +529,138 @@ function PronoLine({
   ];
   const needsInvert = league && INVERT_LOGOS.includes(league.id);
 
+  const teasingLabel = TEASING_LABELS[prono.teasing] || prono.teasing;
+
   return (
-    <div
-      className={`relative px-6 py-5 sm:px-8 ${!isLast ? "border-b border-[#1A1A1A]" : ""} ${started && !hasAccess ? "opacity-50" : ""}`}
+    <article
+      className={cn(
+        "relative overflow-hidden rounded-2xl border border-surface-elevated bg-black/40 p-6",
+        // Conservation V1 : matchs commencés sans accès sont dimmés.
+        started && !hasAccess && "opacity-50",
+      )}
     >
-      <div className="flex items-center gap-4 sm:gap-8">
-        {/* Left — League logo */}
-        <div className="flex shrink-0 flex-col items-center w-20 sm:w-16">
+      {/* Badge "Analyse du jour" top-right si isFeatured. */}
+      {prono.isFeatured && (
+        <span className="absolute right-4 top-4 inline-flex items-center rounded-full bg-accent/20 px-3 py-1 font-body text-body-16 text-accent">
+          Analyse du jour
+        </span>
+      )}
+
+      {/* Header — logo ligue + match + meta (ligue/heure). */}
+      <header className="flex items-start gap-4 pr-32 md:pr-36">
+        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-surface-elevated">
           {league?.logo ? (
-            <div className="flex items-center justify-center size-16">
-              <Image
-                src={league.logo}
-                width={48}
-                height={48}
-                alt={league.name}
-                className={`object-contain ${needsInvert ? "invert" : ""}`}
-              />
-            </div>
+            <Image
+              src={league.logo}
+              width={40}
+              height={40}
+              alt={league.name}
+              className={cn("size-10 object-contain", needsInvert && "invert")}
+            />
           ) : (
-            <div className="flex size-12 items-center justify-center rounded bg-[#141414] ring-1 ring-[#1A1A1A]">
-              <SportIcon
-                sport={league?.sport || ""}
-                className="size-6 text-[#8A8680]"
-              />
-            </div>
+            <SportIcon
+              sport={league?.sport || ""}
+              className="size-7 text-muted-foreground"
+            />
           )}
         </div>
 
-        {/* Center — Match info */}
-        <div className="flex-1 min-w-0 space-y-1.5">
-          <p className="text-lg font-bold text-[#F0EDE8] md:text-xl leading-tight truncate flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate font-body text-h5 text-foreground">
             {prono.matchName}
-            {prono.isFeatured && (
-              <Star className="size-4 text-[#00D47E] fill-[#00D47E] shrink-0" />
+          </h3>
+          <p className="mt-1 font-body text-body-16 text-muted-foreground">
+            {league?.name && (
+              <>
+                <span>{league.name}</span>
+                <span className="opacity-40"> · </span>
+              </>
             )}
-          </p>
-          <p className="text-sm text-[#8A8680] truncate">
-            {TEASING_LABELS[prono.teasing] || prono.teasing}
-            <span className="text-[#8A8680]/40"> · </span>
-            <span
-              className={
-                started ? "text-red-400 font-medium" : "text-[#8A8680]/60"
-              }
-            >
+            <span className={cn(started && "text-destructive")}>
               {formatStartTime(prono.startTime)}
             </span>
           </p>
+        </div>
+      </header>
 
-          {/* Pick — blurred or revealed */}
-          {hasAccess && prono.pick ? (
-            <div>
-              <p className="text-sm font-bold text-[#F0EDE8]">{prono.pick}</p>
-              {prono.argument && (
-                <p className="mt-1 text-xs text-[#8A8680] leading-relaxed">
-                  {prono.argument}
-                </p>
-              )}
-              {prono.bookmakerOdds && prono.bookmakerOdds.length > 0 && (
-                <BookmakerComparator bookmakerOdds={prono.bookmakerOdds} />
-              )}
+      {/* Teasing label — visible Locked ET Unlocked (donne le contexte). */}
+      <p className="mt-4 font-body text-body-16 text-muted-foreground">
+        {teasingLabel}
+      </p>
+
+      {/* Body — Pick / Cote / Argument / BookmakerComparator. */}
+      {hasAccess ? (
+        <div className="mt-4 space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="font-body text-body-16 text-muted-foreground">
+                Pick
+              </p>
+              <p className="mt-1 font-body text-body-16 text-foreground">
+                {prono.pick || "—"}
+              </p>
             </div>
-          ) : (
-            <div className="inline-flex items-center gap-0 relative">
-              <span
-                className="select-none blur-sm pointer-events-none text-sm text-[#8A8680]"
-                aria-hidden
-              >
-                Prédiction verrouillée
-              </span>
-              <Lock className="size-4 text-[#8A8680]/60 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+            <div className="shrink-0 text-right">
+              <p className="font-body text-body-16 text-muted-foreground">
+                Cote
+              </p>
+              <p className="mt-1 font-body text-h5 text-accent">
+                {prono.odds.toFixed(2).replace(".", ",")}
+              </p>
             </div>
+          </div>
+          {prono.argument && (
+            <p className="font-body text-body-16 text-foreground leading-relaxed">
+              {prono.argument}
+            </p>
+          )}
+          {prono.bookmakerOdds && prono.bookmakerOdds.length > 0 && (
+            <BookmakerComparator bookmakerOdds={prono.bookmakerOdds} />
           )}
         </div>
-
-        {/* Right — Odds */}
-        <div className="flex shrink-0 items-baseline gap-2 text-right">
-          <span className="text-xs text-[#8A8680]/60 uppercase">Cote:</span>
-          <span className="text-3xl font-bold text-[#F0EDE8] md:text-4xl">
-            {prono.odds.toFixed(2).replace(".", ",")}
-          </span>
+      ) : (
+        /* Locked — pick + cote + argument floutés, cadenas accent
+           centré par-dessus. select-none + pointer-events-none pour
+           bloquer toute interaction / sélection du contenu masqué. */
+        <div className="relative mt-4">
+          <div
+            aria-hidden
+            className="pointer-events-none space-y-4 select-none blur-[6px]"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="font-body text-body-16 text-muted-foreground">
+                  Pick
+                </p>
+                <p className="mt-1 font-body text-body-16 text-foreground">
+                  ●●●●●●●●●●
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="font-body text-body-16 text-muted-foreground">
+                  Cote
+                </p>
+                <p className="mt-1 font-body text-h5 text-accent">●,●●</p>
+              </div>
+            </div>
+            <p className="font-body text-body-16 text-foreground leading-relaxed">
+              Lorem ipsum dolor sit amet consectetur adipiscing elit sed do
+              eiusmod tempor incididunt ut labore et dolore magna aliqua.
+            </p>
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Lock
+              className="size-8 text-accent"
+              aria-label="Contenu verrouillé"
+            />
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </article>
   );
 }
 
-/* ═══ BOOKMAKER COMPARATOR ═══ */
+/* ════════════════ BOOKMAKER COMPARATOR ════════════════ */
 
 function BookmakerComparator({
   bookmakerOdds,
@@ -529,19 +668,19 @@ function BookmakerComparator({
   bookmakerOdds: BookmakerOddsData[];
 }) {
   return (
-    <div className="mt-3 rounded-md bg-[#141414] ring-1 ring-[#1A1A1A] p-3">
-      <p className="text-xs font-medium text-[#8A8680] uppercase tracking-wide mb-2">
+    <div className="rounded-xl border border-surface-elevated bg-black/40 p-4">
+      <p className="font-body text-body-16 text-muted-foreground">
         Où consulter cette analyse
       </p>
-      <div className="space-y-2">
+      <div className="mt-3 space-y-2">
         {bookmakerOdds.map((bo) => {
           const affiliateLink = bo.bookmaker.affiliateLinks[0];
           return (
             <div
               key={bo.id}
-              className="flex items-center justify-between gap-3 rounded-md bg-[#0E0E0E] px-3 py-2"
+              className="flex items-center justify-between gap-3 rounded-lg bg-black/40 px-3 py-2"
             >
-              <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex min-w-0 items-center gap-3">
                 {bo.bookmaker.logoUrl ? (
                   <Image
                     src={bo.bookmaker.logoUrl}
@@ -551,16 +690,16 @@ function BookmakerComparator({
                     className="size-6 shrink-0 rounded object-contain"
                   />
                 ) : (
-                  <div className="flex size-6 shrink-0 items-center justify-center rounded bg-[#1A1A1A] text-[10px] font-bold text-[#F0EDE8]">
+                  <div className="flex size-6 shrink-0 items-center justify-center rounded bg-surface-elevated font-body text-body-16 text-foreground">
                     {bo.bookmaker.name.charAt(0)}
                   </div>
                 )}
-                <span className="text-sm font-medium text-[#F0EDE8]">
+                <span className="font-body text-body-16 text-foreground">
                   {bo.bookmaker.name}
                 </span>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-sm font-bold text-[#F0EDE8]">
+              <div className="flex shrink-0 items-center gap-3">
+                <span className="font-body text-body-16 text-accent">
                   @{bo.odds.toFixed(2)}
                 </span>
                 {affiliateLink && (
@@ -568,7 +707,7 @@ function BookmakerComparator({
                     href={affiliateLink.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-md bg-[#F0EDE8] px-3 py-1.5 text-xs font-semibold text-[#080808] hover:bg-[#00D47E] transition-all whitespace-nowrap"
+                    className="rounded-lg bg-white px-3 py-1.5 font-body text-body-16 text-black transition-colors hover:bg-white/90"
                   >
                     {affiliateLink.label || "Accéder"}
                   </a>
