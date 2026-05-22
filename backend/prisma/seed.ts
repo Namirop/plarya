@@ -163,8 +163,45 @@ async function createTestMagicLink(email: string): Promise<string> {
   return token;
 }
 
+// Liste des emails contrôlés par le seed. Toutes les opérations de
+// nettoyage en mode "soft" (default) sont scopées à ces emails →
+// les comptes réels créés via paiement Stripe (ex: romainmaes@…) ne
+// sont JAMAIS effacés par `npm run db:seed`.
+const SEEDED_EMAILS = [
+  "admin@test.com",
+  "user@test.com",
+  ...EXPERTS.map((e) => e.email),
+];
+
+// Flag --reset : wipe COMPLET de la DB avant re-seed. Pour repartir
+// 100 % from scratch (utile quand les schemas ont divergé, ou pour
+// reset un environnement de test pollué).
+// Usage : `npm run db:seed:reset`
+const RESET_DB = process.argv.includes("--reset");
+
+async function wipeAll(): Promise<void> {
+  // Ordre FK-aware : enfants → parents (les FK Cascade gèreraient
+  // mais on est explicite pour la lisibilité).
+  await prisma.stripeWebhookEvent.deleteMany({});
+  await prisma.pronoBookmakerOdds.deleteMany({});
+  await prisma.affiliateLink.deleteMany({});
+  await prisma.bookmaker.deleteMany({});
+  await prisma.prono.deleteMany({});
+  await prisma.subscription.deleteMany({});
+  await prisma.session.deleteMany({});
+  await prisma.magicLink.deleteMany({});
+  await prisma.expert.deleteMany({});
+  await prisma.user.deleteMany({});
+}
+
 async function main() {
   console.log("Seeding database...\n");
+
+  if (RESET_DB) {
+    console.log("⚠️  --reset : wiping ALL data before seed\n");
+    await wipeAll();
+    console.log("✓ All tables wiped\n");
+  }
 
   const now = Date.now();
   const testLinks: { email: string; role: string; url: string }[] = [];
@@ -307,8 +344,13 @@ async function main() {
   // ── Seed Test Subscriptions ──
   console.log("\nSeeding test subscriptions...");
 
-  // Delete existing test subscriptions
-  await prisma.subscription.deleteMany({});
+  // Delete existing test subscriptions. SCOPED aux users seedés
+  // uniquement : un user réel (ex: romainmaes@outlook.fr qui aurait
+  // acheté un day pass) garde ses subscriptions. En mode --reset
+  // c'est un no-op (table déjà vidée par wipeAll()).
+  await prisma.subscription.deleteMany({
+    where: { user: { email: { in: SEEDED_EMAILS } } },
+  });
 
   // Get all experts and the test user
   const allExperts = await prisma.expert.findMany({ select: { id: true, pseudo: true, dayPassPrice: true, monthlyPrice: true } });
