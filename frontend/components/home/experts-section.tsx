@@ -9,82 +9,28 @@ import { ExpertCard, type ExpertCardProps } from "@/components/experts/expert-ca
 import { SectionTitle } from "@/components/ui/section-title";
 import { SPORT_DOMAIN, ESPORT_DOMAIN } from "@/lib/sports";
 import type { DomainId } from "@/components/home/domains-section";
+import { apiGet } from "@/lib/api";
+import { allStarted } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
-// Mocks de démo — à remplacer par un fetch /tipsters quand la page sera
-// branchée sur l'API. Mix unlocked/locked pour montrer les 2 variants
-// du bouton du bas. Tous les avatars pointent sur le placeholder local
-// `/profile.jpg` en attendant les vraies photos.
-const EXPERTS_MOCK: (ExpertCardProps & { id: string })[] = [
-  {
-    id: "1",
-    avatar: "/profile.jpg",
-    pseudo: "MultiSport",
-    viewsCount: 152,
-    categories: ["FOOTBALL", "BASKETBALL", "MMA"],
-    analyses: [
-      { label: "Celtics - Knicks", isPickOfTheDay: true },
-      { label: "UFC Fight Nights", isPickOfTheDay: false },
-    ],
-  },
-  {
-    id: "2",
-    avatar: "/profile.jpg",
-    pseudo: "EsportGuru",
-    viewsCount: 218,
-    categories: ["ESPORT"],
-    analyses: [
-      { label: "G2 - Fnatic", isPickOfTheDay: false },
-      { label: "T1 - Gen.G", isPickOfTheDay: true },
-    ],
-    locked: true,
-  },
-  {
-    id: "3",
-    avatar: "/profile.jpg",
-    pseudo: "TipsterPro",
-    viewsCount: 84,
-    categories: ["TENNIS", "FOOTBALL"],
-    analyses: [
-      { label: "Real Madrid - Barça", isPickOfTheDay: true },
-      { label: "Alcaraz - Sinner", isPickOfTheDay: false },
-    ],
-  },
-  {
-    id: "4",
-    avatar: "/profile.jpg",
-    pseudo: "BasketKing",
-    viewsCount: 271,
-    categories: ["BASKETBALL"],
-    analyses: [
-      { label: "Lakers - Warriors", isPickOfTheDay: false },
-      { label: "Bucks - Heat", isPickOfTheDay: false },
-    ],
-    locked: true,
-  },
-  {
-    id: "5",
-    avatar: "/profile.jpg",
-    pseudo: "FootAnalyst",
-    viewsCount: 63,
-    categories: ["FOOTBALL", "RUGBY"],
-    analyses: [
-      { label: "PSG - OM", isPickOfTheDay: true },
-      { label: "France - Irlande", isPickOfTheDay: false },
-    ],
-  },
-  {
-    id: "6",
-    avatar: "/profile.jpg",
-    pseudo: "CombatExpert",
-    viewsCount: 197,
-    categories: ["MMA", "BOXE"],
-    analyses: [
-      { label: "Jones - Aspinall", isPickOfTheDay: false },
-      { label: "Fury - Joshua", isPickOfTheDay: true },
-    ],
-  },
-];
+// Shape renvoyée par GET /tipsters (cf. backend/src/routes/tipsters.ts).
+// On ne garde ici que ce qui sert à construire la card homepage.
+interface TipsterListItem {
+  id: string;
+  pseudo: string;
+  photoUrl: string | null;
+  sports: string[];
+  viewsToday: number;
+  todayPronos: {
+    matchName: string;
+    isFeatured: boolean;
+    startTime: string;
+    result: "PENDING" | "WON" | "LOST";
+  }[];
+}
+
+// Avatar fallback lorsqu'un tipster n'a pas (encore) de photo.
+const AVATAR_FALLBACK = "/profile.jpg";
 
 // Mesures DS : card 322 px + gap 16 px → "step" = 338 px par card.
 const CARD_WIDTH = 322;
@@ -107,19 +53,55 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
   const [activePage, setActivePage] = useState(0);
   const [isAtEnd, setIsAtEnd] = useState(false);
 
+  // ── Fetch tipsters depuis l'API. /tipsters renvoie déjà la liste
+  // triée par displayOrder ASC, createdAt DESC (limite 6 par défaut).
+  // Les `id` réels permettent au Link de la card de naviguer vers la
+  // page profil (`/tipsters/[id]`) sans 404 — c'était l'objet du fix
+  // qui remplace les anciens mocks codés en dur (id "1" → "6"). En cas
+  // d'erreur réseau, on garde la liste vide (la section ne s'affiche
+  // pas en dessous des dots).
+  const [experts, setExperts] = useState<(ExpertCardProps & { id: string })[]>(
+    [],
+  );
+  useEffect(() => {
+    apiGet<TipsterListItem[]>("/tipsters")
+      .then((data) => {
+        const mapped = data.map<ExpertCardProps & { id: string }>((t) => ({
+          id: t.id,
+          avatar: t.photoUrl || AVATAR_FALLBACK,
+          pseudo: t.pseudo,
+          viewsCount: t.viewsToday,
+          categories: t.sports,
+          analyses: t.todayPronos.map((p) => ({
+            label: p.matchName,
+            isPickOfTheDay: p.isFeatured,
+          })),
+          // `locked` (= "Terminé pour aujourd'hui") quand toutes les
+          // analyses PENDING du jour ont déjà commencé. allStarted()
+          // renvoie aussi true pour une liste vide → un tipster sans
+          // analyse du jour apparaît en "Terminé".
+          locked: allStarted(
+            t.todayPronos.filter((p) => p.result === "PENDING"),
+          ),
+        }));
+        setExperts(mapped);
+      })
+      .catch(() => setExperts([]));
+  }, []);
+
   // Reproduction V1 (bae3a79 page.tsx) : filtre les experts par sports
   // appartenant au domaine sélectionné. SPORT regroupe tous les sports
   // physiques (FOOTBALL, TENNIS, BASKETBALL, etc.) ; ESPORT n'a qu'un
   // sport (ESPORT). Un expert match si AU MOINS UN de ses sports est
   // dans le domaine.
   const filteredExperts = useMemo(() => {
-    if (!filterDomain) return EXPERTS_MOCK;
+    if (!filterDomain) return experts;
     const domainSports =
       filterDomain === "SPORT" ? SPORT_DOMAIN : ESPORT_DOMAIN;
-    return EXPERTS_MOCK.filter((e) =>
+    return experts.filter((e) =>
       e.categories.some((s) => domainSports.includes(s)),
     );
-  }, [filterDomain]);
+  }, [experts, filterDomain]);
 
   // Nombre de "pages" = ceil(total / per_page). 6 cards / 3 = 2 pages,
   // mais on garde 3 dots dans la maquette → minimum 3 dots affichés.

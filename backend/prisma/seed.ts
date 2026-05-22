@@ -263,11 +263,18 @@ async function main() {
     // Today's pronos — varied startTime
     // EsportGuru (last tipster): all analyses in the past (to test "terminated" state)
     const allPast = t.email === "esportguru@test.com";
-    // startTime offsets from now: alternate between past and future
-    // For most tipsters: first prono in the past (-1h), rest in the future (+2h, +6h, etc.)
+    // startTime offsets from now : on génère des fenêtres de test
+    // confortables (+6 h, +12 h, +18 h) pour qu'un seed lancé le matin
+    // reste valable toute la journée. Pour les tipsters qui ont au
+    // moins 2 pronos du jour, on garde le premier dans le passé
+    // (-1 h) pour démontrer le rendu "match commencé" (opacity-50).
+    // TennisAce n'a qu'un seul prono → forcé futur pour rester
+    // testable (sinon "Toutes les analyses sont terminées").
     const startTimeOffsets = allPast
       ? t.today.map((_, i) => -(i + 1) * HOUR) // all in the past
-      : t.today.map((_, i) => (i === 0 ? -1 * HOUR : (i * 3 + 1) * HOUR)); // first past, rest future
+      : t.today.length === 1
+        ? [6 * HOUR]
+        : t.today.map((_, i) => (i === 0 ? -1 * HOUR : i * 6 * HOUR));
 
     const todayData = t.today.map(
       ([matchName, league, pick, odds, teasing], i) => ({
