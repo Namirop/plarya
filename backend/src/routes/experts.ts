@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
+import { logger } from "../lib/logger";
 import { calcWinRate } from "../lib/stats";
 import { authMiddleware } from "../middleware/auth";
 import { expertMiddleware } from "../middleware/expert";
@@ -156,7 +157,7 @@ router.get("/", async (req, res) => {
     const limit = req.query.all === "true" ? enriched.length : 6;
     res.json(enriched.slice(0, limit));
   } catch (err) {
-    console.error("GET /experts error:", err);
+    logger.error({ err, route: "GET /experts" }, "List experts failed");
     res.status(500).json({ error: "Erreur serveur" });
   }
 });

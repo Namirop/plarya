@@ -3,9 +3,12 @@ import express from "express";
 import { stripe } from "../lib/stripe";
 import { prisma } from "../lib/prisma";
 import { Prisma } from "../generated/prisma/client";
+import { logger, maskEmail } from "../lib/logger";
 import { sendAccessUnlockedEmail } from "../lib/emails";
 import { createMagicLink } from "../lib/magic-link";
 import type { Sport } from "../generated/prisma/enums";
+
+const webhookLogger = logger.child({ context: "webhook" });
 
 // Type de l'event Stripe — inféré depuis `constructEvent` plutôt que
 // d'importer le namespace Stripe (qui n'est pas exposé proprement
@@ -54,7 +57,7 @@ router.post(
         process.env.STRIPE_WEBHOOK_SECRET!,
       );
     } catch (err) {
-      console.error("[webhook] Signature verification failed:", err);
+      webhookLogger.error({ err }, "Signature verification failed");
       res.status(400).send("Signature invalide");
       return;
     }
@@ -65,7 +68,10 @@ router.post(
       where: { id: event.id },
     });
     if (alreadyProcessed) {
-      console.log(`[webhook] Event ${event.id} already processed, skipping`);
+      webhookLogger.info(
+        { eventId: event.id, eventType: event.type },
+        "Event already processed, skipping",
+      );
       res.json({ received: true });
       return;
     }
@@ -89,11 +95,17 @@ router.post(
         await handleSubscriptionDeleted(event);
         break;
 
+      case "payment_intent.payment_failed":
+        await handlePaymentFailed(event);
+        break;
+
+      case "charge.dispute.created":
+        await handleDisputeCreated(event);
+        break;
+
       default:
-        // Event qu'on n'a pas (encore) à traiter : on le marque comme
-        // processed pour que Stripe ne le réenvoie pas en cas de retry
-        // sur un endpoint sain. Couvre `invoice.payment_failed`,
-        // `charge.dispute.created`, etc. qui seront ajoutés en Phase 2.
+        // Event qu'on n'a pas à traiter : on le marque comme processed
+        // pour éviter le retry inutile par Stripe.
         await markEventProcessed(prisma, event);
         break;
     }
@@ -107,11 +119,12 @@ async function handleCheckoutSessionCompleted(
 ): Promise<void> {
   // Le type réel est Stripe.Checkout.Session, mais le namespace n'est
   // pas exposé proprement — on lit les champs nécessaires via cast
-  // ciblé. Les champs utilisés : id, metadata, subscription, customer_details.
+  // ciblé.
   const session = event.data.object as {
     id: string;
     metadata: Record<string, string> | null;
     subscription: string | null;
+    customer: string | null;
     customer_details: { email: string | null } | null;
   };
   const metadata = session.metadata as Record<string, string>;
@@ -152,7 +165,10 @@ async function handleCheckoutSessionCompleted(
       });
       await markEventProcessed(tx, event);
     });
-    console.log(`[webhook] Expert created: ${pseudo} (user ${userId})`);
+    webhookLogger.info(
+      { eventId: event.id, eventType: event.type, userId, pseudo },
+      "Expert created",
+    );
     return;
   }
 
@@ -173,17 +189,41 @@ async function handleCheckoutSessionCompleted(
       where: { email: normalizedEmail },
     });
     if (!user) {
-      user = await prisma.user.create({ data: { email: normalizedEmail } });
-      console.log(`[webhook] User auto-created: ${normalizedEmail}`);
+      // User auto-créé : on persiste directement le stripeCustomerId
+      // reçu en session.customer (Stripe a créé un Customer pour
+      // l'email passé en customer_email). Évite un round-trip update
+      // ultérieur.
+      user = await prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          ...(session.customer ? { stripeCustomerId: session.customer } : {}),
+        },
+      });
+      webhookLogger.info(
+        { eventId: event.id, eventType: event.type, email: maskEmail(normalizedEmail) },
+        "User auto-created",
+      );
     }
     resolvedUserId = user.id;
+  }
+
+  // Backfill stripeCustomerId si le User existait déjà SANS Customer
+  // Stripe lié (cas : User créé manuellement / via magic-link sans
+  // achat préalable, puis premier achat). On le persiste maintenant
+  // pour réutilisation aux achats suivants.
+  if (resolvedUserId && session.customer) {
+    await prisma.user.updateMany({
+      where: { id: resolvedUserId, stripeCustomerId: null },
+      data: { stripeCustomerId: session.customer },
+    });
   }
 
   if (!resolvedUserId) {
     // Impossible de faire progresser cet event. On le mark processed
     // pour éviter un retry storm sur un état non-récupérable.
-    console.error(
-      `[webhook] No userId/email in event ${event.id} (type=${event.type})`,
+    webhookLogger.error(
+      { eventId: event.id, eventType: event.type },
+      "No userId/email in event metadata",
     );
     await markEventProcessed(prisma, event);
     return;
@@ -217,8 +257,9 @@ async function handleCheckoutSessionCompleted(
     });
     await markEventProcessed(tx, event);
   });
-  console.log(
-    `[webhook] ${type} subscription created: user ${resolvedUserId} → expert ${expertId}`,
+  webhookLogger.info(
+    { eventId: event.id, eventType: event.type, type, userId: resolvedUserId, expertId },
+    "Subscription created",
   );
 
   // Fire-and-forget email POST-transaction. Si l'envoi échoue,
@@ -281,7 +322,10 @@ async function handleInvoicePaid(event: StripeEvent): Promise<void> {
           subExpiresAt: new Date(Date.now() + QUARTER),
         },
       });
-      console.log(`[webhook] Expert sub renewed: ${expert.pseudo}`);
+      webhookLogger.info(
+        { eventId: event.id, expertId: expert.id, pseudo: expert.pseudo },
+        "Expert sub renewed",
+      );
       await markEventProcessed(tx, event);
       return;
     }
@@ -298,7 +342,10 @@ async function handleInvoicePaid(event: StripeEvent): Promise<void> {
           expiresAt: new Date(Date.now() + MONTH),
         },
       });
-      console.log(`[webhook] Subscription renewed: ${sub.id}`);
+      webhookLogger.info(
+        { eventId: event.id, subscriptionId: sub.id },
+        "Subscription renewed",
+      );
     }
     await markEventProcessed(tx, event);
   });
@@ -317,7 +364,10 @@ async function handleSubscriptionDeleted(event: StripeEvent): Promise<void> {
         where: { id: expert.id },
         data: { subStatus: "EXPIRED" },
       });
-      console.log(`[webhook] Expert sub expired: ${expert.pseudo}`);
+      webhookLogger.info(
+        { eventId: event.id, expertId: expert.id, pseudo: expert.pseudo },
+        "Expert sub expired",
+      );
       await markEventProcessed(tx, event);
       return;
     }
@@ -331,8 +381,89 @@ async function handleSubscriptionDeleted(event: StripeEvent): Promise<void> {
         where: { id: sub.id },
         data: { status: "CANCELLED" },
       });
-      console.log(`[webhook] Subscription cancelled: ${sub.id}`);
+      webhookLogger.info(
+        { eventId: event.id, subscriptionId: sub.id },
+        "Subscription cancelled",
+      );
     }
+    await markEventProcessed(tx, event);
+  });
+}
+
+/**
+ * payment_intent.payment_failed — paiement échoué après le checkout
+ * (3DS abandon, fonds insuffisants, fraude détectée, etc.).
+ *
+ * Pour Plarya en l'état, on ne crée une Subscription qu'à
+ * checkout.session.completed (paiement déjà confirmé). Donc
+ * payment_failed arrive AVANT qu'on ait quoi que ce soit en DB —
+ * pas d'état à rollback. On log en warn (signal pour alerting
+ * éventuel) et on marque comme processed.
+ *
+ * Si plus tard on crée des Subscription en PENDING pre-paiement,
+ * ce handler devra les passer en EXPIRED ici.
+ */
+async function handlePaymentFailed(event: StripeEvent): Promise<void> {
+  const intent = event.data.object as {
+    id?: string;
+    customer?: string | null;
+    last_payment_error?: { code?: string; message?: string } | null;
+  };
+  webhookLogger.warn(
+    {
+      eventId: event.id,
+      paymentIntentId: intent.id,
+      customerId: intent.customer,
+      failureCode: intent.last_payment_error?.code,
+      failureMessage: intent.last_payment_error?.message,
+    },
+    "Payment failed post-checkout",
+  );
+  await markEventProcessed(prisma, event);
+}
+
+/**
+ * charge.dispute.created — chargeback initié par l'acheteur.
+ *
+ * Action métier : retrouver la Subscription liée via le PaymentIntent
+ * Stripe (ou le customer), la passer en CANCELLED. (On n'introduit
+ * pas d'enum DISPUTED dédié — CANCELLED suffit pour la logique
+ * d'accès, et on garde la trace exacte dans le payload de l'event
+ * stocké dans stripe_webhook_events.)
+ *
+ * Logué en error : en prod, Sentry/Datadog peut alerter dessus
+ * pour qu'un humain regarde manuellement (gestion du litige côté
+ * Stripe Dashboard).
+ */
+async function handleDisputeCreated(event: StripeEvent): Promise<void> {
+  const dispute = event.data.object as {
+    id?: string;
+    payment_intent?: string | null;
+    charge?: string | null;
+    amount?: number;
+    reason?: string;
+  };
+
+  webhookLogger.error(
+    {
+      eventId: event.id,
+      disputeId: dispute.id,
+      paymentIntentId: dispute.payment_intent,
+      chargeId: dispute.charge,
+      amount: dispute.amount,
+      reason: dispute.reason,
+    },
+    "Charge dispute created — manual review needed",
+  );
+
+  await prisma.$transaction(async (tx) => {
+    // Resolve charge → payment intent → customer email is non-trivial
+    // sans appel API Stripe. Pour l'instant on log + mark processed.
+    // La Subscription concernée sera identifiée manuellement par
+    // l'admin via le Stripe Dashboard (le disputeId est dans le log).
+    // À étendre en V2 : `stripe.paymentIntents.retrieve(dispute.payment_intent)`
+    // pour récupérer le customer.email puis chercher la Subscription
+    // par email + auto-CANCELLED.
     await markEventProcessed(tx, event);
   });
 }

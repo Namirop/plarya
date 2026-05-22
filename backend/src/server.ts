@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { prisma } from "./lib/prisma";
+import { logger } from "./lib/logger";
 import authRoutes from "./routes/auth";
 import expertRoutes from "./routes/experts";
 import pronoRoutes from "./routes/pronos";
@@ -93,6 +94,6 @@ app.use("/tipsters", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  logger.info({ port: PORT }, "Server running");
   initCronJobs();
 });

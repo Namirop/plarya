@@ -1,6 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../lib/prisma";
+import { logger } from "../lib/logger";
 import { createMagicLink, verifyMagicLink, createSession, deleteSession } from "../lib/magic-link";
 import { validate } from "../middleware/validate";
 import { authMiddleware } from "../middleware/auth";
@@ -49,7 +50,7 @@ router.post("/request-magic-link", magicLinkRequestLimiter, validate(magicLinkRe
     // Always return 200 to not leak account existence
     res.json({ message: "Si un compte existe avec cet email, un lien de connexion a été envoyé." });
   } catch (err) {
-    console.error("Magic link request error:", err);
+    logger.error({ err }, "Magic link request error");
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
@@ -85,7 +86,7 @@ router.get("/verify", async (req, res) => {
 
     res.redirect(`${FRONTEND_URL}${redirect}`);
   } catch (err) {
-    console.error("Magic link verify error:", err);
+    logger.error({ err }, "Magic link verify error");
     res.redirect(`${FRONTEND_URL}/auth/verify?error=invalid`);
   }
 });

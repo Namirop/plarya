@@ -1,35 +1,38 @@
 import cron from "node-cron";
 import { prisma } from "./prisma";
+import { logger } from "./logger";
 import { sendWinningPronoEmail } from "./emails";
+
+const cronLogger = logger.child({ context: "cron" });
 
 export function initCronJobs(): void {
   // Tous les jours à 10h00
   cron.schedule("0 10 * * *", async () => {
-    console.log("[CRON] J+1 email job started");
+    cronLogger.info({ job: "daily_winning_emails" }, "Job started");
     try {
       await sendDailyWinningEmails();
     } catch (err) {
-      console.error("[CRON] J+1 email job failed:", err);
+      cronLogger.error({ err, job: "daily_winning_emails" }, "Job failed");
     }
   });
 
   // Chaque jour à minuit : reset viewsToday + isFeatured
   cron.schedule("0 0 * * *", async () => {
-    console.log("[CRON] Midnight reset job started");
+    cronLogger.info({ job: "midnight_reset" }, "Job started");
     try {
       await prisma.expert.updateMany({ data: { viewsToday: 0 } });
       await prisma.prono.updateMany({
         where: { isFeatured: true },
         data: { isFeatured: false },
       });
-      console.log("[CRON] Midnight reset done (viewsToday + isFeatured)");
+      cronLogger.info({ job: "midnight_reset" }, "Job done (viewsToday + isFeatured)");
     } catch (err) {
-      console.error("[CRON] Midnight reset failed:", err);
+      cronLogger.error({ err, job: "midnight_reset" }, "Job failed");
     }
   });
 
-  console.log("[CRON] Daily J+1 email job scheduled (10:00 AM)");
-  console.log("[CRON] Midnight reset job scheduled (00:00)");
+  cronLogger.info("Daily J+1 email job scheduled (10:00 AM)");
+  cronLogger.info("Midnight reset job scheduled (00:00)");
 }
 
 export async function sendDailyWinningEmails(): Promise<void> {
@@ -58,11 +61,11 @@ export async function sendDailyWinningEmails(): Promise<void> {
   });
 
   if (winningPronos.length === 0) {
-    console.log("[CRON] No winning pronos yesterday, skipping emails");
+    cronLogger.info("No winning pronos yesterday, skipping emails");
     return;
   }
 
-  console.log(`[CRON] Found ${winningPronos.length} winning pronos yesterday`);
+  cronLogger.info({ count: winningPronos.length }, "Found winning pronos yesterday");
 
   // Grouper par expert (1 email/user/expert)
   const expertMap = new Map<string, { pseudo: string; matchNames: string[] }>();
@@ -109,5 +112,5 @@ export async function sendDailyWinningEmails(): Promise<void> {
     }
   }
 
-  console.log(`[CRON] J+1 emails dispatched: ${emailsSent} total`);
+  cronLogger.info({ emailsSent }, "J+1 emails dispatched");
 }

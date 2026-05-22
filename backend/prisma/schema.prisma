@@ -66,11 +66,15 @@ enum Sport {
 // ──────────────────────────────────────
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  role          UserRole @default(USER)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default(cuid())
+  email             String   @unique
+  // Stripe Customer ID (cus_xxx). Persisté au premier paiement pour
+  // que les achats suivants réutilisent le même Customer côté Stripe
+  // (évite les doublons, facilite le support + dashboard).
+  stripeCustomerId  String?  @unique
+  role              UserRole @default(USER)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   expert        Expert?
   subscriptions Subscription[]

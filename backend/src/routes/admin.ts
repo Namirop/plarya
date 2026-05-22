@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
+import { logger } from "../lib/logger";
 import { authMiddleware } from "../middleware/auth";
 import { adminMiddleware } from "../middleware/admin";
 import { validate } from "../middleware/validate";
@@ -249,7 +250,7 @@ router.get("/stats/revenue", async (_req, res) => {
 
     res.json(result);
   } catch (err) {
-    console.error("GET /admin/stats/revenue error:", err);
+    logger.error({ err, route: "GET /admin/stats/revenue" }, "Admin stats revenue failed");
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
@@ -299,7 +300,7 @@ router.get("/stats/sales", async (req, res) => {
 
     res.json({ sales: result, total });
   } catch (err) {
-    console.error("GET /admin/stats/sales error:", err);
+    logger.error({ err, route: "GET /admin/stats/sales" }, "Admin stats sales failed");
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
@@ -338,7 +339,7 @@ router.get("/stats/by-expert", async (_req, res) => {
     result.sort((a, b) => b.totalRevenue - a.totalRevenue);
     res.json(result);
   } catch (err) {
-    console.error("GET /admin/stats/by-expert error:", err);
+    logger.error({ err, route: "GET /admin/stats/by-expert" }, "Admin stats by-expert failed");
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
@@ -381,7 +382,7 @@ router.get("/stats/export.csv", async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="ventes-${month}.csv"`);
     res.send(csv);
   } catch (err) {
-    console.error("GET /admin/stats/export.csv error:", err);
+    logger.error({ err, route: "GET /admin/stats/export.csv" }, "Admin CSV export failed");
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
@@ -392,7 +393,7 @@ router.post("/send-daily-emails", async (_req, res) => {
     await sendDailyWinningEmails();
     res.json({ message: "Emails J+1 envoyés avec succès" });
   } catch (err) {
-    console.error("Manual J+1 email trigger failed:", err);
+    logger.error({ err }, "Manual J+1 email trigger failed");
     res.status(500).json({ error: "Erreur lors de l'envoi des emails" });
   }
 });

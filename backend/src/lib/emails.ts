@@ -1,4 +1,4 @@
-import { resend, EMAIL_FROM } from "./resend";
+import { EMAIL_FROM, sendEmailWithRetry } from "./resend";
 import { escapeHtml } from "./format";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -39,10 +39,15 @@ function emailLayout(content: string): string {
 </html>`;
 }
 
+// Note : tous les `sendEmailWithRetry` ci-dessous sont fire-and-
+// forget côté appelant (le helper swallow l'erreur finale après
+// retries). Logging structuré géré dans `lib/resend.ts`. L'argument
+// `context.kind` sert au logger pour distinguer les types d'email.
+
 /** Email magic link de connexion */
 export async function sendMagicLinkEmail(email: string, link: string): Promise<void> {
-  try {
-    await resend.emails.send({
+  await sendEmailWithRetry(
+    {
       from: EMAIL_FROM,
       to: email,
       subject: "Votre lien de connexion Plarya",
@@ -55,11 +60,9 @@ export async function sendMagicLinkEmail(email: string, link: string): Promise<v
         <p class="muted" style="font-size: 14px;">Ce lien expire dans 15 minutes et ne peut &ecirc;tre utilis&eacute; qu'une seule fois.</p>
         <p class="muted" style="font-size: 14px;">Si vous n'avez pas demand&eacute; ce lien, ignorez cet email.</p>
       `),
-    });
-    console.log(`[EMAIL] Magic link sent to ${email}`);
-  } catch (err) {
-    console.error(`[EMAIL] Failed to send magic link to ${email}:`, err);
-  }
+    },
+    { kind: "magic_link" },
+  );
 }
 
 /** Email "Accès débloqué" avec magic link
@@ -78,13 +81,13 @@ export async function sendAccessUnlockedEmail(
   expertId: string,
   magicLinkUrl: string
 ): Promise<void> {
-  try {
-    // Escape user-controlled : pseudo peut contenir des caractères
-    // HTML dangereux. expertId est un cuid contrôlé backend, pas
-    // besoin d'escape. magicLinkUrl est construit côté serveur
-    // (token + redirect), idem.
-    const safePseudo = escapeHtml(expertPseudo);
-    await resend.emails.send({
+  // Escape user-controlled : pseudo peut contenir des caractères
+  // HTML dangereux. expertId est un cuid contrôlé backend, pas
+  // besoin d'escape. magicLinkUrl est construit côté serveur
+  // (token + redirect), idem.
+  const safePseudo = escapeHtml(expertPseudo);
+  await sendEmailWithRetry(
+    {
       from: EMAIL_FROM,
       to: email,
       subject: `Votre accès aux analyses de ${expertPseudo} est débloqué !`,
@@ -102,11 +105,9 @@ export async function sendAccessUnlockedEmail(
         </p>
         <p class="muted" style="font-size: 14px;">Merci pour votre confiance !</p>
       `),
-    });
-    console.log(`[EMAIL] Access unlocked email sent to ${email} (${expertPseudo})`);
-  } catch (err) {
-    console.error(`[EMAIL] Failed to send access unlocked email to ${email}:`, err);
-  }
+    },
+    { kind: "access_unlocked" },
+  );
 }
 
 /** Email J+1 — analyse gagnante de la veille */
@@ -116,13 +117,13 @@ export async function sendWinningPronoEmail(
   expertId: string,
   matchName: string
 ): Promise<void> {
-  try {
-    // Escape user-controlled : pseudo (Expert.pseudo) et matchName
-    // (Prono.matchName) viennent de la DB côté user (set par l'expert
-    // via le dashboard). expertId = cuid backend, pas d'escape.
-    const safePseudo = escapeHtml(expertPseudo);
-    const safeMatchName = escapeHtml(matchName);
-    await resend.emails.send({
+  // Escape user-controlled : pseudo (Expert.pseudo) et matchName
+  // (Prono.matchName) viennent de la DB côté user (set par l'expert
+  // via le dashboard). expertId = cuid backend, pas d'escape.
+  const safePseudo = escapeHtml(expertPseudo);
+  const safeMatchName = escapeHtml(matchName);
+  await sendEmailWithRetry(
+    {
       from: EMAIL_FROM,
       to: email,
       subject: "L'analyse d'hier a gagné ! ✅",
@@ -138,9 +139,7 @@ export async function sendWinningPronoEmail(
           <a href="${FRONTEND_URL}" style="color: #00FF41; text-decoration: underline; font-weight: 600;">Découvrir d'autres experts</a>
         </p>
       `),
-    });
-    console.log(`[EMAIL] Winning prono email sent to ${email} (${expertPseudo} - ${matchName})`);
-  } catch (err) {
-    console.error(`[EMAIL] Failed to send winning prono email to ${email}:`, err);
-  }
+    },
+    { kind: "winning_prono" },
+  );
 }
