@@ -6,7 +6,7 @@ import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-// Pattern input DS aligné /devenir-tipster + EmailCheckoutModal.
+// Pattern input DS aligné /devenir-expert + EmailCheckoutModal.
 const fieldCls = cn(
   "h-12 w-full rounded-xl border border-surface-elevated bg-black/40 px-4 py-3",
   "font-body text-body-16 text-foreground placeholder:text-muted-foreground/50",

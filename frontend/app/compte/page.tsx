@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 /* ════════════════════════ Types ════════════════════════ */
 
-interface TipsterProfile {
+interface ExpertProfile {
   id: string;
   pseudo: string;
   bio: string | null;
@@ -23,15 +23,15 @@ interface TipsterProfile {
   sports: string[];
 }
 
-interface SubscriptionWithTipster {
+interface SubscriptionWithExpert {
   id: string;
   userId: string;
-  tipsterId: string;
+  expertId: string;
   type: "DAY_PASS" | "MONTHLY";
   status: "ACTIVE" | "EXPIRED" | "CANCELLED";
   expiresAt: string;
   createdAt: string;
-  tipster: {
+  expert: {
     id: string;
     pseudo: string;
     photoUrl: string | null;
@@ -41,7 +41,7 @@ interface SubscriptionWithTipster {
 
 /* ════════════════════════ Styles partagés ════════════════════════ */
 
-// Pattern input DS aligné /devenir-tipster + EmailCheckoutModal (Bloc 2).
+// Pattern input DS aligné /devenir-expert + EmailCheckoutModal (Bloc 2).
 // Fond noir 40 %, bordure subtile surface-elevated, focus accent doré.
 const fieldCls = cn(
   "h-12 w-full rounded-xl border border-surface-elevated bg-black/40 px-4 py-3",
@@ -60,7 +60,7 @@ const textareaCls = cn(
 
 const labelCls = "font-body text-body-16 text-muted-foreground";
 
-// Card englobante DS (cohérent avec /tipsters, /devenir-tipster).
+// Card englobante DS (cohérent avec /experts, /devenir-expert).
 const cardCls =
   "rounded-2xl border border-surface-elevated bg-black/40";
 
@@ -83,7 +83,7 @@ function formatPeriod(start: string, end: string): string {
 /** Statut UI dérivé : un abonnement est actif si son status DB est ACTIVE
  *  ET sa date d'expiration est dans le futur (double-check, comme le fait
  *  /subscriptions/check côté backend). */
-function isActiveSubscription(sub: SubscriptionWithTipster): boolean {
+function isActiveSubscription(sub: SubscriptionWithExpert): boolean {
   return sub.status === "ACTIVE" && new Date(sub.expiresAt) > new Date();
 }
 
@@ -125,8 +125,10 @@ export default function ComptePage() {
   const router = useRouter();
   const { user, loading } = useUser();
 
-  // ── État TIPSTER ──
-  const [tipster, setTipster] = useState<TipsterProfile | null>(null);
+  // ── État EXPERT ──
+  // Les données du profil sont dépaquetées dans des states locaux
+  // (pseudo, bio, sports, dailyNote) dès le fetch ; pas besoin de
+  // conserver l'objet complet.
   const [fetchLoading, setFetchLoading] = useState(true);
 
   const [dailyNote, setDailyNote] = useState("");
@@ -144,12 +146,12 @@ export default function ComptePage() {
   // ── État USER (abonnements + achats) ──
   // `null` = pas encore chargé / non applicable, `[]` = chargé vide.
   const [subscriptions, setSubscriptions] = useState<
-    SubscriptionWithTipster[] | null
+    SubscriptionWithExpert[] | null
   >(null);
 
   // ── Redirects ──
   // Déconnecté → /. Admin → /admin (cf. brief §2, admin n'a pas de Mon
-  // Compte, juste un panel /admin). Tipster et User : ils restent ici.
+  // Compte, juste un panel /admin). Expert et User : ils restent ici.
   useEffect(() => {
     if (loading) return;
     if (!user) {
@@ -161,19 +163,18 @@ export default function ComptePage() {
     }
   }, [user, loading, router]);
 
-  // ── Fetch profil TIPSTER ──
+  // ── Fetch profil EXPERT ──
   // Guard fetchLoading conservée (cf. compte-page-audit.md §8 piège 1) :
   // pour USER/ADMIN, on coupe le spinner immédiatement, sinon il tourne
   // à vie.
   useEffect(() => {
     if (!user) return;
-    if (user.role !== "TIPSTER") {
+    if (user.role !== "EXPERT") {
       setFetchLoading(false);
       return;
     }
-    apiGet<TipsterProfile>("/tipsters/me")
+    apiGet<ExpertProfile>("/experts/me")
       .then((data) => {
-        setTipster(data);
         setDailyNote(data.dailyNote || "");
         setPseudo(data.pseudo);
         setBio(data.bio || "");
@@ -184,7 +185,7 @@ export default function ComptePage() {
   }, [user]);
 
   // ── Fetch abonnements USER ──
-  // Uniquement pour les rôles USER (les TIPSTER ont aussi une vue
+  // Uniquement pour les rôles USER (les EXPERT ont aussi une vue
   // d'éditeur, on ne mélange pas). Si ADMIN arrive ici, l'effet
   // redirect ci-dessus le pousse vers /admin avant que le fetch ait
   // lieu — mais on garde le early-return par sécurité.
@@ -194,12 +195,12 @@ export default function ComptePage() {
       setSubscriptions(null);
       return;
     }
-    apiGet<SubscriptionWithTipster[]>("/subscriptions/me")
+    apiGet<SubscriptionWithExpert[]>("/subscriptions/me")
       .then(setSubscriptions)
       .catch(() => setSubscriptions([]));
   }, [user]);
 
-  /* ── Handlers TIPSTER — logique V1 conservée à l'identique ── */
+  /* ── Handlers EXPERT — logique V1 conservée à l'identique ── */
 
   function toggleSport(sport: string) {
     setSports((prev) =>
@@ -212,14 +213,9 @@ export default function ComptePage() {
     setNoteIsError(false);
     setNoteSaving(true);
     try {
-      const data = await apiPatch<TipsterProfile>("/tipsters/me", {
+      await apiPatch<ExpertProfile>("/experts/me", {
         dailyNote,
       });
-      // State optimiste V1 : merge le payload retourné dans le tipster
-      // courant sans re-fetch complet.
-      setTipster((prev) =>
-        prev ? { ...prev, dailyNote: data.dailyNote } : prev,
-      );
       setNoteMsg("Note mise à jour");
     } catch (err) {
       setNoteMsg(err instanceof Error ? err.message : "Erreur");
@@ -239,21 +235,11 @@ export default function ComptePage() {
     }
     setProfileSaving(true);
     try {
-      const data = await apiPatch<TipsterProfile>("/tipsters/me", {
+      await apiPatch<ExpertProfile>("/experts/me", {
         pseudo,
         bio,
         sports,
       });
-      setTipster((prev) =>
-        prev
-          ? {
-              ...prev,
-              pseudo: data.pseudo,
-              bio: data.bio,
-              sports: data.sports,
-            }
-          : prev,
-      );
       setProfileMsg("Profil mis à jour");
     } catch (err) {
       setProfileMsg(err instanceof Error ? err.message : "Erreur");
@@ -270,11 +256,11 @@ export default function ComptePage() {
     return <Spinner />;
   }
 
-  // Vue TIPSTER : éditeur de profil.
-  if (user.role === "TIPSTER") {
+  // Vue EXPERT : éditeur de profil.
+  if (user.role === "EXPERT") {
     if (fetchLoading) return <Spinner />;
     return (
-      <TipsterView
+      <ExpertView
         pseudo={pseudo}
         bio={bio}
         sports={sports}
@@ -299,9 +285,9 @@ export default function ComptePage() {
   return <UserView subscriptions={subscriptions} />;
 }
 
-/* ════════════════════════ Vue TIPSTER ════════════════════════ */
+/* ════════════════════════ Vue EXPERT ════════════════════════ */
 
-interface TipsterViewProps {
+interface ExpertViewProps {
   pseudo: string;
   bio: string;
   sports: string[];
@@ -322,7 +308,7 @@ interface TipsterViewProps {
 
 const DAILY_NOTE_MAX = 200;
 
-function TipsterView(props: TipsterViewProps) {
+function ExpertView(props: ExpertViewProps) {
   const noteCount = props.dailyNote.length;
   // Compteur visuel : vert/blanc tant qu'on est loin du max, doré quand
   // on approche (~80 %), rouge quand on dépasse (maxLength HTML
@@ -426,7 +412,7 @@ function TipsterView(props: TipsterViewProps) {
               />
             </div>
 
-            {/* Sports — chips toggle multi-select (pattern /devenir-tipster) */}
+            {/* Sports — chips toggle multi-select (pattern /devenir-expert) */}
             <div className="space-y-2">
               <Label className={labelCls}>
                 Sports couverts <span className="text-accent">*</span>
@@ -488,7 +474,7 @@ function TipsterView(props: TipsterViewProps) {
 function UserView({
   subscriptions,
 }: {
-  subscriptions: SubscriptionWithTipster[] | null;
+  subscriptions: SubscriptionWithExpert[] | null;
 }) {
   // Loading initial du fetch /subscriptions/me — pendant ce temps on
   // affiche un spinner plutôt que des sections vides flash.
@@ -588,21 +574,21 @@ function SubscriptionCard({
   sub,
   active,
 }: {
-  sub: SubscriptionWithTipster;
+  sub: SubscriptionWithExpert;
   active: boolean;
 }) {
   return (
     <article className={cn(cardCls, "p-6")}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-start gap-4">
-          <TipsterAvatar tipster={sub.tipster} />
+          <ExpertAvatar expert={sub.expert} />
 
           <div className="min-w-0 flex-1">
             <Link
-              href={`/tipsters/${sub.tipsterId}`}
+              href={`/experts/${sub.expertId}`}
               className="font-display text-h5 text-foreground transition-colors hover:text-accent"
             >
-              {sub.tipster.pseudo}
+              {sub.expert.pseudo}
             </Link>
             <p className="mt-1 font-body text-body-16 text-foreground">
               Abonnement mensuel
@@ -621,19 +607,19 @@ function SubscriptionCard({
 
 /* ── Card achat ponctuel ── */
 
-function DayPassCard({ sub }: { sub: SubscriptionWithTipster }) {
+function DayPassCard({ sub }: { sub: SubscriptionWithExpert }) {
   return (
     <article className={cn(cardCls, "p-6")}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-start gap-4">
-          <TipsterAvatar tipster={sub.tipster} />
+          <ExpertAvatar expert={sub.expert} />
 
           <div className="min-w-0 flex-1">
             <Link
-              href={`/tipsters/${sub.tipsterId}`}
+              href={`/experts/${sub.expertId}`}
               className="font-display text-h5 text-foreground transition-colors hover:text-accent"
             >
-              {sub.tipster.pseudo}
+              {sub.expert.pseudo}
             </Link>
             <p className="mt-1 font-body text-body-16 text-foreground">
               Accès à la journée
@@ -652,18 +638,18 @@ function DayPassCard({ sub }: { sub: SubscriptionWithTipster }) {
   );
 }
 
-/* ── Avatar tipster réutilisable (cards abonnement/day-pass) ── */
+/* ── Avatar expert réutilisable (cards abonnement/day-pass) ── */
 
-function TipsterAvatar({
-  tipster,
+function ExpertAvatar({
+  expert,
 }: {
-  tipster: SubscriptionWithTipster["tipster"];
+  expert: SubscriptionWithExpert["expert"];
 }) {
-  if (tipster.photoUrl) {
+  if (expert.photoUrl) {
     return (
       <Image
-        src={tipster.photoUrl}
-        alt={tipster.pseudo}
+        src={expert.photoUrl}
+        alt={expert.pseudo}
         width={48}
         height={48}
         className="size-12 shrink-0 rounded-full object-cover ring-1 ring-accent/40"
@@ -672,7 +658,7 @@ function TipsterAvatar({
   }
   return (
     <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-surface-elevated font-display text-h5 text-accent ring-1 ring-accent/40">
-      {tipster.pseudo.charAt(0).toUpperCase()}
+      {expert.pseudo.charAt(0).toUpperCase()}
     </div>
   );
 }

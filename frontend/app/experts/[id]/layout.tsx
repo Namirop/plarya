@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "Consultez le profil, les statistiques et les analyses de cet expert.",
 };
 
-export default function TipsterProfileLayout({
+export default function ExpertProfileLayout({
   children,
 }: {
   children: React.ReactNode;

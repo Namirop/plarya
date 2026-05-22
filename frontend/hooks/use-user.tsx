@@ -13,7 +13,7 @@ import { apiGet, apiPost } from "@/lib/api";
 interface User {
   id: string;
   email: string;
-  role: "USER" | "TIPSTER" | "ADMIN";
+  role: "USER" | "EXPERT" | "ADMIN";
 }
 
 interface UserContextValue {
@@ -31,18 +31,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // setLoading(false) déplacé dans le finally interne plutôt que dans
+  // l'effect (cf. ESLint react-hooks/set-state-in-effect — appeler
+  // setState dans .finally d'une promise lancée par l'effet déclenche
+  // un re-render en cascade). Idempotent : refreshUser remet aussi
+  // loading à false, ce qui est inoffensif (déjà false en steady-state).
   const fetchUser = useCallback(async () => {
     try {
       const data = await apiGet<User>("/auth/me");
       setUser(data);
     } catch {
       setUser(null);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   // On mount: check if session cookie exists by calling /auth/me
   useEffect(() => {
-    fetchUser().finally(() => setLoading(false));
+    fetchUser();
   }, [fetchUser]);
 
   const requestMagicLink = useCallback(async (email: string) => {

@@ -10,11 +10,11 @@ import { cn } from "@/lib/utils";
 interface EmailCheckoutModalProps {
   open: boolean;
   onClose: () => void;
-  tipsterId: string;
+  expertId: string;
   type: "DAY_PASS" | "MONTHLY";
 }
 
-// Styles input alignés avec /devenir-tipster et le Dashboard pour
+// Styles input alignés avec /devenir-expert et le Dashboard pour
 // cohérence visuelle des champs DS (fond noir 40 %, bordure subtile,
 // focus accent doré).
 const fieldCls = cn(
@@ -28,7 +28,7 @@ const fieldCls = cn(
 export function EmailCheckoutModal({
   open,
   onClose,
-  tipsterId,
+  expertId,
   type,
 }: EmailCheckoutModalProps) {
   const [email, setEmail] = useState("");
@@ -49,7 +49,7 @@ export function EmailCheckoutModal({
     }
     setLoading(true);
     try {
-      const url = await createCheckoutSession(tipsterId, type, trimmed);
+      const url = await createCheckoutSession(expertId, type, trimmed);
       window.location.href = url;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue");

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const createTipsterSchema = z.object({
+export const createExpertSchema = z.object({
   email: z.string().email("Email invalide"),
   pseudo: z.string().min(2).max(30),
   bio: z.string().optional(),

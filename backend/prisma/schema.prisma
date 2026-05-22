@@ -13,7 +13,7 @@ datasource db {
 
 enum UserRole {
   USER
-  TIPSTER
+  EXPERT
   ADMIN
 }
 
@@ -43,7 +43,7 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
-enum TipsterSubStatus {
+enum ExpertSubStatus {
   FREE
   ACTIVE
   EXPIRED
@@ -72,7 +72,7 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  tipster       Tipster?
+  expert        Expert?
   subscriptions Subscription[]
   sessions      Session[]
 
@@ -106,7 +106,7 @@ model Session {
   @@map("sessions")
 }
 
-model Tipster {
+model Expert {
   id              String          @id @default(cuid())
   userId          String          @unique
   pseudo          String          @unique
@@ -115,9 +115,9 @@ model Tipster {
   sports          Sport[]
   dayPassPrice    Int             @default(350)  // centimes (3.50€)
   monthlyPrice    Int             @default(2900) // centimes (29€)
-  subStatus       TipsterSubStatus @default(FREE)
+  subStatus       ExpertSubStatus @default(FREE)
   subExpiresAt    DateTime?
-  stripeSubId     String?          // Stripe subscription for tipster quarterly plan
+  stripeSubId     String?          // Stripe subscription for expert quarterly plan
   warningMessage  String?
   dailyNote       String?
   dailyNoteDate   DateTime?
@@ -130,16 +130,16 @@ model Tipster {
   pronos          Prono[]
   subscriptions   Subscription[]
 
-  @@map("tipsters")
+  @@map("experts")
 }
 
 model Prono {
   id          String       @id @default(cuid())
-  tipsterId   String
+  expertId    String
   matchName   String       // ex: "PSG - Marseille"
   league      String?      // ex: "Ligue 1"
   pick        String       // ex: "PSG gagne"
-  odds        Float        // cote du tipster
+  odds        Float        // cote de l'expert
   teasing     PronoTeasing
   result      PronoResult  @default(PENDING)
   argument    String?      // argumentaire (visible après achat)
@@ -149,17 +149,17 @@ model Prono {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  tipster       Tipster              @relation(fields: [tipsterId], references: [id], onDelete: Cascade)
+  expert        Expert               @relation(fields: [expertId], references: [id], onDelete: Cascade)
   bookmakerOdds PronoBookmakerOdds[]
 
-  @@index([tipsterId, createdAt(sort: Desc)])
+  @@index([expertId, createdAt(sort: Desc)])
   @@map("pronos")
 }
 
 model Subscription {
   id                    String             @id @default(cuid())
   userId                String
-  tipsterId             String
+  expertId              String
   type                  SubscriptionType
   status                SubscriptionStatus @default(ACTIVE)
   stripeSessionId       String?
@@ -170,10 +170,10 @@ model Subscription {
   updatedAt             DateTime           @updatedAt
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tipster           Tipster            @relation(fields: [tipsterId], references: [id], onDelete: Cascade)
+  expert            Expert             @relation(fields: [expertId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([tipsterId])
+  @@index([expertId])
   @@index([expiresAt])
   @@map("subscriptions")
 }

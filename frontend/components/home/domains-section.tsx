@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 // Domaines disponibles pour le filtre in-page (cf. V1 logic retrouvée
 // dans bae3a79 : `activeDomain` state, scroll vers #experts, useMemo
-// filteredTipsters sur SPORT_DOMAIN / ESPORT_DOMAIN).
+// filteredExperts sur SPORT_DOMAIN / ESPORT_DOMAIN).
 export type DomainId = "SPORT" | "ESPORT";
 
 // 3 cards Figma frame `87:211` — voir domains-section-spec.md.

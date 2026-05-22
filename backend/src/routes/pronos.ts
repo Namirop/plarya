@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/auth";
-import { tipsterMiddleware } from "../middleware/tipster";
+import { expertMiddleware } from "../middleware/expert";
 import { validate } from "../middleware/validate";
 import { createPronoSchema, updateResultSchema } from "../validators/prono";
 
@@ -18,33 +18,33 @@ const bookmakerOddsInclude = {
   },
 } as const;
 
-// POST /pronos — Tipster publishes a prono
+// POST /pronos — Expert publishes a prono
 router.post(
   "/",
   authMiddleware,
-  tipsterMiddleware,
+  expertMiddleware,
   validate(createPronoSchema),
   async (req, res) => {
     try {
-      const tipster = await prisma.tipster.findUnique({
+      const expert = await prisma.expert.findUnique({
         where: { userId: req.user!.userId },
         select: { id: true },
       });
 
-      if (!tipster) {
-        res.status(404).json({ error: "Profil tipster introuvable" });
+      if (!expert) {
+        res.status(404).json({ error: "Profil expert introuvable" });
         return;
       }
 
       const { bookmakerOdds, ...pronoData } = req.body;
 
-      // Auto-deflag previous featured prono for this tipster today
+      // Auto-deflag previous featured prono for this expert today
       if (pronoData.isFeatured) {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
         await prisma.prono.updateMany({
           where: {
-            tipsterId: tipster.id,
+            expertId: expert.id,
             isFeatured: true,
             createdAt: { gte: todayStart },
           },
@@ -54,7 +54,7 @@ router.post(
 
       const prono = await prisma.prono.create({
         data: {
-          tipsterId: tipster.id,
+          expertId: expert.id,
           matchName: pronoData.matchName,
           league: pronoData.league,
           pick: pronoData.pick,
@@ -87,21 +87,21 @@ router.post(
   }
 );
 
-// GET /pronos/mine — Tipster's own pronos (must be before /:id)
-router.get("/mine", authMiddleware, tipsterMiddleware, async (req, res) => {
+// GET /pronos/mine — Expert's own pronos (must be before /:id)
+router.get("/mine", authMiddleware, expertMiddleware, async (req, res) => {
   try {
-    const tipster = await prisma.tipster.findUnique({
+    const expert = await prisma.expert.findUnique({
       where: { userId: req.user!.userId },
       select: { id: true },
     });
 
-    if (!tipster) {
-      res.status(404).json({ error: "Profil tipster introuvable" });
+    if (!expert) {
+      res.status(404).json({ error: "Profil expert introuvable" });
       return;
     }
 
     const pronos = await prisma.prono.findMany({
-      where: { tipsterId: tipster.id },
+      where: { expertId: expert.id },
       orderBy: { createdAt: "desc" },
       include: bookmakerOddsInclude,
     });
@@ -112,18 +112,18 @@ router.get("/mine", authMiddleware, tipsterMiddleware, async (req, res) => {
   }
 });
 
-// PATCH /pronos/:id/result — Tipster validates won/lost
+// PATCH /pronos/:id/result — Expert validates won/lost
 router.patch(
   "/:id/result",
   authMiddleware,
-  tipsterMiddleware,
+  expertMiddleware,
   validate(updateResultSchema),
   async (req, res) => {
     try {
       const id = req.params.id as string;
       const prono = await prisma.prono.findUnique({
         where: { id },
-        include: { tipster: { select: { userId: true } } },
+        include: { expert: { select: { userId: true } } },
       });
 
       if (!prono) {
@@ -131,8 +131,8 @@ router.patch(
         return;
       }
 
-      // Only the prono's tipster or admin can update
-      if (prono.tipster.userId !== req.user!.userId && req.user!.role !== "ADMIN") {
+      // Only the prono's expert or admin can update
+      if (prono.expert.userId !== req.user!.userId && req.user!.role !== "ADMIN") {
         res.status(403).json({ error: "Non autorisé" });
         return;
       }
@@ -156,7 +156,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
     const prono = await prisma.prono.findUnique({
       where: { id },
       include: {
-        tipster: { select: { userId: true, pseudo: true } },
+        expert: { select: { userId: true, pseudo: true } },
         ...bookmakerOddsInclude,
       },
     });
@@ -167,7 +167,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
     }
 
     const userId = req.user!.userId;
-    const isOwner = prono.tipster.userId === userId;
+    const isOwner = prono.expert.userId === userId;
     const isAdmin = req.user!.role === "ADMIN";
 
     if (!isOwner && !isAdmin) {
@@ -175,7 +175,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
       const subscription = await prisma.subscription.findFirst({
         where: {
           userId,
-          tipsterId: prono.tipsterId,
+          expertId: prono.expertId,
           status: "ACTIVE",
           expiresAt: { gt: new Date() },
         },

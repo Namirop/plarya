@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { apiGet, apiPost, apiPatch, apiFetch } from "@/lib/api";
@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 interface Stats {
   usersCount: number;
-  tipstersCount: number;
+  expertsCount: number;
   pronosCount: number;
   activeSubscriptionsCount: number;
   estimatedRevenueCents: number;
@@ -31,20 +31,20 @@ interface Sale {
   id: string;
   date: string;
   email: string;
-  tipsterPseudo: string;
+  expertPseudo: string;
   type: "DAY_PASS" | "MONTHLY";
   amount: number;
 }
 
-interface TipsterRevenue {
-  tipsterId: string;
+interface ExpertRevenue {
+  expertId: string;
   pseudo: string;
   salesCount: number;
   totalRevenue: number;
-  tipsterShare: number;
+  expertShare: number;
 }
 
-interface AdminTipster {
+interface AdminExpert {
   id: string;
   pseudo: string;
   sports: string[];
@@ -64,7 +64,7 @@ interface AdminProno {
   teasing: string;
   result: "PENDING" | "WON" | "LOST";
   createdAt: string;
-  tipster: { pseudo: string };
+  expert: { pseudo: string };
 }
 
 interface AdminUser {
@@ -77,13 +77,13 @@ interface AdminUser {
 
 /* ── Tabs ── */
 
-type Tab = "revenus" | "ventes" | "par-expert" | "tipsters" | "pronos" | "users";
+type Tab = "revenus" | "ventes" | "par-expert" | "experts" | "pronos" | "users";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "revenus", label: "Revenus" },
   { key: "ventes", label: "Ventes" },
   { key: "par-expert", label: "Par expert" },
-  { key: "tipsters", label: "Experts" },
+  { key: "experts", label: "Experts" },
   { key: "pronos", label: "Analyses" },
   { key: "users", label: "Users" },
 ];
@@ -175,8 +175,8 @@ export default function AdminPage() {
   const [revenueDays, setRevenueDays] = useState<RevenueDay[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [salesTotal, setSalesTotal] = useState(0);
-  const [tipsterRevenue, setTipsterRevenue] = useState<TipsterRevenue[]>([]);
-  const [tipsters, setTipsters] = useState<AdminTipster[]>([]);
+  const [expertRevenue, setExpertRevenue] = useState<ExpertRevenue[]>([]);
+  const [experts, setExperts] = useState<AdminExpert[]>([]);
   const [pronos, setPronos] = useState<AdminProno[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -199,13 +199,13 @@ export default function AdminPage() {
         apiGet<Stats>("/admin/stats"),
         apiGet<RevenueDay[]>("/admin/stats/revenue"),
         apiGet<{ sales: Sale[]; total: number }>("/admin/stats/sales?limit=50"),
-        apiGet<TipsterRevenue[]>("/admin/stats/by-tipster"),
-        apiGet<AdminTipster[]>("/admin/tipsters"),
+        apiGet<ExpertRevenue[]>("/admin/stats/by-expert"),
+        apiGet<AdminExpert[]>("/admin/experts"),
         apiGet<AdminProno[]>("/admin/pronos"),
         apiGet<AdminUser[]>("/admin/users"),
       ]);
       setStats(s); setRevenueDays(rd); setSales(sl.sales); setSalesTotal(sl.total);
-      setTipsterRevenue(tr); setTipsters(t); setPronos(p); setUsers(u);
+      setExpertRevenue(tr); setExperts(t); setPronos(p); setUsers(u);
     } catch { /* silent */ } finally { setLoadingData(false); }
   }, []);
 
@@ -244,7 +244,7 @@ export default function AdminPage() {
   }
 
   // Override résultat — état optimiste V1 conservé. Sur succès, on
-  // déclenche un fetchAll() pour resync les stats by-tipster + le
+  // déclenche un fetchAll() pour resync les stats by-expert + le
   // winRate dérivé (cf. audit §10 piège 5). Sur erreur, toast et on
   // ne touche pas au state (le rollback est implicite : la prochaine
   // navigation/refresh forcera la cohérence).
@@ -256,7 +256,7 @@ export default function AdminPage() {
         `Analyse marquée comme ${result === "WON" ? "gagnée" : "perdue"}`,
         "success",
       );
-      // Refetch ciblé impossible en V1 (pas d'endpoint par-tipster
+      // Refetch ciblé impossible en V1 (pas d'endpoint par-expert
       // isolé) → fetchAll complet. Cost acceptable côté admin
       // (faible fréquence).
       fetchAll();
@@ -336,8 +336,8 @@ export default function AdminPage() {
         <div className="mt-8">
           {tab === "revenus" && <RevenueSection revenueDays={revenueDays} />}
           {tab === "ventes" && <SalesSection sales={sales} total={salesTotal} />}
-          {tab === "par-expert" && <ByTipsterSection tipsterRevenue={tipsterRevenue} />}
-          {tab === "tipsters" && <TipstersSection tipsters={tipsters} onUpdate={fetchAll} />}
+          {tab === "par-expert" && <ByExpertSection expertRevenue={expertRevenue} />}
+          {tab === "experts" && <ExpertsAdminSection experts={experts} onUpdate={fetchAll} />}
           {tab === "pronos" && <PronosSection pronos={pronos} onOverride={handleOverrideResult} />}
           {tab === "users" && <UsersSection users={users} />}
         </div>
@@ -362,7 +362,7 @@ export default function AdminPage() {
         title="Modifier le résultat de l'analyse"
         description={
           pendingOverride
-            ? `Cette action modifie le winRate du tipster et peut impacter les payouts. Marquer l'analyse comme ${
+            ? `Cette action modifie le winRate du expert et peut impacter les payouts. Marquer l'analyse comme ${
                 pendingOverride.result === "WON" ? "gagnée" : "perdue"
               } ?`
             : ""
@@ -478,7 +478,7 @@ function SalesSection({ sales, total }: { sales: Sale[]; total: number }) {
                     {new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
                   </td>
                   <td className={tdCls}>{s.email}</td>
-                  <td className={cn(tdCls, "font-medium")}>{s.tipsterPseudo}</td>
+                  <td className={cn(tdCls, "font-medium")}>{s.expertPseudo}</td>
                   <td className="px-4 py-3">
                     <span className={cn(badgeBaseCls, s.type === "MONTHLY" ? BADGE_TONES.premium : BADGE_TONES.muted)}>
                       {s.type === "DAY_PASS" ? "Day Pass" : "Mensuel"}
@@ -500,7 +500,7 @@ function SalesSection({ sales, total }: { sales: Sale[]; total: number }) {
           sales.map((s) => (
             <div key={s.id} className={mobileCardCls}>
               <div className="flex items-center justify-between">
-                <p className="font-body text-body-16 font-medium text-foreground">{s.tipsterPseudo}</p>
+                <p className="font-body text-body-16 font-medium text-foreground">{s.expertPseudo}</p>
                 <span className="font-body text-body-16 font-medium text-foreground">{formatPrice(s.amount)}€</span>
               </div>
               <p className="mt-1 font-body text-body-16 text-muted-foreground">{s.email}</p>
@@ -520,9 +520,9 @@ function SalesSection({ sales, total }: { sales: Sale[]; total: number }) {
   );
 }
 
-/* ══════════════════ By Tipster Section ══════════════════ */
+/* ══════════════════ By Expert Section ══════════════════ */
 
-function ByTipsterSection({ tipsterRevenue }: { tipsterRevenue: TipsterRevenue[] }) {
+function ByExpertSection({ expertRevenue }: { expertRevenue: ExpertRevenue[] }) {
   return (
     <div>
       {/* Desktop table */}
@@ -538,16 +538,16 @@ function ByTipsterSection({ tipsterRevenue }: { tipsterRevenue: TipsterRevenue[]
             </tr>
           </thead>
           <tbody>
-            {tipsterRevenue.length === 0 ? (
+            {expertRevenue.length === 0 ? (
               <EmptyRow cols={5} message="Aucune donnée pour les experts" />
             ) : (
-              tipsterRevenue.map((t) => (
-                <tr key={t.tipsterId} className={tbodyRowCls}>
+              expertRevenue.map((t) => (
+                <tr key={t.expertId} className={tbodyRowCls}>
                   <td className={cn(tdCls, "font-medium")}>{t.pseudo}</td>
                   <td className={tdNumericCls}>{t.salesCount}</td>
                   <td className={cn(tdNumericCls, "font-medium")}>{formatPrice(t.totalRevenue)}€</td>
-                  <td className={cn(tdNumericCls, "font-medium text-accent")}>{formatPrice(t.tipsterShare)}€</td>
-                  <td className={tdMutedCls + " text-right"}>{formatPrice(t.totalRevenue - t.tipsterShare)}€</td>
+                  <td className={cn(tdNumericCls, "font-medium text-accent")}>{formatPrice(t.expertShare)}€</td>
+                  <td className={tdMutedCls + " text-right"}>{formatPrice(t.totalRevenue - t.expertShare)}€</td>
                 </tr>
               ))
             )}
@@ -557,19 +557,19 @@ function ByTipsterSection({ tipsterRevenue }: { tipsterRevenue: TipsterRevenue[]
 
       {/* Mobile cards */}
       <div className="space-y-3 sm:hidden">
-        {tipsterRevenue.length === 0 ? (
+        {expertRevenue.length === 0 ? (
           <EmptyCard message="Aucune donnée pour les experts" />
         ) : (
-          tipsterRevenue.map((t) => (
-            <div key={t.tipsterId} className={mobileCardCls}>
+          expertRevenue.map((t) => (
+            <div key={t.expertId} className={mobileCardCls}>
               <div className="flex items-center justify-between">
                 <p className="font-body text-body-16 font-medium text-foreground">{t.pseudo}</p>
                 <span className="font-body text-body-16 font-medium text-foreground">{formatPrice(t.totalRevenue)}€</span>
               </div>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-body text-body-16 text-muted-foreground">
                 <span>{t.salesCount} vente{t.salesCount > 1 ? "s" : ""}</span>
-                <span className="font-medium text-accent">Expert : {formatPrice(t.tipsterShare)}€</span>
-                <span>Plateforme : {formatPrice(t.totalRevenue - t.tipsterShare)}€</span>
+                <span className="font-medium text-accent">Expert : {formatPrice(t.expertShare)}€</span>
+                <span>Plateforme : {formatPrice(t.totalRevenue - t.expertShare)}€</span>
               </div>
             </div>
           ))
@@ -579,30 +579,38 @@ function ByTipsterSection({ tipsterRevenue }: { tipsterRevenue: TipsterRevenue[]
   );
 }
 
-/* ══════════════════ Tipsters Section ══════════════════ */
+/* ══════════════════ Experts Section ══════════════════ */
 
-function TipstersSection({
-  tipsters,
+function ExpertsAdminSection({
+  experts,
   onUpdate,
 }: {
-  tipsters: AdminTipster[];
+  experts: AdminExpert[];
   onUpdate: () => void;
 }) {
   const { showToast } = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [warningText, setWarningText] = useState("");
-  const [orderValues, setOrderValues] = useState<Record<string, number>>({});
+  // Local edits seulement — la source de vérité pour la valeur affichée
+  // est `experts[i].displayOrder` (props). Le state `orderEdits` stocke
+  // les valeurs modifiées par l'admin avant clic "Enregistrer".
+  // Évite le pattern setState-in-effect (cf. ESLint
+  // react-hooks/set-state-in-effect) et le bug où un fetchAll() reset
+  // implicitement les modifs non-sauvées de l'admin.
+  const [orderEdits, setOrderEdits] = useState<Record<string, number>>({});
   const [orderSaved, setOrderSaved] = useState<string | null>(null);
 
-  useEffect(() => {
+  const orderValues = useMemo(() => {
     const values: Record<string, number> = {};
-    for (const t of tipsters) values[t.id] = t.displayOrder;
-    setOrderValues(values);
-  }, [tipsters]);
+    for (const t of experts) {
+      values[t.id] = orderEdits[t.id] ?? t.displayOrder;
+    }
+    return values;
+  }, [experts, orderEdits]);
 
-  async function handleSaveWarning(tipsterId: string) {
+  async function handleSaveWarning(expertId: string) {
     try {
-      await apiPatch(`/admin/tipsters/${tipsterId}/warning`, { warningMessage: warningText || null });
+      await apiPatch(`/admin/experts/${expertId}/warning`, { warningMessage: warningText || null });
       setEditingId(null);
       setWarningText("");
       onUpdate();
@@ -614,10 +622,10 @@ function TipstersSection({
     }
   }
 
-  async function handleSaveOrder(tipsterId: string) {
+  async function handleSaveOrder(expertId: string) {
     try {
-      await apiPatch(`/admin/tipsters/${tipsterId}/display-order`, { displayOrder: orderValues[tipsterId] ?? 0 });
-      setOrderSaved(tipsterId);
+      await apiPatch(`/admin/experts/${expertId}/display-order`, { displayOrder: orderValues[expertId] ?? 0 });
+      setOrderSaved(expertId);
       setTimeout(() => setOrderSaved(null), 2000);
       onUpdate();
     } catch (err) {
@@ -651,10 +659,10 @@ function TipstersSection({
               </tr>
             </thead>
             <tbody>
-              {tipsters.length === 0 ? (
+              {experts.length === 0 ? (
                 <EmptyRow cols={3} message="Aucun expert enregistré" />
               ) : (
-                tipsters.map((t) => (
+                experts.map((t) => (
                   <tr key={t.id} className={tbodyRowCls}>
                     <td className={cn(tdCls, "font-medium")}>{t.pseudo}</td>
                     <td className="px-4 py-3">
@@ -663,7 +671,7 @@ function TipstersSection({
                         min={0}
                         value={orderValues[t.id] ?? 0}
                         onChange={(e) =>
-                          setOrderValues((prev) => ({
+                          setOrderEdits((prev) => ({
                             ...prev,
                             [t.id]: parseInt(e.target.value) || 0,
                           }))
@@ -689,7 +697,7 @@ function TipstersSection({
         </div>
       </div>
 
-      {/* ── Tipsters list ── */}
+      {/* ── Experts list ── */}
       <div>
         <h3 className="mb-3 font-body text-body-16 text-foreground">
           Liste des experts
@@ -709,10 +717,10 @@ function TipstersSection({
               </tr>
             </thead>
             <tbody>
-              {tipsters.length === 0 ? (
+              {experts.length === 0 ? (
                 <EmptyRow cols={6} message="Aucun expert enregistré" />
               ) : (
-                tipsters.map((t) => (
+                experts.map((t) => (
                   <tr key={t.id} className={tbodyRowCls}>
                     <td className={cn(tdCls, "font-medium")}>{t.pseudo}</td>
                     <td className={tdMutedCls}>{t.user.email}</td>
@@ -783,10 +791,10 @@ function TipstersSection({
 
         {/* Mobile cards */}
         <div className="space-y-3 sm:hidden">
-          {tipsters.length === 0 ? (
+          {experts.length === 0 ? (
             <EmptyCard message="Aucun expert enregistré" />
           ) : (
-            tipsters.map((t) => (
+            experts.map((t) => (
               <div key={t.id} className={mobileCardCls}>
                 <div className="flex items-center justify-between">
                   <p className="font-body text-body-16 font-medium text-foreground">{t.pseudo}</p>
@@ -888,7 +896,7 @@ function PronosSection({
                       <p className="font-body text-body-16 text-muted-foreground">{p.league}</p>
                     )}
                   </td>
-                  <td className={tdMutedCls}>{p.tipster.pseudo}</td>
+                  <td className={tdMutedCls}>{p.expert.pseudo}</td>
                   <td className={cn(tdNumericCls, "font-medium")}>@{p.odds}</td>
                   <td className="px-4 py-3">
                     <ResultBadge result={p.result} />
@@ -937,7 +945,7 @@ function PronosSection({
                 <ResultBadge result={p.result} />
               </div>
               <div className="mt-1 flex items-center gap-3 font-body text-body-16 text-muted-foreground">
-                <span>{p.tipster.pseudo}</span>
+                <span>{p.expert.pseudo}</span>
                 <span>@{p.odds}</span>
                 <span>{new Date(p.createdAt).toLocaleDateString("fr-FR")}</span>
               </div>
@@ -1046,8 +1054,8 @@ function ResultBadge({ result }: { result: string }) {
 }
 
 function RoleBadge({ role }: { role: string }) {
-  // ADMIN = premium (doré), TIPSTER = success (vert), USER = muted.
+  // ADMIN = premium (doré), EXPERT = success (vert), USER = muted.
   const tone: BadgeTone =
-    role === "ADMIN" ? "premium" : role === "TIPSTER" ? "success" : "muted";
+    role === "ADMIN" ? "premium" : role === "EXPERT" ? "success" : "muted";
   return <span className={cn(badgeBaseCls, BADGE_TONES[tone])}>{role}</span>;
 }

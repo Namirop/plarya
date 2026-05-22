@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     "Rejoignez Plarya en tant qu'expert et partagez vos analyses sportives.",
 };
 
-export default function DevenirTipsterLayout({
+export default function DevenirExpertLayout({
   children,
 }: {
   children: React.ReactNode;

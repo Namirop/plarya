@@ -28,7 +28,7 @@ interface LoginModalProps {
   redirectAfterLogin?: string;
 }
 
-// Pattern input DS aligné /devenir-tipster + EmailCheckoutModal (Bloc 2)
+// Pattern input DS aligné /devenir-expert + EmailCheckoutModal (Bloc 2)
 // + /compte. Inline ici pour éviter une dépendance — à factoriser dans
 // lib/styles si on en ajoute un 4ᵉ consommateur.
 const fieldCls = cn(

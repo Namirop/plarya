@@ -3,9 +3,9 @@ import { prisma } from "./prisma";
 /** Calcule le taux de réussite sur les 10 derniers pronos validés.
  *  Usage interne uniquement (dashboard expert, admin) — JAMAIS affiché
  *  sur les pages publiques (CLAUDE.md §6). */
-export async function calcWinRate(tipsterId: string): Promise<number> {
+export async function calcWinRate(expertId: string): Promise<number> {
   const recent = await prisma.prono.findMany({
-    where: { tipsterId, result: { not: "PENDING" } },
+    where: { expertId, result: { not: "PENDING" } },
     orderBy: { createdAt: "desc" },
     take: 10,
     select: { result: true },

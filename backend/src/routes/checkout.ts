@@ -2,7 +2,7 @@ import { Router } from "express";
 import { stripe } from "../lib/stripe";
 import { prisma } from "../lib/prisma";
 import { authMiddleware, optionalAuthMiddleware } from "../middleware/auth";
-import { createCheckoutSchema, becomeTipsterSchema } from "../validators/checkout";
+import { createCheckoutSchema, becomeExpertSchema } from "../validators/checkout";
 
 const router = Router();
 
@@ -15,7 +15,7 @@ router.post("/create-session", optionalAuthMiddleware, async (req, res) => {
       return;
     }
 
-    const { tipsterId, type, email: bodyEmail } = parsed.data;
+    const { expertId, type, email: bodyEmail } = parsed.data;
 
     // Resolve userId and email
     let userId: string | undefined;
@@ -48,7 +48,7 @@ router.post("/create-session", optionalAuthMiddleware, async (req, res) => {
       const existing = await prisma.subscription.findFirst({
         where: {
           userId,
-          tipsterId,
+          expertId,
           status: "ACTIVE",
           expiresAt: { gt: new Date() },
         },
@@ -60,9 +60,9 @@ router.post("/create-session", optionalAuthMiddleware, async (req, res) => {
       }
     }
 
-    const tipster = await prisma.tipster.findUnique({ where: { id: tipsterId } });
-    if (!tipster) {
-      res.status(404).json({ error: "Tipster introuvable" });
+    const expert = await prisma.expert.findUnique({ where: { id: expertId } });
+    if (!expert) {
+      res.status(404).json({ error: "Expert introuvable" });
       return;
     }
 
@@ -73,7 +73,7 @@ router.post("/create-session", optionalAuthMiddleware, async (req, res) => {
 
       const upcomingCount = await prisma.prono.count({
         where: {
-          tipsterId,
+          expertId,
           createdAt: { gte: today },
           startTime: { gt: new Date() },
         },
@@ -88,11 +88,11 @@ router.post("/create-session", optionalAuthMiddleware, async (req, res) => {
     }
 
     const isSubscription = type === "MONTHLY";
-    const amount = isSubscription ? tipster.monthlyPrice : tipster.dayPassPrice;
+    const amount = isSubscription ? expert.monthlyPrice : expert.dayPassPrice;
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
     // Build metadata
-    const metadata: Record<string, string> = { tipsterId, type };
+    const metadata: Record<string, string> = { expertId, type };
     if (userId) {
       metadata.userId = userId;
     }
@@ -111,8 +111,8 @@ router.post("/create-session", optionalAuthMiddleware, async (req, res) => {
             unit_amount: amount,
             product_data: {
               name: isSubscription
-                ? `Abonnement mensuel — ${tipster.pseudo}`
-                : `Day Pass — ${tipster.pseudo}`,
+                ? `Abonnement mensuel — ${expert.pseudo}`
+                : `Day Pass — ${expert.pseudo}`,
             },
             ...(isSubscription ? { recurring: { interval: "month" as const } } : {}),
           },
@@ -120,8 +120,8 @@ router.post("/create-session", optionalAuthMiddleware, async (req, res) => {
         },
       ],
       metadata,
-      success_url: `${frontendUrl}/tipsters/${tipsterId}?checkout=success&stripe_session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${frontendUrl}/tipsters/${tipsterId}?checkout=cancel`,
+      success_url: `${frontendUrl}/experts/${expertId}?checkout=success&stripe_session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${frontendUrl}/experts/${expertId}?checkout=cancel`,
     });
 
     res.json({ url: session.url });
@@ -131,10 +131,10 @@ router.post("/create-session", optionalAuthMiddleware, async (req, res) => {
   }
 });
 
-// POST /checkout/become-tipster
-router.post("/become-tipster", authMiddleware, async (req, res) => {
+// POST /checkout/become-expert
+router.post("/become-expert", authMiddleware, async (req, res) => {
   try {
-    const parsed = becomeTipsterSchema.safeParse(req.body);
+    const parsed = becomeExpertSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Données invalides" });
       return;
@@ -143,19 +143,19 @@ router.post("/become-tipster", authMiddleware, async (req, res) => {
     const { pseudo, bio, sports } = parsed.data;
     const userId = req.user!.userId;
 
-    // Check user is not already a tipster
+    // Check user is not already an expert
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { tipster: true },
+      include: { expert: true },
     });
 
-    if (user?.role === "TIPSTER" || user?.tipster) {
-      res.status(400).json({ error: "Vous êtes déjà tipster" });
+    if (user?.role === "EXPERT" || user?.expert) {
+      res.status(400).json({ error: "Vous êtes déjà expert" });
       return;
     }
 
     // Check pseudo uniqueness
-    const existingPseudo = await prisma.tipster.findUnique({ where: { pseudo } });
+    const existingPseudo = await prisma.expert.findUnique({ where: { pseudo } });
     if (existingPseudo) {
       res.status(400).json({ error: "Ce pseudo est déjà pris" });
       return;
@@ -172,7 +172,7 @@ router.post("/become-tipster", authMiddleware, async (req, res) => {
             currency: "eur",
             unit_amount: 3900, // 39€
             product_data: {
-              name: "Abonnement Tipster — 39€/trimestre",
+              name: "Abonnement Expert — 39€/trimestre",
             },
             recurring: { interval: "month" as const, interval_count: 3 },
           },
@@ -184,15 +184,15 @@ router.post("/become-tipster", authMiddleware, async (req, res) => {
         pseudo,
         bio: bio || "",
         sports: JSON.stringify(sports),
-        purpose: "become_tipster",
+        purpose: "become_expert",
       },
-      success_url: `${frontendUrl}/devenir-tipster?checkout=success`,
-      cancel_url: `${frontendUrl}/devenir-tipster?checkout=cancel`,
+      success_url: `${frontendUrl}/devenir-expert?checkout=success`,
+      cancel_url: `${frontendUrl}/devenir-expert?checkout=cancel`,
     });
 
     res.json({ url: session.url });
   } catch (err) {
-    console.error("Become tipster checkout error:", err);
+    console.error("Become expert checkout error:", err);
     res.status(500).json({ error: "Erreur lors de la création du paiement" });
   }
 });

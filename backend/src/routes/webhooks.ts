@@ -4,6 +4,7 @@ import { stripe } from "../lib/stripe";
 import { prisma } from "../lib/prisma";
 import { sendAccessUnlockedEmail } from "../lib/emails";
 import { createMagicLink } from "../lib/magic-link";
+import type { Sport } from "../generated/prisma/enums";
 
 const router = Router();
 
@@ -37,39 +38,45 @@ router.post(
           const metadata = session.metadata as Record<string, string>;
           const { userId, purpose } = metadata;
 
-          if (purpose === "become_tipster") {
-            // Create tipster account after payment
+          // Accept both new and legacy `purpose` for backward-compat
+          // during the tipster→expert rollout. Anciennes sessions Stripe
+          // créées avant le rename portent encore "become_tipster".
+          if (purpose === "become_expert" || purpose === "become_tipster") {
+            // Create expert account after payment
             const { pseudo, bio, sports: sportsJson } = metadata;
-            const sports = JSON.parse(sportsJson) as string[];
+            const sports = JSON.parse(sportsJson) as Sport[];
             const stripeSubId = session.subscription as string;
 
-            // Idempotence: check if tipster already exists for this user
-            const existingTipster = await prisma.tipster.findUnique({
+            // Idempotence: check if expert already exists for this user
+            const existingExpert = await prisma.expert.findUnique({
               where: { userId },
             });
-            if (existingTipster) break;
+            if (existingExpert) break;
 
             await prisma.$transaction([
               prisma.user.update({
                 where: { id: userId },
-                data: { role: "TIPSTER" },
+                data: { role: "EXPERT" },
               }),
-              prisma.tipster.create({
+              prisma.expert.create({
                 data: {
                   userId,
                   pseudo,
                   bio: bio || null,
-                  sports: sports as any,
+                  sports,
                   subStatus: "ACTIVE",
                   subExpiresAt: new Date(Date.now() + QUARTER),
                   stripeSubId,
                 },
               }),
             ]);
-            console.log(`Tipster created: ${pseudo} (user ${userId})`);
+            console.log(`Expert created: ${pseudo} (user ${userId})`);
           } else {
             // User subscription (day pass / monthly)
-            const { tipsterId, type } = metadata;
+            // expertId : nouveau nom de clé. Backward-compat avec
+            // tipsterId pour les sessions Stripe pending pré-rename.
+            const expertId = metadata.expertId || metadata.tipsterId;
+            const { type } = metadata;
 
             // Idempotence
             const existing = await prisma.subscription.findFirst({
@@ -100,20 +107,20 @@ router.post(
               await prisma.subscription.create({
                 data: {
                   userId: resolvedUserId,
-                  tipsterId,
+                  expertId,
                   type: "DAY_PASS",
                   status: "ACTIVE",
                   stripeSessionId: session.id,
                   expiresAt: new Date(Date.now() + DAY),
                 },
               });
-              console.log(`Day pass created for user ${resolvedUserId} → tipster ${tipsterId}`);
+              console.log(`Day pass created for user ${resolvedUserId} → expert ${expertId}`);
             } else if (type === "MONTHLY") {
               const stripeSubId = session.subscription as string;
               await prisma.subscription.create({
                 data: {
                   userId: resolvedUserId,
-                  tipsterId,
+                  expertId,
                   type: "MONTHLY",
                   status: "ACTIVE",
                   stripeSessionId: session.id,
@@ -121,22 +128,22 @@ router.post(
                   expiresAt: new Date(Date.now() + MONTH),
                 },
               });
-              console.log(`Monthly sub created for user ${resolvedUserId} → tipster ${tipsterId}`);
+              console.log(`Monthly sub created for user ${resolvedUserId} → expert ${expertId}`);
             }
 
             // Fire-and-forget: send access unlocked email with magic link
-            const [buyer, tipsterRecord] = await Promise.all([
+            const [buyer, expertRecord] = await Promise.all([
               prisma.user.findUnique({ where: { id: resolvedUserId }, select: { email: true } }),
-              prisma.tipster.findUnique({ where: { id: tipsterId }, select: { pseudo: true } }),
+              prisma.expert.findUnique({ where: { id: expertId }, select: { pseudo: true } }),
             ]);
-            if (buyer && tipsterRecord) {
+            if (buyer && expertRecord) {
               const backendUrl = process.env.BACKEND_URL || "http://localhost:4000";
               const magicToken = await createMagicLink(buyer.email);
               const magicLinkUrl = `${backendUrl}/auth/verify?token=${magicToken}`;
               sendAccessUnlockedEmail(
                 buyer.email,
-                tipsterRecord.pseudo,
-                tipsterId,
+                expertRecord.pseudo,
+                expertId,
                 magicLinkUrl
               );
             }
@@ -149,19 +156,19 @@ router.post(
           const subscriptionId = invoice.subscription ?? null;
           if (!subscriptionId) break;
 
-          // Check if it's a tipster quarterly renewal
-          const tipster = await prisma.tipster.findFirst({
+          // Check if it's an expert quarterly renewal
+          const expert = await prisma.expert.findFirst({
             where: { stripeSubId: subscriptionId },
           });
-          if (tipster) {
-            await prisma.tipster.update({
-              where: { id: tipster.id },
+          if (expert) {
+            await prisma.expert.update({
+              where: { id: expert.id },
               data: {
                 subStatus: "ACTIVE",
                 subExpiresAt: new Date(Date.now() + QUARTER),
               },
             });
-            console.log(`Tipster sub renewed: ${tipster.pseudo}`);
+            console.log(`Expert sub renewed: ${expert.pseudo}`);
             break;
           }
 
@@ -185,16 +192,16 @@ router.post(
         case "customer.subscription.deleted": {
           const subscription = event.data.object;
 
-          // Check if it's a tipster sub
-          const tipster = await prisma.tipster.findFirst({
+          // Check if it's an expert sub
+          const expert = await prisma.expert.findFirst({
             where: { stripeSubId: subscription.id },
           });
-          if (tipster) {
-            await prisma.tipster.update({
-              where: { id: tipster.id },
+          if (expert) {
+            await prisma.expert.update({
+              where: { id: expert.id },
               data: { subStatus: "EXPIRED" },
             });
-            console.log(`Tipster sub expired: ${tipster.pseudo}`);
+            console.log(`Expert sub expired: ${expert.pseudo}`);
             break;
           }
 

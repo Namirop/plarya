@@ -6,15 +6,15 @@ import { checkSubscriptionSchema } from "../validators/checkout";
 
 const router = Router();
 
-// POST /subscriptions/check — Check if user has access to a tipster's pronos
+// POST /subscriptions/check — Check if user has access to an expert's pronos
 router.post("/check", authMiddleware, validate(checkSubscriptionSchema), async (req, res) => {
   try {
-    const { tipsterId } = req.body;
+    const { expertId } = req.body;
 
     const subscription = await prisma.subscription.findFirst({
       where: {
         userId: req.user!.userId,
-        tipsterId,
+        expertId,
         status: "ACTIVE",
         expiresAt: { gt: new Date() },
       },
@@ -32,7 +32,7 @@ router.get("/me", authMiddleware, async (req, res) => {
     const subscriptions = await prisma.subscription.findMany({
       where: { userId: req.user!.userId },
       include: {
-        tipster: {
+        expert: {
           select: { id: true, pseudo: true, photoUrl: true, sports: true },
         },
       },

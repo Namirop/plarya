@@ -11,7 +11,7 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 const DAY = 86400000;
 const HOUR = 3600000;
 
-interface TipsterSeed {
+interface ExpertSeed {
   email: string;
   pseudo: string;
   bio: string;
@@ -22,10 +22,10 @@ interface TipsterSeed {
   today: [string, string, string, number, string][];
 }
 
-const TIPSTERS: TipsterSeed[] = [
+const EXPERTS: ExpertSeed[] = [
   {
-    email: "tipster@test.com",
-    pseudo: "TipsterTest",
+    email: "expert@test.com",
+    pseudo: "ExpertTest",
     bio: "Expert Football & Tennis — Analyses pointues",
     sports: ["FOOTBALL", "TENNIS"],
     history: [
@@ -170,7 +170,7 @@ async function main() {
   const testLinks: { email: string; role: string; url: string }[] = [];
 
   // Admin user
-  const admin = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: "admin@test.com" },
     update: { role: "ADMIN" },
     create: {
@@ -198,34 +198,34 @@ async function main() {
     url: `${BACKEND_URL}/auth/verify?token=${userToken}`,
   });
 
-  for (const t of TIPSTERS) {
+  for (const e of EXPERTS) {
     // Upsert user
     const user = await prisma.user.upsert({
-      where: { email: t.email },
+      where: { email: e.email },
       update: {},
       create: {
-        email: t.email,
-        role: "TIPSTER",
+        email: e.email,
+        role: "EXPERT",
       },
     });
 
     // Create test magic link
-    const token = await createTestMagicLink(t.email);
+    const token = await createTestMagicLink(e.email);
     testLinks.push({
-      email: t.email,
-      role: "TIPSTER",
+      email: e.email,
+      role: "EXPERT",
       url: `${BACKEND_URL}/auth/verify?token=${token}`,
     });
 
-    // Upsert tipster profile
-    const tipster = await prisma.tipster.upsert({
+    // Upsert expert profile
+    const expert = await prisma.expert.upsert({
       where: { userId: user.id },
       update: { dayPassPrice: 350, viewsToday: Math.floor(Math.random() * 300), photoUrl: "/profile.jpg" },
       create: {
         userId: user.id,
-        pseudo: t.pseudo,
-        bio: t.bio,
-        sports: t.sports,
+        pseudo: e.pseudo,
+        bio: e.bio,
+        sports: e.sports,
         subStatus: "FREE",
         viewsToday: Math.floor(Math.random() * 300),
         photoUrl: "/profile.jpg",
@@ -233,14 +233,14 @@ async function main() {
     });
 
     // Delete existing pronos and recreate with fresh dates
-    await prisma.prono.deleteMany({ where: { tipsterId: tipster.id } });
+    await prisma.prono.deleteMany({ where: { expertId: expert.id } });
 
     // Historical pronos — startTime = createdAt (already past)
-    const historyData = t.history.map(
+    const historyData = e.history.map(
       ([matchName, league, pick, odds, teasing, result, daysAgo]) => {
         const createdAt = new Date(now - daysAgo * DAY);
         return {
-          tipsterId: tipster.id,
+          expertId: expert.id,
           matchName,
           league,
           pick,
@@ -261,24 +261,24 @@ async function main() {
     );
 
     // Today's pronos — varied startTime
-    // EsportGuru (last tipster): all analyses in the past (to test "terminated" state)
-    const allPast = t.email === "esportguru@test.com";
+    // EsportGuru (last expert): all analyses in the past (to test "terminated" state)
+    const allPast = e.email === "esportguru@test.com";
     // startTime offsets from now : on génère des fenêtres de test
     // confortables (+6 h, +12 h, +18 h) pour qu'un seed lancé le matin
-    // reste valable toute la journée. Pour les tipsters qui ont au
+    // reste valable toute la journée. Pour les experts qui ont au
     // moins 2 pronos du jour, on garde le premier dans le passé
     // (-1 h) pour démontrer le rendu "match commencé" (opacity-50).
     // TennisAce n'a qu'un seul prono → forcé futur pour rester
     // testable (sinon "Toutes les analyses sont terminées").
     const startTimeOffsets = allPast
-      ? t.today.map((_, i) => -(i + 1) * HOUR) // all in the past
-      : t.today.length === 1
+      ? e.today.map((_, i) => -(i + 1) * HOUR) // all in the past
+      : e.today.length === 1
         ? [6 * HOUR]
-        : t.today.map((_, i) => (i === 0 ? -1 * HOUR : i * 6 * HOUR));
+        : e.today.map((_, i) => (i === 0 ? -1 * HOUR : i * 6 * HOUR));
 
-    const todayData = t.today.map(
+    const todayData = e.today.map(
       ([matchName, league, pick, odds, teasing], i) => ({
-        tipsterId: tipster.id,
+        expertId: expert.id,
         matchName,
         league,
         pick,
@@ -294,13 +294,13 @@ async function main() {
         result: "PENDING" as const,
         startTime: new Date(now + startTimeOffsets[i]),
         isFeatured: i === 0,
-        createdAt: new Date(now - (t.today.length - i) * HOUR),
+        createdAt: new Date(now - (e.today.length - i) * HOUR),
       }),
     );
 
     await prisma.prono.createMany({ data: [...historyData, ...todayData] });
     console.log(
-      `  ${t.pseudo}: ${historyData.length} history + ${todayData.length} today`,
+      `  ${e.pseudo}: ${historyData.length} history + ${todayData.length} today`,
     );
   }
 
@@ -310,39 +310,39 @@ async function main() {
   // Delete existing test subscriptions
   await prisma.subscription.deleteMany({});
 
-  // Get all tipsters and the test user
-  const allTipsters = await prisma.tipster.findMany({ select: { id: true, pseudo: true, dayPassPrice: true, monthlyPrice: true } });
+  // Get all experts and the test user
+  const allExperts = await prisma.expert.findMany({ select: { id: true, pseudo: true, dayPassPrice: true, monthlyPrice: true } });
   const testUser = await prisma.user.findUnique({ where: { email: "user@test.com" } });
 
-  if (testUser && allTipsters.length >= 3) {
+  if (testUser && allExperts.length >= 3) {
     const subData = [
       // Recent day passes (varying dates over the last 30 days)
-      { userId: testUser.id, tipsterId: allTipsters[0].id, type: "DAY_PASS" as const, daysAgo: 1 },
-      { userId: testUser.id, tipsterId: allTipsters[1].id, type: "DAY_PASS" as const, daysAgo: 3 },
-      { userId: testUser.id, tipsterId: allTipsters[0].id, type: "DAY_PASS" as const, daysAgo: 5 },
-      { userId: testUser.id, tipsterId: allTipsters[2].id, type: "MONTHLY" as const, daysAgo: 7 },
-      { userId: testUser.id, tipsterId: allTipsters[0].id, type: "DAY_PASS" as const, daysAgo: 10 },
-      { userId: testUser.id, tipsterId: allTipsters[1].id, type: "DAY_PASS" as const, daysAgo: 12 },
-      { userId: testUser.id, tipsterId: allTipsters[3].id, type: "DAY_PASS" as const, daysAgo: 15 },
-      { userId: testUser.id, tipsterId: allTipsters[2].id, type: "DAY_PASS" as const, daysAgo: 18 },
-      { userId: testUser.id, tipsterId: allTipsters[0].id, type: "DAY_PASS" as const, daysAgo: 20 },
-      { userId: testUser.id, tipsterId: allTipsters[4].id, type: "MONTHLY" as const, daysAgo: 22 },
-      { userId: testUser.id, tipsterId: allTipsters[1].id, type: "DAY_PASS" as const, daysAgo: 25 },
-      { userId: testUser.id, tipsterId: allTipsters[0].id, type: "DAY_PASS" as const, daysAgo: 28 },
+      { userId: testUser.id, expertId: allExperts[0].id, type: "DAY_PASS" as const, daysAgo: 1 },
+      { userId: testUser.id, expertId: allExperts[1].id, type: "DAY_PASS" as const, daysAgo: 3 },
+      { userId: testUser.id, expertId: allExperts[0].id, type: "DAY_PASS" as const, daysAgo: 5 },
+      { userId: testUser.id, expertId: allExperts[2].id, type: "MONTHLY" as const, daysAgo: 7 },
+      { userId: testUser.id, expertId: allExperts[0].id, type: "DAY_PASS" as const, daysAgo: 10 },
+      { userId: testUser.id, expertId: allExperts[1].id, type: "DAY_PASS" as const, daysAgo: 12 },
+      { userId: testUser.id, expertId: allExperts[3].id, type: "DAY_PASS" as const, daysAgo: 15 },
+      { userId: testUser.id, expertId: allExperts[2].id, type: "DAY_PASS" as const, daysAgo: 18 },
+      { userId: testUser.id, expertId: allExperts[0].id, type: "DAY_PASS" as const, daysAgo: 20 },
+      { userId: testUser.id, expertId: allExperts[4].id, type: "MONTHLY" as const, daysAgo: 22 },
+      { userId: testUser.id, expertId: allExperts[1].id, type: "DAY_PASS" as const, daysAgo: 25 },
+      { userId: testUser.id, expertId: allExperts[0].id, type: "DAY_PASS" as const, daysAgo: 28 },
     ];
 
-    // Also add purchases from tipster accounts (simulating other users buying)
-    for (const t of allTipsters.slice(0, 3)) {
-      const tipsterUser = await prisma.user.findFirst({
-        where: { tipster: { id: t.id } },
+    // Also add purchases from expert accounts (simulating other users buying)
+    for (const e of allExperts.slice(0, 3)) {
+      const expertUser = await prisma.user.findFirst({
+        where: { expert: { id: e.id } },
         select: { id: true },
       });
-      if (!tipsterUser) continue;
-      // Each tipster buys from other tipsters
-      for (const other of allTipsters.filter((o) => o.id !== t.id).slice(0, 2)) {
+      if (!expertUser) continue;
+      // Each expert buys from other experts
+      for (const other of allExperts.filter((o) => o.id !== e.id).slice(0, 2)) {
         subData.push({
-          userId: tipsterUser.id,
-          tipsterId: other.id,
+          userId: expertUser.id,
+          expertId: other.id,
           type: "DAY_PASS" as const,
           daysAgo: Math.floor(Math.random() * 25) + 1,
         });
@@ -359,7 +359,7 @@ async function main() {
       await prisma.subscription.create({
         data: {
           userId: sub.userId,
-          tipsterId: sub.tipsterId,
+          expertId: sub.expertId,
           type: sub.type,
           status: isActive ? "ACTIVE" : "EXPIRED",
           expiresAt,

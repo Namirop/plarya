@@ -6,7 +6,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { prisma } from "./lib/prisma";
 import authRoutes from "./routes/auth";
-import tipsterRoutes from "./routes/tipsters";
+import expertRoutes from "./routes/experts";
 import pronoRoutes from "./routes/pronos";
 import subscriptionRoutes from "./routes/subscriptions";
 import adminRoutes from "./routes/admin";
@@ -76,12 +76,19 @@ app.get("/health", async (_req, res) => {
 
 // Routes
 app.use("/auth", authRoutes);
-app.use("/tipsters", tipsterRoutes);
+app.use("/experts", expertRoutes);
 app.use("/pronos", pronoRoutes);
 app.use("/subscriptions", subscriptionRoutes);
 app.use("/admin", adminLimiter, adminRoutes);
 app.use("/checkout", checkoutLimiter, checkoutRoutes);
 app.use("/bookmakers", bookmakerRoutes);
+
+// Backward-compat : anciennes URLs /tipsters/* → /experts/* en 301.
+// Couvre les magic-links générés avant le rename (cf. CLAUDE.md §1.1
+// renommage produit). À retirer après 6 mois si aucun hit sur ces routes.
+app.use("/tipsters", (req, res) => {
+  res.redirect(301, "/experts" + req.url);
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

@@ -1,5 +1,4 @@
 import { resend, EMAIL_FROM } from "./resend";
-import { formatPrice } from "./format";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
@@ -62,66 +61,6 @@ export async function sendMagicLinkEmail(email: string, link: string): Promise<v
   }
 }
 
-/** Email de bienvenue après inscription */
-export async function sendWelcomeEmail(email: string): Promise<void> {
-  try {
-    await resend.emails.send({
-      from: EMAIL_FROM,
-      to: email,
-      subject: "Bienvenue sur Plarya !",
-      html: emailLayout(`
-        <h1 style="color: #FFFFFF; font-size: 24px;">Bienvenue sur Plarya !</h1>
-        <p>Votre compte a bien &eacute;t&eacute; cr&eacute;&eacute;.</p>
-        <p>D&eacute;couvrez les meilleures analyses sportives de nos experts et commencez &agrave; gagner d&egrave;s maintenant.</p>
-        <p style="text-align: center; margin: 32px 0;">
-          <a href="${FRONTEND_URL}" class="btn">Voir les experts</a>
-        </p>
-        <p class="muted" style="font-size: 14px;">Des questions ? R&eacute;pondez directement &agrave; cet email.</p>
-      `),
-    });
-    console.log(`[EMAIL] Welcome email sent to ${email}`);
-  } catch (err) {
-    console.error(`[EMAIL] Failed to send welcome email to ${email}:`, err);
-  }
-}
-
-/** Email de confirmation de paiement */
-export async function sendPaymentConfirmationEmail(
-  email: string,
-  tipsterPseudo: string,
-  tipsterId: string,
-  type: "DAY_PASS" | "MONTHLY",
-  amountCents: number
-): Promise<void> {
-  try {
-    const typeLabel = type === "DAY_PASS" ? "Day Pass" : "Abonnement mensuel";
-    // Prix lu dynamiquement depuis le tipster (pass\u00E9 en arg par
-    // l'appelant \u2014 cf. webhooks.ts). \u00C9vite le drift entre la DB et
-    // les emails (cf. audit-final.md \u00A7J).
-    const priceLabel = type === "DAY_PASS"
-      ? formatPrice(amountCents)
-      : `${formatPrice(amountCents)}/mois`;
-
-    await resend.emails.send({
-      from: EMAIL_FROM,
-      to: email,
-      subject: `Acc\u00e8s confirm\u00e9 \u2014 ${tipsterPseudo}`,
-      html: emailLayout(`
-        <h1 style="color: #FFFFFF; font-size: 24px;">Paiement confirm&eacute; !</h1>
-        <p>Votre <strong>${typeLabel}</strong> (${priceLabel}) pour <strong>${tipsterPseudo}</strong> est maintenant actif.</p>
-        <p>Vous avez d&eacute;sormais acc&egrave;s &agrave; toutes ses analyses sportives.</p>
-        <p style="text-align: center; margin: 32px 0;">
-          <a href="${FRONTEND_URL}/tipsters/${tipsterId}" class="btn">Voir les analyses</a>
-        </p>
-        <p class="muted" style="font-size: 14px;">Merci pour votre confiance !</p>
-      `),
-    });
-    console.log(`[EMAIL] Payment confirmation sent to ${email} (${typeLabel} for ${tipsterPseudo})`);
-  } catch (err) {
-    console.error(`[EMAIL] Failed to send payment confirmation to ${email}:`, err);
-  }
-}
-
 /** Email "Accès débloqué" avec magic link */
 export async function sendAccessUnlockedEmail(
   email: string,
@@ -133,13 +72,13 @@ export async function sendAccessUnlockedEmail(
     await resend.emails.send({
       from: EMAIL_FROM,
       to: email,
-      subject: `Votre acc\u00e8s aux analyses de ${expertPseudo} est d\u00e9bloqu\u00e9 !`,
+      subject: `Votre accès aux analyses de ${expertPseudo} est débloqué !`,
       html: emailLayout(`
         <h1 style="color: #FFFFFF; font-size: 24px;">Acc&egrave;s d&eacute;bloqu&eacute; !</h1>
         <p>Votre acc&egrave;s aux analyses de <strong>${expertPseudo}</strong> est maintenant actif.</p>
         <p>Consultez ses analyses d&egrave;s maintenant :</p>
         <p style="text-align: center; margin: 32px 0;">
-          <a href="${FRONTEND_URL}/tipsters/${expertId}" class="btn">Voir les analyses</a>
+          <a href="${FRONTEND_URL}/experts/${expertId}" class="btn">Voir les analyses</a>
         </p>
         <p>Pour vous connecter &agrave; tout moment, utilisez ce lien :</p>
         <p style="text-align: center; margin: 24px 0;">
@@ -161,21 +100,21 @@ export async function sendAccessUnlockedEmail(
 /** Email J+1 — analyse gagnante de la veille */
 export async function sendWinningPronoEmail(
   email: string,
-  tipsterPseudo: string,
-  tipsterId: string,
+  expertPseudo: string,
+  expertId: string,
   matchName: string
 ): Promise<void> {
   try {
     await resend.emails.send({
       from: EMAIL_FROM,
       to: email,
-      subject: "L'analyse d'hier a gagn\u00e9 ! \u2705",
+      subject: "L'analyse d'hier a gagné ! ✅",
       html: emailLayout(`
         <h1 style="color: #FFFFFF; font-size: 24px;">L'analyse d'hier est pass&eacute;e ! &#127919;</h1>
-        <p>L'analyse de <strong>${tipsterPseudo}</strong> sur <strong>${matchName}</strong> a &eacute;t&eacute; gagnante hier !</p>
+        <p>L'analyse de <strong>${expertPseudo}</strong> sur <strong>${matchName}</strong> a &eacute;t&eacute; gagnante hier !</p>
         <p>D&eacute;couvrez ses s&eacute;lections du jour :</p>
         <p style="text-align: center; margin: 32px 0;">
-          <a href="${FRONTEND_URL}/tipsters/${tipsterId}" class="btn">Voir les analyses du jour</a>
+          <a href="${FRONTEND_URL}/experts/${expertId}" class="btn">Voir les analyses du jour</a>
         </p>
         <p>Ou explorez d'autres experts :</p>
         <p style="text-align: center; margin: 24px 0;">
@@ -183,7 +122,7 @@ export async function sendWinningPronoEmail(
         </p>
       `),
     });
-    console.log(`[EMAIL] Winning prono email sent to ${email} (${tipsterPseudo} - ${matchName})`);
+    console.log(`[EMAIL] Winning prono email sent to ${email} (${expertPseudo} - ${matchName})`);
   } catch (err) {
     console.error(`[EMAIL] Failed to send winning prono email to ${email}:`, err);
   }

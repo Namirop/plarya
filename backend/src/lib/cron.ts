@@ -17,7 +17,7 @@ export function initCronJobs(): void {
   cron.schedule("0 0 * * *", async () => {
     console.log("[CRON] Midnight reset job started");
     try {
-      await prisma.tipster.updateMany({ data: { viewsToday: 0 } });
+      await prisma.expert.updateMany({ data: { viewsToday: 0 } });
       await prisma.prono.updateMany({
         where: { isFeatured: true },
         data: { isFeatured: false },
@@ -52,8 +52,8 @@ export async function sendDailyWinningEmails(): Promise<void> {
     select: {
       id: true,
       matchName: true,
-      tipsterId: true,
-      tipster: { select: { id: true, pseudo: true } },
+      expertId: true,
+      expert: { select: { id: true, pseudo: true } },
     },
   });
 
@@ -64,15 +64,15 @@ export async function sendDailyWinningEmails(): Promise<void> {
 
   console.log(`[CRON] Found ${winningPronos.length} winning pronos yesterday`);
 
-  // Grouper par tipster (1 email/user/tipster)
-  const tipsterMap = new Map<string, { pseudo: string; matchNames: string[] }>();
+  // Grouper par expert (1 email/user/expert)
+  const expertMap = new Map<string, { pseudo: string; matchNames: string[] }>();
   for (const prono of winningPronos) {
-    const existing = tipsterMap.get(prono.tipsterId);
+    const existing = expertMap.get(prono.expertId);
     if (existing) {
       existing.matchNames.push(prono.matchName);
     } else {
-      tipsterMap.set(prono.tipsterId, {
-        pseudo: prono.tipster.pseudo,
+      expertMap.set(prono.expertId, {
+        pseudo: prono.expert.pseudo,
         matchNames: [prono.matchName],
       });
     }
@@ -80,11 +80,11 @@ export async function sendDailyWinningEmails(): Promise<void> {
 
   let emailsSent = 0;
 
-  for (const [tipsterId, { pseudo, matchNames }] of tipsterMap) {
+  for (const [expertId, { pseudo, matchNames }] of expertMap) {
     // Users avec un abonnement actif ou expiré depuis hier
     const subscriptions = await prisma.subscription.findMany({
       where: {
-        tipsterId,
+        expertId,
         OR: [
           { status: "ACTIVE", expiresAt: { gt: new Date() } },
           { status: "ACTIVE", expiresAt: { gte: yesterdayStart } },
@@ -104,7 +104,7 @@ export async function sendDailyWinningEmails(): Promise<void> {
         : matchNames[0];
 
     for (const sub of subscriptions) {
-      sendWinningPronoEmail(sub.user.email, pseudo, tipsterId, matchLabel);
+      sendWinningPronoEmail(sub.user.email, pseudo, expertId, matchLabel);
       emailsSent++;
     }
   }

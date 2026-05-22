@@ -5,22 +5,22 @@ interface CheckoutResponse {
 }
 
 export async function createCheckoutSession(
-  tipsterId: string,
+  expertId: string,
   type: "DAY_PASS" | "MONTHLY",
   email?: string
 ): Promise<string> {
-  const body: Record<string, string> = { tipsterId, type };
+  const body: Record<string, string> = { expertId, type };
   if (email) body.email = email;
   const data = await apiPost<CheckoutResponse>("/checkout/create-session", body);
   return data.url;
 }
 
-export async function createTipsterCheckout(
+export async function createExpertCheckout(
   pseudo: string,
   bio: string,
   sports: string[]
 ): Promise<string> {
-  const data = await apiPost<CheckoutResponse>("/checkout/become-tipster", {
+  const data = await apiPost<CheckoutResponse>("/checkout/become-expert", {
     pseudo,
     bio: bio || undefined,
     sports,

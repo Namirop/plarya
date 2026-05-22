@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
@@ -13,9 +20,9 @@ import { apiGet } from "@/lib/api";
 import { allStarted } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
-// Shape renvoyée par GET /tipsters (cf. backend/src/routes/tipsters.ts).
+// Shape renvoyée par GET /experts (cf. backend/src/routes/experts.ts).
 // On ne garde ici que ce qui sert à construire la card homepage.
-interface TipsterListItem {
+interface ExpertListItem {
   id: string;
   pseudo: string;
   photoUrl: string | null;
@@ -29,7 +36,7 @@ interface TipsterListItem {
   }[];
 }
 
-// Avatar fallback lorsqu'un tipster n'a pas (encore) de photo.
+// Avatar fallback lorsqu'un expert n'a pas (encore) de photo.
 const AVATAR_FALLBACK = "/profile.jpg";
 
 // Mesures DS : card 322 px + gap 16 px → "step" = 338 px par card.
@@ -53,10 +60,10 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
   const [activePage, setActivePage] = useState(0);
   const [isAtEnd, setIsAtEnd] = useState(false);
 
-  // ── Fetch tipsters depuis l'API. /tipsters renvoie déjà la liste
+  // ── Fetch experts depuis l'API. /experts renvoie déjà la liste
   // triée par displayOrder ASC, createdAt DESC (limite 6 par défaut).
   // Les `id` réels permettent au Link de la card de naviguer vers la
-  // page profil (`/tipsters/[id]`) sans 404 — c'était l'objet du fix
+  // page profil (`/experts/[id]`) sans 404 — c'était l'objet du fix
   // qui remplace les anciens mocks codés en dur (id "1" → "6"). En cas
   // d'erreur réseau, on garde la liste vide (la section ne s'affiche
   // pas en dessous des dots).
@@ -64,7 +71,7 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
     [],
   );
   useEffect(() => {
-    apiGet<TipsterListItem[]>("/tipsters")
+    apiGet<ExpertListItem[]>("/experts")
       .then((data) => {
         const mapped = data.map<ExpertCardProps & { id: string }>((t) => ({
           id: t.id,
@@ -78,7 +85,7 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
           })),
           // `locked` (= "Terminé pour aujourd'hui") quand toutes les
           // analyses PENDING du jour ont déjà commencé. allStarted()
-          // renvoie aussi true pour une liste vide → un tipster sans
+          // renvoie aussi true pour une liste vide → un expert sans
           // analyse du jour apparaît en "Terminé".
           locked: allStarted(
             t.todayPronos.filter((p) => p.result === "PENDING"),
@@ -127,7 +134,15 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
   // ET quand les experts arrivent du fetch API (sans ce 2ᵉ trigger,
   // `isAtEnd` reste à `true` car maxScroll = scrollWidth(0) -
   // clientWidth = très négatif au mount initial → flèche désactivée).
-  useEffect(() => {
+  // useLayoutEffect : on mesure le DOM (scrollWidth / clientWidth) puis
+  // on set le state avant le paint → évite le flash "flèche disabled"
+  // pendant 1 frame. Le pattern setState-in-layout-effect est
+  // explicitement recommandé par React pour les mesures DOM (cf.
+  // https://react.dev/reference/react/useLayoutEffect#measuring-layout-
+  // before-the-browser-repaints-the-screen) ; la règle ESLint est trop
+  // conservatrice ici.
+  useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     updateState();
   }, [updateState, filteredExperts]);
 

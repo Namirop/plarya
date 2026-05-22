@@ -1,10 +1,10 @@
 // Types partagés entre l'app dashboard et ses composants. Extraits de
 // `app/dashboard/page.tsx` lors de l'éclatement Bloc 2 — la page V1
 // déclarait ces interfaces inline. Ils restent fidèles aux réponses
-// API actuelles (cf. backend `routes/tipsters.ts`, `routes/pronos.ts`,
+// API actuelles (cf. backend `routes/experts.ts`, `routes/pronos.ts`,
 // `routes/bookmakers.ts`).
 
-export interface TipsterProfile {
+export interface ExpertProfile {
   id: string;
   pseudo: string;
   winRate: number;

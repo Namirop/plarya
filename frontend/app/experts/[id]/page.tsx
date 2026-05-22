@@ -45,7 +45,7 @@ interface PronoData {
   bookmakerOdds?: BookmakerOddsData[];
 }
 
-interface TipsterProfile {
+interface ExpertProfile {
   id: string;
   pseudo: string;
   bio: string | null;
@@ -60,19 +60,19 @@ interface TipsterProfile {
   pronos: PronoData[];
 }
 
-// Shape minimale de /tipsters/me utilisée uniquement pour détecter si
-// le tipster connecté est sur SA propre page publique (bypass paywall).
-interface OwnTipsterIdentity {
+// Shape minimale de /experts/me utilisée uniquement pour détecter si
+// le expert connecté est sur SA propre page publique (bypass paywall).
+interface OwnExpertIdentity {
   id: string;
 }
 
-export default function TipsterProfilePage() {
+export default function ExpertProfilePage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const { user, refreshUser } = useUser();
   const id = params.id as string;
 
-  const [tipster, setTipster] = useState<TipsterProfile | null>(null);
+  const [expert, setExpert] = useState<ExpertProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -84,10 +84,10 @@ export default function TipsterProfilePage() {
   const [subscriptionAccess, setSubscriptionAccess] = useState(false);
 
   // ── ACCÈS PROPRIÉTAIRE ─────────────────────────────────────
-  // Si user.role === TIPSTER, on fetch son propre profil pour
+  // Si user.role === EXPERT, on fetch son propre profil pour
   // détecter s'il est sur SA page publique. Backend inchangé :
-  // /tipsters/me existe déjà, gated TIPSTER via middleware.
-  const [ownTipsterId, setOwnTipsterId] = useState<string | null>(null);
+  // /experts/me existe déjà, gated EXPERT via middleware.
+  const [ownExpertId, setOwnExpertId] = useState<string | null>(null);
 
   const [fullPronos, setFullPronos] = useState<PronoData[] | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -99,18 +99,18 @@ export default function TipsterProfilePage() {
   const viewTracked = useRef(false);
 
   // ── hasAccess (DÉRIVÉ, source de vérité UI) ────────────────
-  // Étend la V1 : abonnement actif / day-pass OU tipster
+  // Étend la V1 : abonnement actif / day-pass OU expert
   // propriétaire de la page OU admin. Tous les consommateurs en
   // aval (PronoLine, sticky CTA, modale upsell) lisent ce même
   // `hasAccess` — aucune autre modif d'API n'est nécessaire.
   const isAdmin = user?.role === "ADMIN";
-  const isOwner = !!user && !!ownTipsterId && ownTipsterId === id;
+  const isOwner = !!user && !!ownExpertId && ownExpertId === id;
   const hasAccess = subscriptionAccess || isAdmin || isOwner;
 
   useEffect(() => {
     if (!id) return;
-    apiGet<TipsterProfile>(`/tipsters/${id}`)
-      .then(setTipster)
+    apiGet<ExpertProfile>(`/experts/${id}`)
+      .then(setExpert)
       .catch((err) => setError(err instanceof Error ? err.message : "Erreur"))
       .finally(() => setLoading(false));
   }, [id]);
@@ -118,19 +118,19 @@ export default function TipsterProfilePage() {
   useEffect(() => {
     if (!id || viewTracked.current) return;
     viewTracked.current = true;
-    apiPost(`/tipsters/${id}/view`, {}).catch(() => {});
+    apiPost(`/experts/${id}/view`, {}).catch(() => {});
   }, [id]);
 
-  // Fetch /tipsters/me uniquement si l'user est un TIPSTER.
+  // Fetch /experts/me uniquement si l'user est un EXPERT.
   // Pour USER/ADMIN, l'endpoint est gated → on skip.
   useEffect(() => {
-    if (user?.role !== "TIPSTER") {
-      setOwnTipsterId(null);
+    if (user?.role !== "EXPERT") {
+      setOwnExpertId(null);
       return;
     }
-    apiGet<OwnTipsterIdentity>("/tipsters/me")
-      .then((data) => setOwnTipsterId(data.id))
-      .catch(() => setOwnTipsterId(null));
+    apiGet<OwnExpertIdentity>("/experts/me")
+      .then((data) => setOwnExpertId(data.id))
+      .catch(() => setOwnExpertId(null));
   }, [user]);
 
   const checkAccess = useCallback(async () => {
@@ -138,7 +138,7 @@ export default function TipsterProfilePage() {
     try {
       const data = await apiPost<{ hasAccess: boolean }>(
         "/subscriptions/check",
-        { tipsterId: id },
+        { expertId: id },
       );
       setSubscriptionAccess(data.hasAccess);
       return data.hasAccess;
@@ -153,7 +153,7 @@ export default function TipsterProfilePage() {
 
   useEffect(() => {
     if (!hasAccess || !id) return;
-    apiGet<PronoData[]>(`/tipsters/${id}/pronos`)
+    apiGet<PronoData[]>(`/experts/${id}/pronos`)
       .then(setFullPronos)
       .catch(() => {});
   }, [hasAccess, id]);
@@ -173,7 +173,7 @@ export default function TipsterProfilePage() {
           /* ignore */
         }
       }
-      window.history.replaceState({}, "", `/tipsters/${id}`);
+      window.history.replaceState({}, "", `/experts/${id}`);
       let attempts = 0;
       const maxAttempts = 5;
       async function pollAccess() {
@@ -181,7 +181,7 @@ export default function TipsterProfilePage() {
         try {
           const data = await apiPost<{ hasAccess: boolean }>(
             "/subscriptions/check",
-            { tipsterId: id },
+            { expertId: id },
           );
           if (data.hasAccess) {
             setSubscriptionAccess(true);
@@ -224,7 +224,7 @@ export default function TipsterProfilePage() {
     );
   }
 
-  if (error || !tipster) {
+  if (error || !expert) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <p className="font-body text-body-16 text-destructive">
@@ -234,9 +234,9 @@ export default function TipsterProfilePage() {
     );
   }
 
-  const dayPrice = formatPrice(tipster.dayPassPrice);
-  const monthlyPrice = formatPrice(tipster.monthlyPrice);
-  const pronos = fullPronos ?? tipster.pronos;
+  const dayPrice = formatPrice(expert.dayPassPrice);
+  const monthlyPrice = formatPrice(expert.monthlyPrice);
+  const pronos = fullPronos ?? expert.pronos;
   const pendingPronos = pronos.filter((p) => p.result === "PENDING");
   const allAnalysesStarted = allStarted(pendingPronos);
 
@@ -249,9 +249,9 @@ export default function TipsterProfilePage() {
         <div className="mx-auto w-full max-w-[872px] flex-1 px-4 pt-10 pb-32 md:px-6 md:pt-16">
           {/* Bandeau d'avertissement admin — tokens accent doré
               (remplace #00D47E vert V1). */}
-          {tipster.warningMessage && (
+          {expert.warningMessage && (
             <div className="mb-6 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 font-body text-body-16 text-accent">
-              {tipster.warningMessage}
+              {expert.warningMessage}
             </div>
           )}
 
@@ -262,17 +262,17 @@ export default function TipsterProfilePage() {
             <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
               {/* Avatar 96×96, ring doré subtil (remplace ring off-white V1). */}
               <div className="shrink-0">
-                {tipster.photoUrl ? (
+                {expert.photoUrl ? (
                   <Image
-                    src={tipster.photoUrl}
-                    alt={tipster.pseudo}
+                    src={expert.photoUrl}
+                    alt={expert.pseudo}
                     width={96}
                     height={96}
                     className="size-24 rounded-full object-cover ring-1 ring-accent/40"
                   />
                 ) : (
                   <div className="flex size-24 items-center justify-center rounded-full bg-surface-elevated font-display text-h2 text-accent ring-1 ring-accent/40">
-                    {tipster.pseudo.charAt(0).toUpperCase()}
+                    {expert.pseudo.charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
@@ -283,7 +283,7 @@ export default function TipsterProfilePage() {
                     vert V1). */}
                 <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
                   <h1 className="font-display text-h2 text-foreground">
-                    {tipster.pseudo}
+                    {expert.pseudo}
                   </h1>
                   <span className="inline-flex items-center rounded-full bg-accent/20 px-3 py-1 font-body text-body-16 text-accent">
                     EXPERT
@@ -291,33 +291,33 @@ export default function TipsterProfilePage() {
                 </div>
 
                 {/* Compteur vues — affiché uniquement si > 0 (V1 inchangé). */}
-                {tipster.viewsToday > 0 && (
+                {expert.viewsToday > 0 && (
                   <div className="flex items-center gap-2 font-body text-body-16 text-muted-foreground">
                     <Icon icon="tabler:eye" className="size-4" />
-                    <span>{tipster.viewsToday} vues aujourd&apos;hui</span>
+                    <span>{expert.viewsToday} vues aujourd&apos;hui</span>
                   </div>
                 )}
 
                 {/* Bio. */}
-                {tipster.bio && (
+                {expert.bio && (
                   <p className="font-body text-body-16 text-foreground">
-                    {tipster.bio}
+                    {expert.bio}
                   </p>
                 )}
 
                 {/* Note du jour (italique V1 retiré — DS golden-da
                     n'utilise pas d'italique en dehors de cas spécifiques). */}
-                {tipster.dailyNote && (
+                {expert.dailyNote && (
                   <p className="font-body text-body-16 text-muted-foreground">
-                    {tipster.dailyNote}
+                    {expert.dailyNote}
                   </p>
                 )}
 
                 {/* Sports couverts — chips rounded-full DS (mêmes
-                    tokens que /devenir-tipster, état non-actif). */}
-                {tipster.sports.length > 0 && (
+                    tokens que /devenir-expert, état non-actif). */}
+                {expert.sports.length > 0 && (
                   <div className="mt-1 flex flex-wrap justify-center gap-2 md:justify-start">
-                    {tipster.sports.map((sport) => (
+                    {expert.sports.map((sport) => (
                       <span
                         key={sport}
                         className="inline-flex items-center gap-2 rounded-full border border-surface-elevated bg-black/40 px-3 py-1 font-body text-body-16 text-foreground"
@@ -407,7 +407,7 @@ export default function TipsterProfilePage() {
       <EmailCheckoutModal
         open={emailModalOpen}
         onClose={() => setEmailModalOpen(false)}
-        tipsterId={id}
+        expertId={id}
         type={emailModalType}
       />
 

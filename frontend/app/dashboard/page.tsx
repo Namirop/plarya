@@ -12,13 +12,13 @@ import { SectionTitle } from "@/components/ui/section-title";
 import type {
   Bookmaker,
   Prono,
-  TipsterProfile,
+  ExpertProfile,
 } from "@/lib/types/dashboard";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading } = useUser();
-  const [profile, setProfile] = useState<TipsterProfile | null>(null);
+  const [profile, setProfile] = useState<ExpertProfile | null>(null);
   const [pronos, setPronos] = useState<Prono[]>([]);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -26,7 +26,7 @@ export default function DashboardPage() {
   const fetchData = useCallback(async () => {
     try {
       const [profileData, pronosData, bookmakersData] = await Promise.all([
-        apiGet<TipsterProfile>("/tipsters/me"),
+        apiGet<ExpertProfile>("/experts/me"),
         apiGet<Prono[]>("/pronos/mine"),
         apiGet<Bookmaker[]>("/bookmakers"),
       ]);
@@ -46,14 +46,14 @@ export default function DashboardPage() {
       router.push("/");
       return;
     }
-    // ADMIN n'a pas de profil Tipster en DB → `/tipsters/me` renvoie 404
+    // ADMIN n'a pas de profil Expert en DB → `/experts/me` renvoie 404
     // et la page ne fonctionne pas. On le renvoie vers son panel admin
     // (où sa nav le menait déjà via le Header role-aware).
     if (user.role === "ADMIN") {
       router.push("/admin");
       return;
     }
-    if (user.role !== "TIPSTER") {
+    if (user.role !== "EXPERT") {
       router.push("/");
       return;
     }
@@ -66,7 +66,7 @@ export default function DashboardPage() {
         result,
       });
       setPronos((prev) => prev.map((p) => (p.id === pronoId ? updated : p)));
-      const profileData = await apiGet<TipsterProfile>("/tipsters/me");
+      const profileData = await apiGet<ExpertProfile>("/experts/me");
       setProfile(profileData);
     } catch {
       /* silent */
@@ -76,7 +76,7 @@ export default function DashboardPage() {
   // Callback du form quand une analyse vient d'être publiée. Reproduit
   // le V1 (cf. ancien handlePublish lignes 169-181) : ajout au top de
   // la liste pronos + remplacement complet du profil.
-  function handlePublished(newProno: Prono, updatedProfile: TipsterProfile) {
+  function handlePublished(newProno: Prono, updatedProfile: ExpertProfile) {
     setPronos((prev) => [newProno, ...prev]);
     setProfile(updatedProfile);
   }
@@ -95,7 +95,7 @@ export default function DashboardPage() {
   //   1. Analyses publiées : pronos.length (total V1)
   //   2. Taux de réussite : profile.winRate (V1, déjà calculé backend)
   //   3. Ce mois : pronos créés ce mois civil (computed ici, V1 n'expose
-  //      pas un compteur mensuel via /tipsters/me)
+  //      pas un compteur mensuel via /experts/me)
   const now = new Date();
   const pronosThisMonth = pronos.filter((p) => {
     const d = new Date(p.createdAt);

@@ -20,7 +20,7 @@ export interface ExpertCardAnalysis {
 }
 
 export interface ExpertCardProps {
-  /** ID du tipster pour construire le href `/tipsters/[id]`. Si omis,
+  /** ID du expert pour construire le href `/experts/[id]`. Si omis,
    *  la card est rendue sans wrapper Link (utile pour les pages de
    *  test interne `/test-expert-card`, qui montrent la card en mode
    *  vitrine sans navigation). */
@@ -166,7 +166,7 @@ export function ExpertCard({
   // (l'utilisateur peut vouloir voir les analyses futures de l'expert).
   return (
     <Link
-      href={`/tipsters/${id}`}
+      href={`/experts/${id}`}
       aria-label={`Voir le profil de ${pseudo}`}
       className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-2xl"
     >

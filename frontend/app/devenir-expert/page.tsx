@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { useUser } from "@/hooks/use-user";
-import { createTipsterCheckout } from "@/lib/stripe";
+import { createExpertCheckout } from "@/lib/stripe";
 import { SPORT_LABELS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,10 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-export default function DevenirTipsterPage() {
+export default function DevenirExpertPage() {
   return (
     <Suspense>
-      <DevenirTipsterContent />
+      <DevenirExpertContent />
     </Suspense>
   );
 }
@@ -43,7 +43,7 @@ const labelCls = "font-body text-body-16 text-muted-foreground";
 // Wrapper layout (max-w 872 = largeur de la card Figma). Padding
 // vertical 64 px desktop / 40 px mobile, padding latéral 16 px mobile
 // (cohérent avec le Dashboard). PageShell aussi utilisé par les états
-// alternatifs (déjà tipster / success / cancel) pour cohérence
+// alternatifs (déjà expert / success / cancel) pour cohérence
 // visuelle (même page bg, même container).
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
@@ -53,7 +53,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function DevenirTipsterContent() {
+function DevenirExpertContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading } = useUser();
@@ -90,7 +90,7 @@ function DevenirTipsterContent() {
     }
     setSubmitting(true);
     try {
-      const url = await createTipsterCheckout(pseudo, bio, sports);
+      const url = await createExpertCheckout(pseudo, bio, sports);
       window.location.href = url;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors du paiement");
@@ -110,8 +110,8 @@ function DevenirTipsterContent() {
     );
   }
 
-  // ── État 2 : utilisateur déjà tipster ────────────────────────
-  if (user?.role === "TIPSTER") {
+  // ── État 2 : utilisateur déjà expert ────────────────────────
+  if (user?.role === "EXPERT") {
     return (
       <PageShell>
         <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-6 py-8 text-center md:px-8 md:py-10">
@@ -167,7 +167,7 @@ function DevenirTipsterContent() {
             // Logique V1 inchangée : retire le query param sans nav et
             // refresh pour repartir sur la branche par défaut (form).
             onClick={() => {
-              window.history.replaceState({}, "", "/devenir-tipster");
+              window.history.replaceState({}, "", "/devenir-expert");
               router.refresh();
             }}
           >

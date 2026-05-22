@@ -9,19 +9,19 @@ import { GoldenBorderOverlay } from "@/components/ui/golden-border-overlay";
 import { LoginModal } from "@/components/auth/login-modal";
 import { useUser } from "@/hooks/use-user";
 
-const DEVENIR_CREATEUR_HREF = "/devenir-tipster";
+const DEVENIR_CREATEUR_HREF = "/devenir-expert";
 
 export function DevenirCreateurSection() {
   const { user, loading } = useUser();
   const [loginOpen, setLoginOpen] = useState(false);
 
-  // Si user connecté → bouton = Link direct vers /devenir-tipster
+  // Si user connecté → bouton = Link direct vers /devenir-expert
   // (comportement avant le fix).
   // Si user déconnecté → bouton ouvre LoginModal contextualisé qui,
-  // après login, le déposera sur /devenir-tipster via le sessionStorage
+  // après login, le déposera sur /devenir-expert via le sessionStorage
   // POST_LOGIN_REDIRECT_KEY consommé dans HeaderAuth.
   // Pendant le `loading` initial de useUser : on rend comme déconnecté
-  // (l'inverse causerait un flash "click → /devenir-tipster → bounce /"
+  // (l'inverse causerait un flash "click → /devenir-expert → bounce /"
   // si la session échoue à hydrater).
   const isConnected = !loading && !!user;
 

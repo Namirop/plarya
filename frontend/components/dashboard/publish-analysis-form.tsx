@@ -19,7 +19,7 @@ import type {
   Bookmaker,
   Prono,
   PublishFormFieldErrors,
-  TipsterProfile,
+  ExpertProfile,
 } from "@/lib/types/dashboard";
 
 // ───────────────────────────────────────────────────────────────────
@@ -98,9 +98,9 @@ export interface PublishAnalysisFormProps {
   bookmakers: Bookmaker[];
   /** Callback de succès — reçu par le parent pour mettre à jour ses
    *  states `pronos` et `profile`. Le composant gère l'appel API
-   *  `POST /pronos` puis le re-fetch `/tipsters/me` (logique V1
+   *  `POST /pronos` puis le re-fetch `/experts/me` (logique V1
    *  conservée à l'identique), et passe les deux résultats au parent. */
-  onPublished: (newProno: Prono, updatedProfile: TipsterProfile) => void;
+  onPublished: (newProno: Prono, updatedProfile: ExpertProfile) => void;
 }
 
 export function PublishAnalysisForm({
@@ -183,7 +183,7 @@ export function PublishAnalysisForm({
       // Re-fetch profil puis émission vers le parent — V1 faisait les 2
       // séparément (`setPronos` + `setProfile`), ici on bundle dans le
       // callback unique pour garder l'API du composant simple.
-      const updatedProfile = await apiGet<TipsterProfile>("/tipsters/me");
+      const updatedProfile = await apiGet<ExpertProfile>("/experts/me");
       onPublished(newProno, updatedProfile);
     } catch (err) {
       setFormError(

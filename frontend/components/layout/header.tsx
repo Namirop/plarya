@@ -8,7 +8,7 @@ import { Icon } from "@iconify/react";
 import { GoldenBorderOverlay } from "@/components/ui/golden-border-overlay";
 import { cn } from "@/lib/utils";
 
-export type HeaderRole = "USER" | "TIPSTER" | "ADMIN";
+export type HeaderRole = "USER" | "EXPERT" | "ADMIN";
 
 export interface HeaderProps {
   /** "loading" : on n'a pas encore résolu la session (1ʳᵉ frame post
@@ -18,7 +18,7 @@ export interface HeaderProps {
   /** Rôle de l'utilisateur connecté. Pilote les liens de nav affichés
    *  (cf. nav role-aware §5 de project-state.md) :
    *    - USER  : "Mon Compte" (vue acheteur : abonnements + historique)
-   *    - TIPSTER : "Dashboard" + "Mon Compte" (éditeur profil expert)
+   *    - EXPERT : "Dashboard" + "Mon Compte" (éditeur profil expert)
    *    - ADMIN : "Admin" uniquement
    *  Ignoré en variant="guest". Défaut USER (safe pour les rôles
    *  inconnus — affiche le moins de liens). */
@@ -42,7 +42,7 @@ interface NavLink {
 // desktop ET en mobile (panel dropdown) pour rester cohérent.
 function navLinksForRole(role: HeaderRole): NavLink[] {
   switch (role) {
-    case "TIPSTER":
+    case "EXPERT":
       return [
         { href: "/dashboard", label: "Dashboard" },
         { href: "/compte", label: "Mon Compte" },

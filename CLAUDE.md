@@ -8,7 +8,7 @@ Plarya est une plateforme qui met en avant des analystes sportifs experts. Les u
 
 **Business model :**
 
-- Experts (appelés "tipsters" en interne uniquement) publient des analyses payantes
+- Experts publient des analyses payantes
 - Accès unitaire : 3,5€ par analyse (day pass)
 - Abonnement mensuel : 29€
 - Commission plateforme : 30% — Expert : 70% (reversement par virement manuel mensuel par l'admin, pas Stripe Connect pour le MVP)
@@ -145,7 +145,7 @@ Rouge erreur : #EF4444
 
 ### Règles strictes
 
-- **JAMAIS** de fond blanc sur les pages publiques (ni dashboard tipster, ni admin — tout en dark)
+- **JAMAIS** de fond blanc sur les pages publiques (ni dashboard expert, ni admin — tout en dark)
 - **JAMAIS** de couleurs vives genre vert électrique, bleu saturé, rose
 - **TOUJOURS** passer par des variables Tailwind centralisées (définies dans `globals.css` via `@theme` pour Tailwind v4)
 - **Mobile-first** reste la règle, mais sans sacrifier l'esthétique premium sur desktop
@@ -400,7 +400,7 @@ Devenir expert se fait via paiement Stripe d'un abonnement récurrent.
   - Sports couverts
 - L'utilisateur doit être connecté (sinon redirection home).
 - Soumission → création d'une session Stripe Checkout en mode `subscription` (39€/trimestre, intervalle 3 mois récurrent).
-- Après paiement réussi (webhook Stripe `checkout.session.completed` avec `purpose=become_tipster`) : création du record Expert + passage du rôle User à EXPERT en transaction Prisma + `subExpiresAt = now + 90 jours`.
+- Après paiement réussi (webhook Stripe `checkout.session.completed` avec `purpose=become_expert`) : création du record Expert + passage du rôle User à EXPERT en transaction Prisma + `subExpiresAt = now + 90 jours`. Le handler accepte aussi `purpose=become_tipster` pour les sessions Stripe pending pré-rename (backward-compat).
 - L'utilisateur devient expert **immédiatement** après le paiement réussi (retour sur `/devenir-expert?checkout=success`).
 - Renouvellement automatique trimestriel via webhook `invoice.paid` (extension `subExpiresAt` de +90j). Annulation Stripe → `subStatus = EXPIRED` via webhook `customer.subscription.deleted`.
 
@@ -508,7 +508,7 @@ Chaque analyse (Prono) a un champ `startTime: DateTime` obligatoire. Le frontend
 
 ### Ordre d'affichage des experts
 
-- Champ `displayOrder: Int` sur Tipster
+- Champ `displayOrder: Int` sur Expert
 - Tri homepage : `ORDER BY displayOrder ASC, createdAt DESC`
 - Admin peut modifier `displayOrder` pour réordonner manuellement
 - Par défaut : les nouveaux experts ont le `displayOrder` le plus bas (apparaissent en premier)
