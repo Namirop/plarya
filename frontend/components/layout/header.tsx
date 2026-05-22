@@ -5,13 +5,16 @@ import Link from "next/link";
 import Image from "next/image";
 import { Icon } from "@iconify/react";
 
-import { Button } from "@/components/ui/button";
+import { GoldenBorderOverlay } from "@/components/ui/golden-border-overlay";
 import { cn } from "@/lib/utils";
 
 export type HeaderRole = "USER" | "TIPSTER" | "ADMIN";
 
 export interface HeaderProps {
-  variant?: "connected" | "guest";
+  /** "loading" : on n'a pas encore résolu la session (1ʳᵉ frame post
+   *  hydratation). On rend juste le logo, rien à droite — évite le
+   *  flash "guest → connected" visible 50-200 ms au refresh. */
+  variant?: "connected" | "guest" | "loading";
   /** Rôle de l'utilisateur connecté. Pilote les liens de nav affichés
    *  (cf. nav role-aware §5 de project-state.md) :
    *    - USER  : "Mon Compte" (vue acheteur : abonnements + historique)
@@ -54,6 +57,13 @@ function navLinksForRole(role: HeaderRole): NavLink[] {
 
 const navItemClass =
   "font-body text-body-16 text-foreground transition-opacity hover:opacity-70";
+
+// Item à l'intérieur du pill bordé doré (desktop). Padding horizontal
+// confortable, fond transparent par défaut + léger fond blanc 5% au
+// hover pour signaler l'interactivité tout en restant subtil sous la
+// bordure dorée.
+const navPillItemCls =
+  "inline-flex items-center justify-center rounded-full px-5 py-2 font-body text-body-16 text-foreground transition-colors hover:bg-white/5 cursor-pointer";
 
 export function Header({
   variant = "guest",
@@ -103,131 +113,185 @@ export function Header({
   return (
     <header
       className={cn(
+        // Le header pleine largeur (BG full-bleed pour cover le viewport).
+        // Le CONTENU à l'intérieur est contraint à max-w-content + padding
+        // identique aux sections de la home → alignement visuel avec le
+        // contenu de la page (logo collé au même bord que le texte du Hero,
+        // nav à droite collée au même bord que le côté droit des cards).
         // overflow-visible : le logo (h=160) déborde au-dessus/en dessous
         // de la barre h=70 pour compenser le padding transparent du PNG.
         // Mobile : transparent en haut de page (fondu avec le hero),
         // bg-background/90 + blur dès que `scrolled` passe à true pour
         // masquer le contenu qui défile derrière (cf. effet "frosted").
+        // Si le menu mobile est ouvert, on force aussi le fond sombre
+        // pour que le header s'aligne avec le panel dropdown (sinon
+        // contraste laid : header transparent + panel dark).
         // Desktop (md+) : toujours bg-background/90 + backdrop-blur-md.
-        // Transition douce sur bg + backdrop pour éviter le flash.
-        "relative flex h-[70px] w-full items-center justify-between overflow-visible px-4 lg:px-32 py-2",
+        "relative h-[70px] w-full overflow-visible",
         "transition-colors duration-200 ease-out",
         "md:bg-background/90 md:backdrop-blur-md",
-        scrolled
+        scrolled || menuOpen
           ? "bg-background/90 backdrop-blur-md"
           : "bg-transparent",
         sticky && "sticky top-0 z-50",
       )}
     >
+      {/* Wrapper inner — aligne le contenu du header avec le contenu
+          des sections de la home (mx-auto + max-w-content + même
+          padding latéral). */}
+      <div className="mx-auto flex h-full w-full max-w-content items-center justify-between px-6 py-2 sm:px-8 lg:px-0">
       {/* Le PNG du logo (1536×1024, transparent) contient beaucoup de
           padding autour du glyphe visible (le glyphe occupe ~30 % de la
           hauteur et est positionné légèrement au-dessus du centre vertical
           du canvas — d'où le `translate-y-[6px]` qui re-aligne le glyphe
           avec les boutons d'auth à droite, vertical-centrés sur la barre).
-          Mobile : on rend le logo plus petit (h-[110px]) pour matcher la
-          spec Figma (128×46 visible). */}
+          Mobile : h-[140px] (vs 110 précédent — retour Romain logo trop
+          petit en mobile). Desktop : h-[160px] inchangé. */}
       <Link href="/" className="flex shrink-0 items-center">
         <Image
           src="/full-logo-remove.png"
           alt="Plarya"
           width={240}
           height={160}
-          className="h-[110px] md:h-[160px] w-auto translate-y-[6px] md:translate-y-[10px]"
+          className="h-[140px] md:h-[160px] w-auto translate-y-[6px] md:translate-y-[10px]"
           priority
         />
       </Link>
 
-      {/* Nav desktop : visible md+ — liens pilotés par `navLinksForRole`. */}
-      {variant === "connected" ? (
-        <nav className="hidden md:flex items-center gap-16">
+      {/* Nav desktop : visible md+. Pattern unifié "pill" — toutes les
+          actions à droite sont enveloppées dans un container rounded-full
+          bordé d'un GoldenBorderOverlay (même technique que le cadre du
+          Hero + de "Devenir créateur"). Pendant variant="loading" : on
+          ne rend RIEN à droite (évite le flash). */}
+      {variant === "loading" ? (
+        <div className="hidden md:block" aria-hidden />
+      ) : variant === "connected" ? (
+        <nav className="relative hidden items-center gap-1 rounded-full p-1.5 md:inline-flex">
+          <GoldenBorderOverlay className="rounded-full opacity-100" />
           {navLinks.map((l) => (
-            <Link key={l.href} href={l.href} className={navItemClass}>
+            <Link key={l.href} href={l.href} className={navPillItemCls}>
               {l.label}
             </Link>
           ))}
-          <button type="button" onClick={onLogout} className={navItemClass}>
+          <button
+            type="button"
+            onClick={onLogout}
+            className={cn(navPillItemCls, "text-muted-foreground hover:text-foreground")}
+          >
             Déconnexion
           </button>
         </nav>
       ) : (
-        <div className="hidden md:flex items-center gap-4">
-          <Button variant="ghost" onClick={onSignIn}>
+        <div className="relative hidden items-center gap-1 rounded-full p-1.5 md:inline-flex">
+          <GoldenBorderOverlay className="rounded-full opacity-100" />
+          <button
+            type="button"
+            onClick={onSignIn}
+            className={navPillItemCls}
+          >
             Se connecter
-          </Button>
-          <Button variant="primary" render={<Link href={signUpHref} />}>
+          </button>
+          <Link
+            href={signUpHref}
+            className="inline-flex items-center justify-center rounded-full border border-accent-strong bg-gradient-gold px-5 py-2 font-body text-body-16 text-black shadow-shine transition-all hover:brightness-105"
+          >
             Créer un compte
-          </Button>
+          </Link>
         </div>
       )}
 
-      {/* Burger mobile : visible <md uniquement. Ouvre un panel dropdown
-          contenant les mêmes liens que la nav desktop. */}
-      <button
-        type="button"
-        aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
-        aria-expanded={menuOpen}
-        onClick={() => setMenuOpen((v) => !v)}
-        className="md:hidden inline-flex size-10 items-center justify-center text-foreground cursor-pointer"
-      >
-        <Icon
-          icon={menuOpen ? "iconamoon:close" : "iconamoon:menu-burger-horizontal"}
-          width={24}
-          height={24}
-        />
-      </button>
+      {/* Burger mobile : visible <md uniquement. Caché pendant
+          variant="loading" (même raison — évite le flash). */}
+      {variant !== "loading" && (
+        <button
+          type="button"
+          aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((v) => !v)}
+          className="md:hidden inline-flex size-10 items-center justify-center text-foreground cursor-pointer"
+        >
+          <Icon
+            icon={menuOpen ? "iconamoon:close" : "iconamoon:menu-burger-horizontal"}
+            width={24}
+            height={24}
+          />
+        </button>
+      )}
+      </div> {/* /inner wrapper */}
 
       {menuOpen && (
         <div
           className={cn(
-            // Panel dropdown sous le header. bg-background/95 + blur pour
-            // rester lisible sur le gradient doré derrière.
+            // Panel dropdown sous le header. bg-background/95 + blur
+            // pour rester lisible sur le gradient doré derrière. Bord
+            // gauche transparent → border-t doré subtil pour marquer
+            // la séparation avec le header.
             "md:hidden absolute left-0 right-0 top-full",
-            "bg-background/95 backdrop-blur-md border-t border-white/5",
-            "px-6 py-4 flex flex-col gap-3",
+            "bg-background/95 backdrop-blur-md",
+            "border-t border-accent/15",
+            "px-6 py-6 flex flex-col",
           )}
         >
           {variant === "connected" ? (
             <>
-              {navLinks.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className={navItemClass}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {l.label}
-                </Link>
-              ))}
+              {/* Nav links — simples, gap généreux pour respiration. */}
+              <div className="flex flex-col gap-5">
+                {navLinks.map((l) => (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    className={navItemClass}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
+
+              {/* Séparateur subtil avant l'action de sortie. */}
+              <div className="my-5 h-px w-full bg-accent/15" />
+
               <button
                 type="button"
                 onClick={() => {
                   setMenuOpen(false);
                   onLogout?.();
                 }}
-                className={cn(navItemClass, "text-left")}
+                className={cn(navItemClass, "text-left text-muted-foreground")}
               >
                 Déconnexion
               </button>
             </>
           ) : (
-            <>
-              <Button
-                variant="ghost"
+            // Guest : pattern identique aux nav links connectés —
+            // deux liens texte stackés. "Créer un compte" en accent
+            // doré + chevron pour signaler l'action primaire sans le
+            // poids du bouton gradient (qui dominait le panel).
+            <div className="flex flex-col gap-5">
+              <button
+                type="button"
                 onClick={() => {
                   setMenuOpen(false);
                   onSignIn?.();
                 }}
-                className="justify-start"
+                className={cn(navItemClass, "text-left")}
               >
                 Se connecter
-              </Button>
-              <Button
-                variant="primary"
-                render={<Link href={signUpHref} onClick={() => setMenuOpen(false)} />}
+              </button>
+              <Link
+                href={signUpHref}
+                onClick={() => setMenuOpen(false)}
+                className="inline-flex items-center gap-2 font-body text-body-16 text-accent transition-opacity hover:opacity-80"
               >
                 Créer un compte
-              </Button>
-            </>
+                <Icon
+                  icon="iconamoon:arrow-right-2"
+                  width={18}
+                  height={18}
+                  aria-hidden
+                />
+              </Link>
+            </div>
           )}
         </div>
       )}
