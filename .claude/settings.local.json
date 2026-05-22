@@ -35,7 +35,14 @@
       "Bash(curl -s -I http://localhost:3000/full-logo-remove.png)",
       "Bash(curl -s -o /tmp/served-logo.png http://localhost:3000/full-logo-remove.png)",
       "Read(//tmp/**)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "mcp__figma__get_metadata",
+      "mcp__figma__get_variable_defs",
+      "mcp__figma__get_design_context",
+      "Bash(awk 'NR==4' \"C:\\\\Users\\\\romai\\\\.claude\\\\projects\\\\C--Users-romai-Desktop-Plarya\\\\cc523e11-412c-4d87-ba5d-a66449404f89\\\\tool-results\\\\mcp-figma-get_design_context-1779287918474.txt\")",
+      "Bash(echo \"EXIT=$?\")",
+      "Read(//c/Users/romai/AppData/Local/Temp/claude/C--Users-romai-Desktop-Plarya/2dcc9038-7063-4e51-a27c-a3f1cf685730/tasks/**)",
+      "Bash(xargs wc -l)"
     ]
   }
 }
