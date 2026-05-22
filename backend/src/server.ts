@@ -57,10 +57,12 @@ const checkoutLimiter = rateLimit({
   message: { error: "Trop de requêtes, réessayez dans une minute" },
 });
 
-// Admin: 20 req/min
+// Admin: 100 req/min — un admin légitime enchaîne facilement plusieurs
+// actions (PATCH override résultat → refetch stats → refetch listes) ;
+// 20/min était sous-dimensionné (cap hit en ~6 actions normales).
 const adminLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 20,
+  max: 100,
   message: { error: "Trop de requêtes, réessayez dans une minute" },
 });
 
