@@ -1,4 +1,5 @@
 import { resend, EMAIL_FROM } from "./resend";
+import { formatPrice } from "./format";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
@@ -89,11 +90,17 @@ export async function sendPaymentConfirmationEmail(
   email: string,
   tipsterPseudo: string,
   tipsterId: string,
-  type: "DAY_PASS" | "MONTHLY"
+  type: "DAY_PASS" | "MONTHLY",
+  amountCents: number
 ): Promise<void> {
   try {
     const typeLabel = type === "DAY_PASS" ? "Day Pass" : "Abonnement mensuel";
-    const priceLabel = type === "DAY_PASS" ? "3,50\u20AC" : "19\u20AC/mois";
+    // Prix lu dynamiquement depuis le tipster (pass\u00E9 en arg par
+    // l'appelant \u2014 cf. webhooks.ts). \u00C9vite le drift entre la DB et
+    // les emails (cf. audit-final.md \u00A7J).
+    const priceLabel = type === "DAY_PASS"
+      ? formatPrice(amountCents)
+      : `${formatPrice(amountCents)}/mois`;
 
     await resend.emails.send({
       from: EMAIL_FROM,

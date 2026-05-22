@@ -3,6 +3,17 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+// Pattern input DS aligné /devenir-tipster + EmailCheckoutModal.
+const fieldCls = cn(
+  "h-12 w-full rounded-xl border border-surface-elevated bg-black/40 px-4 py-3",
+  "font-body text-body-16 text-foreground placeholder:text-muted-foreground/50",
+  "transition-colors duration-200",
+  "focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:outline-none",
+  "disabled:cursor-not-allowed disabled:opacity-70",
+);
 
 export default function AuthVerifyPage() {
   return (
@@ -29,7 +40,9 @@ function VerifyContent() {
   return (
     <div className="flex min-h-[50vh] items-center justify-center px-4">
       <div className="text-center">
-        <p className="text-texte-secondaire">Connexion en cours...</p>
+        <p className="font-body text-body-16 text-muted-foreground">
+          Connexion en cours...
+        </p>
       </div>
     </div>
   );
@@ -62,24 +75,35 @@ function ErrorState({ message }: { message: string }) {
   return (
     <div className="flex min-h-[50vh] items-center justify-center px-4">
       <div className="w-full max-w-sm text-center">
-        <h1 className="text-xl font-bold text-blanc">{message}</h1>
+        <h1 className="font-display text-h4 text-foreground">{message}</h1>
 
         {sent ? (
-          <p className="mt-4 text-sm text-texte-secondaire">
-            Un nouveau lien a été envoyé à <strong className="text-blanc">{email}</strong>.
+          <p className="mt-4 font-body text-body-16 text-muted-foreground">
+            Un nouveau lien a été envoyé à{" "}
+            <strong className="text-foreground">{email}</strong>.
           </p>
         ) : (
           <div className="mt-6 space-y-4">
-            <p className="text-sm text-texte-secondaire">
+            <p className="font-body text-body-16 text-muted-foreground">
               Entrez votre email pour recevoir un nouveau lien.
             </p>
 
             {error && (
-              <p className="text-sm text-rouge-erreur">{error}</p>
+              <p
+                role="alert"
+                className="font-body text-body-16 text-destructive"
+              >
+                {error}
+              </p>
             )}
 
             <div className="space-y-2 text-left">
-              <label htmlFor="resend-email" className="text-sm text-texte-secondaire">Email</label>
+              <label
+                htmlFor="resend-email"
+                className="font-body text-body-16 text-muted-foreground"
+              >
+                Email
+              </label>
               <input
                 id="resend-email"
                 type="email"
@@ -87,18 +111,21 @@ function ErrorState({ message }: { message: string }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
-                className="w-full rounded-lg border border-bordure bg-fond-principal px-4 py-3 text-blanc placeholder:text-texte-tertiaire focus:border-or-principal/50 focus:outline-none focus:ring-1 focus:ring-or-principal/50 transition-colors"
+                disabled={submitting}
+                className={fieldCls}
               />
             </div>
 
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="lg"
               onClick={handleResend}
               disabled={submitting}
-              className="w-full h-10 rounded-lg border border-or-principal/30 bg-gradient-to-r from-or-principal/10 to-or-principal/5 text-sm font-bold text-blanc transition-all hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] hover:border-or-principal/50 disabled:opacity-50"
+              className="w-full"
             >
               {submitting ? "Envoi..." : "Demander un nouveau lien"}
-            </button>
+            </Button>
           </div>
         )}
       </div>

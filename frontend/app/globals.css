@@ -56,7 +56,16 @@
   --text-body-16: 16px;
   --text-body-16--line-height: 16px;
   --text-body-16--font-weight: 400;
-  /* Mobile sizes : à mesurer sur la frame "1a. Mobile Homepage" (non extraites du DS) */
+
+  /* Tokens typo mobile (frame "1a. Mobile Homepage", Figma vxkUD2k0gxROZEGZLlSFqb) :
+       h1 mobile : DM Serif Display 32 / 30
+       H2 mobile : DM Serif Display 24 / 24
+     Pas matérialisés ici en tokens Tailwind dédiés : Tailwind v4 ne génère
+     pas correctement `.text-{name}` quand le nom contient un suffixe
+     (collision parsing avec `--{name}--line-height`). On applique donc
+     ces valeurs en arbitraires explicites (`text-[32px] leading-[30px]`,
+     `text-[24px] leading-none`) dans Hero et SectionTitle.
+     H5 (20) et body-16 (16) restent inchangés en mobile. */
 
   /* ── Border radius ── */
   --radius: 16px;            /* DS : 16px par défaut partout (cards, boutons) */
@@ -82,32 +91,12 @@
   --container-hero: 1308px;      /* Hero — container plus large, padding horizontal réduit */
 
   /* ════════════════════════════════════════════════════════════════
-     LEGACY TOKENS — palette V1 (conservés pour les composants pas
-     encore migrés vers la nouvelle DA). À supprimer après migration.
+     shadcn/ui — mapping des variables shadcn (:root ci-dessous) vers
+     les tokens Tailwind v4 (`text-destructive`, `border-border`, etc.).
+     Utilisé par tous les composants shadcn + nos utilities transverses.
+     Distinct des tokens DS golden-da plus haut (qui restent prioritaires
+     via la cascade — cf. note sur --color-accent retiré).
      ════════════════════════════════════════════════════════════════ */
-  --color-noir: #000000;
-  --color-blanc: #ffffff;
-  --color-gris-fonce: #18181b;
-  --color-gris-moyen: #a1a1aa;
-
-  --color-fond-principal: #131212;
-  --color-fond-card: #0c0c0c;
-  --color-fond-card-hover: #111111;
-  --color-bordure: #1f1f1f;
-  --color-bordure-or: rgba(212, 175, 55, 0.2);
-
-  --color-or-principal: #d4af37;
-  --color-or-clair: #f4d03f;
-  --color-or-sombre: #8b7500;
-  --color-or-badges: #d4af37;
-
-  --color-vert-succes: #10b981;
-  --color-rouge-erreur: #ef4444;
-
-  --color-texte-principal: #ffffff;
-  --color-texte-secondaire: #a1a1aa;
-  --color-texte-tertiaire: #71717a;
-
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -239,21 +228,6 @@ body::after {
 
 /* ── Utility classes ── */
 
-.text-gradient-or {
-  background: linear-gradient(to bottom, #f4d03f, #d4af37, #8b7500);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.glow-or {
-  box-shadow: 0 0 40px rgba(212, 175, 55, 0.15);
-}
-
-.glow-or-hover:hover {
-  box-shadow: 0 0 60px rgba(212, 175, 55, 0.25);
-}
-
 /* Hide number input spinners */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
@@ -274,89 +248,6 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 }
 input[type="time"] {
   color-scheme: dark;
-}
-
-@keyframes navbar-slide-down {
-  from {
-    opacity: 0;
-    transform: translateY(-100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.navbar-enter {
-  animation: navbar-slide-down 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-@keyframes marquee-loop {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(50%);
-  }
-}
-
-.marquee-loop {
-  display: flex;
-  width: max-content;
-  animation: marquee-loop 15s linear infinite;
-}
-
-@keyframes hero-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.hero-reveal {
-  opacity: 0;
-  animation: hero-fade-in 0.8s ease-out forwards;
-}
-
-@keyframes pop-in {
-  from {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.scroll-reveal {
-  opacity: 0;
-  transform: translateY(20px);
-  transition:
-    opacity 0.7s ease-out,
-    transform 0.7s ease-out;
-}
-
-.scroll-reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.scroll-pop {
-  opacity: 0;
-  transform: scale(0.6);
-  transition:
-    opacity 0.6s ease-out,
-    transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.scroll-pop.visible {
-  opacity: 1;
-  transform: scale(1);
 }
 
 @layer base {

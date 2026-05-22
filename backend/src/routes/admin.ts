@@ -151,14 +151,23 @@ router.get("/stats", async (_req, res) => {
         prisma.subscription.count({ where: { status: "ACTIVE" } }),
       ]);
 
-    // Estimate revenue from active subscriptions
+    // Estimate revenue from active subscriptions. Prix lu sur le
+    // tipster lié (et non hardcodé) — cf. audit-final.md §J : chaque
+    // tipster a son propre prix, hardcoder 1900 produit un total
+    // faux dès qu'un tipster s'écarte du default.
     const activeSubscriptions = await prisma.subscription.findMany({
       where: { status: "ACTIVE", expiresAt: { gt: new Date() } },
-      select: { type: true },
+      select: {
+        type: true,
+        tipster: { select: { dayPassPrice: true, monthlyPrice: true } },
+      },
     });
 
     const revenue = activeSubscriptions.reduce((total, sub) => {
-      return total + (sub.type === "DAY_PASS" ? 300 : 1900);
+      const amount = sub.type === "DAY_PASS"
+        ? sub.tipster.dayPassPrice
+        : sub.tipster.monthlyPrice;
+      return total + amount;
     }, 0);
 
     res.json({

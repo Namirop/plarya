@@ -114,7 +114,7 @@ model Tipster {
   photoUrl        String?
   sports          Sport[]
   dayPassPrice    Int             @default(350)  // centimes (3.50€)
-  monthlyPrice    Int             @default(1900) // centimes (19€)
+  monthlyPrice    Int             @default(2900) // centimes (29€)
   subStatus       TipsterSubStatus @default(FREE)
   subExpiresAt    DateTime?
   stripeSubId     String?          // Stripe subscription for tipster quarterly plan

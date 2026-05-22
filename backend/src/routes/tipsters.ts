@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
-import { calcWinRate, calcStreak, streakBadge } from "../lib/stats";
+import { calcWinRate } from "../lib/stats";
 import { authMiddleware } from "../middleware/auth";
 import { tipsterMiddleware } from "../middleware/tipster";
 import { updateTipsterSchema } from "../validators/tipsters";
@@ -20,7 +20,6 @@ router.get("/me", authMiddleware, tipsterMiddleware, async (req, res) => {
     }
 
     const winRate = await calcWinRate(tipster.id);
-    const streak = await calcStreak(tipster.id);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -41,8 +40,6 @@ router.get("/me", authMiddleware, tipsterMiddleware, async (req, res) => {
       monthlyPrice: tipster.monthlyPrice,
       warningMessage: tipster.warningMessage,
       winRate,
-      streak,
-      streakBadge: streakBadge(streak),
       pronosToday,
     });
   } catch (err) {
@@ -153,7 +150,7 @@ router.get("/", async (req, res) => {
           pronosToday,
           todayPronos,
         };
-      })
+      }),
     );
 
     const limit = req.query.all === "true" ? enriched.length : 6;

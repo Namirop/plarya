@@ -1,15 +1,3 @@
-const SPORT_EMOJIS: Record<string, string> = {
-  FOOTBALL: "⚽",
-  TENNIS: "🎾",
-  BASKETBALL: "🏀",
-  RUGBY: "🏉",
-  HOCKEY: "🏒",
-  MMA: "🥊",
-  BOXE: "🥊",
-  ESPORT: "🎮",
-  AUTRE: "🏅",
-};
-
 const SPORT_NAMES: Record<string, string> = {
   FOOTBALL: "Football",
   TENNIS: "Tennis",
@@ -257,10 +245,6 @@ export function getLeague(id: string): League | undefined {
   return LEAGUE_MAP.get(id);
 }
 
-export function getLeaguesBySport(sport: string): League[] {
-  return LEAGUES.filter((l) => l.sport === sport);
-}
-
 export function getLeaguesGroupedBySport(): Record<string, League[]> {
   const grouped: Record<string, League[]> = {};
   for (const league of LEAGUES) {
@@ -270,57 +254,10 @@ export function getLeaguesGroupedBySport(): Record<string, League[]> {
   return grouped;
 }
 
-// ── Legacy compat ──
-
-const LEGACY_LEAGUE_FLAGS: Record<string, string> = {
-  "ligue 1": "🇫🇷",
-  "ligue 2": "🇫🇷",
-  "premier league": "🇬🇧",
-  "la liga": "🇪🇸",
-  "serie a": "🇮🇹",
-  bundesliga: "🇩🇪",
-  eredivisie: "🇳🇱",
-  "liga portugal": "🇵🇹",
-  "super lig": "🇹🇷",
-  "top 14": "🇫🇷",
-  "6 nations": "🏴",
-  "roland garros": "🇫🇷",
-  wimbledon: "🇬🇧",
-  "us open": "🇺🇸",
-  atp: "🎾",
-  "atp finals": "🎾",
-  wta: "🎾",
-  nba: "🇺🇸",
-  ufc: "🇺🇸",
-  lck: "🇰🇷",
-  "lck spring": "🇰🇷",
-  lec: "🇪🇺",
-  lpl: "🇨🇳",
-  worlds: "🌍",
-  valorant: "🎮",
-  cs2: "🎮",
-  "cs2 major": "🎮",
-  "cs2 blast": "🎮",
-};
-
 // ── Helpers ──
-
-export function getSportEmoji(sport: string): string {
-  // Also check if it's a league id and return the sport emoji
-  const league = LEAGUE_MAP.get(sport);
-  if (league) return SPORT_EMOJIS[league.sport] || "🏅";
-  return SPORT_EMOJIS[sport] || "🏅";
-}
 
 export function getSportLabel(sport: string): string {
   return SPORT_NAMES[sport] || sport;
-}
-
-/** Get flag for a league. Checks new LEAGUES by id first, then legacy mapping. */
-export function getLeagueFlag(league: string): string {
-  const found = LEAGUE_MAP.get(league);
-  if (found) return found.country;
-  return LEGACY_LEAGUE_FLAGS[league.toLowerCase().trim()] || "";
 }
 
 export const SPORT_DOMAIN = [

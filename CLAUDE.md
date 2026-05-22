@@ -392,17 +392,19 @@ C'est le changement le plus important. **Pas de création de compte avant le pai
 
 ### PAGE "DEVENIR EXPERT" (`/devenir-expert`)
 
-**Changement :** Ce n'est plus un formulaire de paiement automatique. Les experts sont validés par l'admin.
+Devenir expert se fait via paiement Stripe d'un abonnement récurrent.
 
-- Formulaire de candidature :
-  - Pseudo
-  - Email
+- Formulaire avec :
+  - Pseudo (unique)
   - Bio
   - Sports couverts
-  - Expérience / motivation (textarea)
-- Soumission → email envoyé à l'admin
-- L'admin valide manuellement dans le panel admin
-- Pas de paiement 39€/trimestre pour l'instant (à discuter avec le client, pour le MVP on reste sur invitation)
+- L'utilisateur doit être connecté (sinon redirection home).
+- Soumission → création d'une session Stripe Checkout en mode `subscription` (39€/trimestre, intervalle 3 mois récurrent).
+- Après paiement réussi (webhook Stripe `checkout.session.completed` avec `purpose=become_tipster`) : création du record Expert + passage du rôle User à EXPERT en transaction Prisma + `subExpiresAt = now + 90 jours`.
+- L'utilisateur devient expert **immédiatement** après le paiement réussi (retour sur `/devenir-expert?checkout=success`).
+- Renouvellement automatique trimestriel via webhook `invoice.paid` (extension `subExpiresAt` de +90j). Annulation Stripe → `subStatus = EXPIRED` via webhook `customer.subscription.deleted`.
+
+⚠️ Restera à arbitrer plus tard : remettre un système de candidature manuelle gratuite (originellement prévu MVP), ou conserver ce paiement comme barrière qualité. Pour l'instant, le code et le brief sont alignés sur le paiement.
 
 ---
 
@@ -545,12 +547,10 @@ Chaque analyse (Prono) a un champ `startTime: DateTime` obligatoire. Le frontend
 
 ---
 
-## 9. STRATÉGIE DE MIGRATION VERS LA NOUVELLE DA
+## 9. DESIGN SYSTEM — STATE
 
-- Tokens DS dans `app/globals.css` sous `@theme` (Tailwind v4)
-- Legacy tokens V1 conservés sous le commentaire `LEGACY` dans `globals.css`
-- Migration composant par composant : quand un composant est refait en nouveaux tokens, vérifier qu'il n'utilise plus aucun token LEGACY
-- Quand TOUS les composants sont migrés, supprimer le bloc LEGACY de `globals.css`
+- Tokens DS dans `app/globals.css` sous `@theme` (Tailwind v4).
+- La migration vers la DA golden-da est **terminée** : le bloc LEGACY V1 a été supprimé. Seuls subsistent dans `globals.css` les tokens DS golden-da + le mapping shadcn/ui (`--color-border`, `--color-destructive`, etc.) qui alimente les utilities Tailwind transverses.
 
 ## 10. TOKENS PRINCIPAUX
 

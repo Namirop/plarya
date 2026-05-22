@@ -8,10 +8,6 @@ export interface TipsterProfile {
   id: string;
   pseudo: string;
   winRate: number;
-  /** Legacy V1, conservé pour rétro-compatibilité backend — non affiché
-   *  (CLAUDE.md §6 retire les streaks de l'UI publique et interne). */
-  streak: number;
-  streakBadge: string;
   pronosToday: number;
 }
 
