@@ -41,12 +41,13 @@ const textareaCls = cn(
 const labelCls = "font-body text-body-16 text-muted-foreground";
 
 // Wrapper layout (max-w 872 = largeur de la card Figma). Padding
-// vertical 64 px. PageShell aussi utilisé par les états
+// vertical 64 px desktop / 40 px mobile, padding latéral 16 px mobile
+// (cohérent avec le Dashboard). PageShell aussi utilisé par les états
 // alternatifs (déjà tipster / success / cancel) pour cohérence
 // visuelle (même page bg, même container).
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-[872px] px-6 py-16 sm:px-8">
+    <div className="mx-auto w-full max-w-[872px] px-4 py-10 md:px-8 md:py-16">
       {children}
     </div>
   );
@@ -113,7 +114,7 @@ function DevenirTipsterContent() {
   if (user?.role === "TIPSTER") {
     return (
       <PageShell>
-        <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-8 py-10 text-center">
+        <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-6 py-8 text-center md:px-8 md:py-10">
           <h1 className="font-display text-h2 text-foreground">
             Vous êtes déjà expert
           </h1>
@@ -133,7 +134,7 @@ function DevenirTipsterContent() {
   if (checkoutStatus === "success") {
     return (
       <PageShell>
-        <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-8 py-10 text-center">
+        <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-6 py-8 text-center md:px-8 md:py-10">
           <h1 className="font-display text-h2 text-foreground">
             Bienvenue parmi les experts <span className="text-accent">!</span>
           </h1>
@@ -153,7 +154,7 @@ function DevenirTipsterContent() {
   if (checkoutStatus === "cancel") {
     return (
       <PageShell>
-        <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-8 py-10 text-center">
+        <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-6 py-8 text-center md:px-8 md:py-10">
           <h1 className="font-display text-h2 text-foreground">
             Paiement annulé
           </h1>
@@ -180,20 +181,21 @@ function DevenirTipsterContent() {
   // ── État 5 (default) : formulaire de candidature ────────────
   return (
     <PageShell>
-      {/* Titre de page — DM Serif Display 48/60 (cf. devenir-expert-spec.md §3) */}
-      <h1 className="text-center font-display text-[48px] leading-[60px] text-foreground">
+      {/* Titre de page — DM Serif Display 48/60 desktop, 32/36 mobile
+          (aligné Dashboard h1 — évite le wrap horrible sur "Devenir Expert"). */}
+      <h1 className="text-center font-display text-[32px] leading-[36px] text-foreground md:text-[48px] md:leading-[60px]">
         Devenir Expert
       </h1>
-      <p className="mx-auto mt-8 max-w-[635px] text-center font-body text-body-16 text-muted-foreground">
+      <p className="mx-auto mt-6 max-w-[635px] text-center font-body text-body-16 text-muted-foreground md:mt-8">
         Publiez vos analyses et monétisez votre expertise — 39€/trimestre
       </p>
 
-      {/* Card englobante — bg-black/40 + bordure subtile, radius 16,
-          padding interne 32 px (cf. spec §5 + DS). */}
+      {/* Card englobante — bg-black/40 + bordure subtile, radius 16.
+          Padding 32 px desktop / 20 px mobile (cf. spec §5 + DS). */}
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="mt-16 space-y-6 rounded-2xl border border-surface-elevated bg-black/40 p-8"
+        className="mt-10 space-y-6 rounded-2xl border border-surface-elevated bg-black/40 p-5 md:mt-16 md:p-8"
       >
         {error && (
           <div
