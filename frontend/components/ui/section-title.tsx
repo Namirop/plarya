@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+
+import { CaretRight } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
 
@@ -22,17 +24,9 @@ export interface SectionTitleProps {
 
 export function SectionTitle({ title, cta, className, ctaClassName }: SectionTitleProps) {
   return (
-    <div
-      className={cn(
-        "flex w-full items-center justify-between gap-6",
-        className,
-      )}
-    >
+    <div className={cn("flex w-full items-center justify-between gap-6", className)}>
       <div className="flex items-center gap-4">
-        <span
-          aria-hidden
-          className="block h-[46px] md:h-[54px] w-px shrink-0 bg-accent"
-        />
+        <span aria-hidden className="block h-[46px] md:h-[54px] w-px shrink-0 bg-accent" />
         {/* text-[24px] leading-none mobile (= "H2 mobile" du Figma 24/24).
             md:text-h2 = 32/1 desktop. Pas de token Tailwind dédié pour le
             mobile : v4 ne génère pas les utilities avec suffixe ambigu. */}
@@ -50,7 +44,7 @@ export function SectionTitle({ title, cta, className, ctaClassName }: SectionTit
           )}
         >
           {cta.text}
-          <ChevronRight
+          <CaretRight
             className="size-4 text-accent transition-transform duration-200 ease-out group-hover:translate-x-0.5"
             aria-hidden
           />

@@ -1,0 +1,80 @@
+# Dependabot — surveillance hebdo des deps npm sur frontend + backend.
+#
+# Groupes : pour éviter une foire de 20 PRs par semaine, on regroupe
+# les bumps par famille de lib (Next, Prisma, types, tooling). Chaque
+# groupe = 1 PR par semaine au max.
+#
+# Doc : https://docs.github.com/en/code-security/dependabot
+
+version: 2
+
+updates:
+  # ─────────────── Frontend ───────────────
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      next:
+        patterns:
+          - "next"
+          - "@next/*"
+          - "eslint-config-next"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      typescript:
+        patterns:
+          - "typescript"
+          - "@types/*"
+      tooling:
+        patterns:
+          - "eslint*"
+          - "prettier*"
+
+  # ─────────────── Backend ────────────────
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      prisma:
+        patterns:
+          - "prisma"
+          - "@prisma/*"
+      typescript:
+        patterns:
+          - "typescript"
+          - "@types/*"
+      express:
+        patterns:
+          - "express"
+          - "@types/express"
+          - "cookie-parser"
+          - "@types/cookie-parser"
+          - "cors"
+          - "@types/cors"
+          - "helmet"
+          - "@types/helmet"
+      tooling:
+        patterns:
+          - "tsx"
+          - "prettier*"
+          - "ts-node"
+
+  # ─────────────── GitHub Actions ─────────
+  # Bump aussi nos workflows GitHub Actions quand ils existeront.
+  # Vide pour l'instant — sera utile à l'ajout du premier .yml CI.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3

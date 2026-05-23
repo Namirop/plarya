@@ -19,9 +19,7 @@ export const TEASING_OPTIONS = [
 /** Format cents to display price (e.g. 350 → "3,50", 1900 → "19") */
 export function formatPrice(cents: number): string {
   const euros = cents / 100;
-  return euros % 1 === 0
-    ? euros.toFixed(0)
-    : euros.toFixed(2).replace(".", ",");
+  return euros % 1 === 0 ? euros.toFixed(0) : euros.toFixed(2).replace(".", ",");
 }
 
 export const SPORT_LABELS: Record<string, string> = {

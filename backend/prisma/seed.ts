@@ -85,9 +85,7 @@ const EXPERTS: ExpertSeed[] = [
       ["Sinner - Alcaraz", "atp", "Sinner gagne", 1.9, "PICK_SOLIDE", "WON", 2],
       ["Medvedev - Fritz", "atp", "Medvedev gagne", 1.65, "SAFE", "WON", 1],
     ],
-    today: [
-      ["Djokovic - Alcaraz", "roland-garros", "Djokovic en 4", 2.4, "A_NE_PAS_RATER"],
-    ],
+    today: [["Djokovic - Alcaraz", "roland-garros", "Djokovic en 4", 2.4, "A_NE_PAS_RATER"]],
   },
   {
     email: "multisport@test.com",
@@ -167,11 +165,7 @@ async function createTestMagicLink(email: string): Promise<string> {
 // nettoyage en mode "soft" (default) sont scopées à ces emails →
 // les comptes réels créés via paiement Stripe (ex: romainmaes@…) ne
 // sont JAMAIS effacés par `npm run db:seed`.
-const SEEDED_EMAILS = [
-  "admin@test.com",
-  "user@test.com",
-  ...EXPERTS.map((e) => e.email),
-];
+const SEEDED_EMAILS = ["admin@test.com", "user@test.com", ...EXPERTS.map((e) => e.email)];
 
 // Flag --reset : wipe COMPLET de la DB avant re-seed. Pour repartir
 // 100 % from scratch (utile quand les schemas ont divergé, ou pour
@@ -257,7 +251,11 @@ async function main() {
     // Upsert expert profile
     const expert = await prisma.expert.upsert({
       where: { userId: user.id },
-      update: { dayPassPrice: 350, viewsToday: Math.floor(Math.random() * 300), photoUrl: "/profile.jpg" },
+      update: {
+        dayPassPrice: 350,
+        viewsToday: Math.floor(Math.random() * 300),
+        photoUrl: "/profile.jpg",
+      },
       create: {
         userId: user.id,
         pseudo: e.pseudo,
@@ -313,8 +311,21 @@ async function main() {
         ? [6 * HOUR]
         : e.today.map((_, i) => (i === 0 ? -1 * HOUR : i * 6 * HOUR));
 
-    const todayData = e.today.map(
-      ([matchName, league, pick, odds, teasing], i) => ({
+    // Garde-fou : si on lance le seed entre minuit et X heures du
+    // matin, le calcul `now - N heures` ferait glisser le createdAt
+    // côté HIER → les pronos du jour seraient invisibles partout
+    // (les queries filtrent `createdAt >= today midnight`). On clamp
+    // donc à minuit-aujourd'hui (+ N secondes pour préserver l'ordre).
+    const todayMidnight = new Date(now);
+    todayMidnight.setHours(0, 0, 0, 0);
+
+    const todayData = e.today.map(([matchName, league, pick, odds, teasing], i) => {
+      const desired = now - (e.today.length - i) * HOUR;
+      const createdAt =
+        desired < todayMidnight.getTime()
+          ? new Date(todayMidnight.getTime() + i * 1000)
+          : new Date(desired);
+      return {
         expertId: expert.id,
         matchName,
         league,
@@ -331,14 +342,12 @@ async function main() {
         result: "PENDING" as const,
         startTime: new Date(now + startTimeOffsets[i]),
         isFeatured: i === 0,
-        createdAt: new Date(now - (e.today.length - i) * HOUR),
-      }),
-    );
+        createdAt,
+      };
+    });
 
     await prisma.prono.createMany({ data: [...historyData, ...todayData] });
-    console.log(
-      `  ${e.pseudo}: ${historyData.length} history + ${todayData.length} today`,
-    );
+    console.log(`  ${e.pseudo}: ${historyData.length} history + ${todayData.length} today`);
   }
 
   // ── Seed Test Subscriptions ──
@@ -353,7 +362,9 @@ async function main() {
   });
 
   // Get all experts and the test user
-  const allExperts = await prisma.expert.findMany({ select: { id: true, pseudo: true, dayPassPrice: true, monthlyPrice: true } });
+  const allExperts = await prisma.expert.findMany({
+    select: { id: true, pseudo: true, dayPassPrice: true, monthlyPrice: true },
+  });
   const testUser = await prisma.user.findUnique({ where: { email: "user@test.com" } });
 
   if (testUser && allExperts.length >= 3) {
@@ -393,9 +404,10 @@ async function main() {
 
     for (const sub of subData) {
       const createdAt = new Date(now - sub.daysAgo * DAY);
-      const expiresAt = sub.type === "DAY_PASS"
-        ? new Date(createdAt.getTime() + DAY)
-        : new Date(createdAt.getTime() + 30 * DAY);
+      const expiresAt =
+        sub.type === "DAY_PASS"
+          ? new Date(createdAt.getTime() + DAY)
+          : new Date(createdAt.getTime() + 30 * DAY);
       const isActive = expiresAt > new Date();
 
       await prisma.subscription.create({

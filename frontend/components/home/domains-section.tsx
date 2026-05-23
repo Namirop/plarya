@@ -56,10 +56,7 @@ export interface DomainsSectionProps {
   onDomainSelect?: (domain: DomainId) => void;
 }
 
-export function DomainsSection({
-  activeDomain = null,
-  onDomainSelect,
-}: DomainsSectionProps = {}) {
+export function DomainsSection({ activeDomain = null, onDomainSelect }: DomainsSectionProps = {}) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   // Index de la card "centrée" dans le carrousel mobile. Sert à
   // appliquer l'opacity 50 % aux voisines (effet focus + fade Figma).
@@ -120,9 +117,7 @@ export function DomainsSection({
                 subtitle={d.subtitle}
                 state={d.state}
                 onClick={
-                  d.id && onDomainSelect
-                    ? () => onDomainSelect(d.id as DomainId)
-                    : undefined
+                  d.id && onDomainSelect ? () => onDomainSelect(d.id as DomainId) : undefined
                 }
                 isSelected={d.id !== null && d.id === activeDomain}
               />
@@ -147,9 +142,7 @@ export function DomainsSection({
               }}
               className={cn(
                 "size-[8px] rounded-full transition-all duration-200 cursor-pointer",
-                i === activeIndex
-                  ? "bg-accent"
-                  : "bg-muted-foreground opacity-40 hover:opacity-70",
+                i === activeIndex ? "bg-accent" : "bg-muted-foreground opacity-40 hover:opacity-70",
               )}
             />
           ))}

@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 
 import { Toast, type ToastVariant } from "./toast";
 
@@ -33,20 +27,15 @@ let toastIdCounter = 0;
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
 
-  const showToast = useCallback(
-    (message: string, variant: ToastVariant) => {
-      toastIdCounter += 1;
-      const id = toastIdCounter;
-      setToasts((prev) => {
-        const next = [...prev, { id, message, variant }];
-        // Cap : si on dépasse, on garde les MAX_TOASTS plus récents.
-        return next.length > MAX_TOASTS
-          ? next.slice(next.length - MAX_TOASTS)
-          : next;
-      });
-    },
-    [],
-  );
+  const showToast = useCallback((message: string, variant: ToastVariant) => {
+    toastIdCounter += 1;
+    const id = toastIdCounter;
+    setToasts((prev) => {
+      const next = [...prev, { id, message, variant }];
+      // Cap : si on dépasse, on garde les MAX_TOASTS plus récents.
+      return next.length > MAX_TOASTS ? next.slice(next.length - MAX_TOASTS) : next;
+    });
+  }, []);
 
   const dismiss = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -61,12 +50,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           auto pour rester cliquable. */}
       <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col gap-2">
         {toasts.map((t) => (
-          <Toast
-            key={t.id}
-            message={t.message}
-            variant={t.variant}
-            onClose={() => dismiss(t.id)}
-          />
+          <Toast key={t.id} message={t.message} variant={t.variant} onClose={() => dismiss(t.id)} />
         ))}
       </div>
     </ToastContext.Provider>

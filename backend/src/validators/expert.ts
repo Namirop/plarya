@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { sportsSchema } from "./shared";
+
 // Bornes prix (centimes). Cf. audit-final.md §J : sans guard, un
 // admin distrait peut set monthlyPrice à 1 et créer une session
 // Stripe à 0,01€. min(100)=1€ floor, max(5000)=50€ ceiling pour
@@ -11,21 +13,7 @@ export const createExpertSchema = z.object({
   email: z.string().email("Email invalide"),
   pseudo: z.string().min(2).max(30),
   bio: z.string().optional(),
-  sports: z
-    .array(
-      z.enum([
-        "FOOTBALL",
-        "TENNIS",
-        "BASKETBALL",
-        "RUGBY",
-        "HOCKEY",
-        "MMA",
-        "BOXE",
-        "ESPORT",
-        "AUTRE",
-      ])
-    )
-    .min(1, "Au moins un sport requis"),
+  sports: sportsSchema,
   subStatus: z.enum(["FREE", "ACTIVE"]).optional(),
   // Prix optionnels à la création (Prisma utilise les defaults 350 /
   // 2900 si omis). Validés pour éviter saisie aberrante.

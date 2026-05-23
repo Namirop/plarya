@@ -67,12 +67,10 @@ router.post(
           ...(bookmakerOdds && bookmakerOdds.length > 0
             ? {
                 bookmakerOdds: {
-                  create: bookmakerOdds.map(
-                    (bo: { bookmakerId: string; odds: number }) => ({
-                      bookmakerId: bo.bookmakerId,
-                      odds: bo.odds,
-                    })
-                  ),
+                  create: bookmakerOdds.map((bo: { bookmakerId: string; odds: number }) => ({
+                    bookmakerId: bo.bookmakerId,
+                    odds: bo.odds,
+                  })),
                 },
               }
             : {}),
@@ -84,7 +82,7 @@ router.post(
     } catch (err) {
       res.status(500).json({ error: "Erreur serveur" });
     }
-  }
+  },
 );
 
 // GET /pronos/mine — Expert's own pronos (must be before /:id)
@@ -146,7 +144,7 @@ router.patch(
     } catch (err) {
       res.status(500).json({ error: "Erreur serveur" });
     }
-  }
+  },
 );
 
 // GET /pronos/:id — Single prono detail (checks subscription)

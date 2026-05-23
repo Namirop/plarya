@@ -1,24 +1,32 @@
-import { Icon } from "@iconify/react";
+import type { ComponentType } from "react";
 
-const SPORT_ICONS: Record<string, string> = {
-  FOOTBALL: "tabler:ball-football",
-  TENNIS: "tabler:ball-tennis",
-  BASKETBALL: "tabler:ball-basketball",
-  RUGBY: "tabler:ball-american-football",
-  HOCKEY: "material-symbols:sports-hockey",
-  MMA: "material-symbols:sports-mma-outline",
-  BOXE: "material-symbols:sports-mma-outline",
-  ESPORT: "tabler:device-gamepad-2",
-  AUTRE: "tabler:trophy",
+import type { IconProps } from "@phosphor-icons/react";
+import {
+  SoccerBall,
+  TennisBall,
+  Basketball,
+  Football,
+  BoxingGlove,
+  GameController,
+  Trophy,
+} from "@phosphor-icons/react";
+
+// Mapping sport → composant Phosphor. Phosphor n'a pas d'icône hockey
+// dédiée à ce jour ; on fallback sur Trophy (acceptable visuellement
+// — hockey reste minoritaire en France de toute façon).
+const SPORT_ICONS: Record<string, ComponentType<IconProps>> = {
+  FOOTBALL: SoccerBall,
+  TENNIS: TennisBall,
+  BASKETBALL: Basketball,
+  RUGBY: Football, // Football américain Phosphor = forme ovale rugby
+  HOCKEY: Trophy,
+  MMA: BoxingGlove,
+  BOXE: BoxingGlove,
+  ESPORT: GameController,
+  AUTRE: Trophy,
 };
 
-export function SportIcon({
-  sport,
-  className = "size-4",
-}: {
-  sport: string;
-  className?: string;
-}) {
-  const iconName = SPORT_ICONS[sport] || "tabler:trophy";
-  return <Icon icon={iconName} className={className} />;
+export function SportIcon({ sport, className = "size-4" }: { sport: string; className?: string }) {
+  const IconCmp = SPORT_ICONS[sport] || Trophy;
+  return <IconCmp className={className} />;
 }

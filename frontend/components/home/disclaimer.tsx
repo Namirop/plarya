@@ -14,9 +14,8 @@ export function Disclaimer() {
             avec le divider décoratif au-dessus. Desktop : 748 px (≈
             largeur du contenu hero). */}
         <p className="mx-auto max-w-[315px] md:max-w-[748px] text-center font-body text-body-16 leading-[1.4] text-muted-foreground">
-          Les contenus proposés sur Plarya sont des analyses et opinions
-          personnelles. Ils ne constituent en aucun cas des conseils
-          financiers ou des incitations à parier.
+          Les contenus proposés sur Plarya sont des analyses et opinions personnelles. Ils ne
+          constituent en aucun cas des conseils financiers ou des incitations à parier.
         </p>
       </div>
     </section>

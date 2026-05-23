@@ -90,6 +90,37 @@ model User {
   @@map("users")
 }
 
+// Cooldown anti re-login après suppression de compte.
+//
+// Quand un user supprime son compte (cf. DELETE /auth/me, branche
+// immediate, ET le cron auto_delete_pending_experts), on anonymise
+// `User.email = deleted-{id}@plarya.local` → impossible de retrouver
+// l'email original depuis User. Sans contre-mesure, l'user (ou pire,
+// quelqu'un d'autre avec accès à sa boîte mail) peut tout de suite
+// re-demander un magic-link sur l'email original → /auth/verify
+// trouve aucun User → en crée un nouveau → "re-login" magique.
+//
+// Cette table garde un cooldown explicite : on insère `email` (en
+// clair, l'original) au moment du soft delete, avec un `expiresAt`
+// (now + 7 jours par défaut). Pendant cette fenêtre, le
+// request-magic-link sur cet email est silencieusement refusé (200
+// sans envoi d'email, comme un email inconnu — anti-énumération).
+//
+// Purge : cron quotidien à 03:00 supprime les rows expiresAt < now
+// (cf. lib/cron.ts) → on ne garde pas l'email indéfiniment, conforme
+// à l'esprit du droit à l'oubli RGPD.
+model DeletedEmailCooldown {
+  id        String   @id @default(cuid())
+  email     String
+  deletedAt DateTime @default(now())
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+  @@map("deleted_email_cooldowns")
+}
+
 model MagicLink {
   id        String    @id @default(cuid())
   token     String    @unique
@@ -138,6 +169,17 @@ model Expert {
   // publiquement quand non-null mais conservé pour l'historique
   // Subscriptions / audit Stripe.
   deletedAt       DateTime?
+  // Suppression programmée. Quand un expert demande à supprimer son
+  // compte alors qu'il a des Subscriptions ACTIVE en cours, on ne
+  // peut pas supprimer immédiatement (l'acheteur a payé pour X jours
+  // d'accès). On flag pendingDeletionAt = now et :
+  //   - le profile est retiré des listings publics
+  //   - les nouveaux paiements sont bloqués (création de sub refusée)
+  //   - les subs existantes continuent à fonctionner jusqu'à expiresAt
+  //   - un cron quotidien check les experts pending : quand la dernière
+  //     sub active a expiré → soft delete automatique (deletedAt set).
+  // L'expert peut annuler tant que deletedAt n'est pas posé.
+  pendingDeletionAt DateTime?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -146,6 +188,7 @@ model Expert {
   subscriptions   Subscription[]
 
   @@index([deletedAt])
+  @@index([pendingDeletionAt])
   @@map("experts")
 }
 

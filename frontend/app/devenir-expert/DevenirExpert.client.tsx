@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 
-import { useUser } from "@/hooks/use-user";
-import { createExpertCheckout } from "@/lib/stripe";
-import { SPORT_LABELS } from "@/lib/constants";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useUser } from "@/hooks/use-user";
+import { SPORT_LABELS } from "@/lib/constants";
+import { createExpertCheckout } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 
 // Styles partagés form (DS). Inputs : fond noir 40 %, bordure subtile
@@ -38,11 +39,7 @@ const labelCls = "font-body text-body-16 text-muted-foreground";
 // alternatifs (déjà expert / success / cancel) pour cohérence
 // visuelle (même page bg, même container).
 function PageShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mx-auto w-full max-w-[872px] px-4 py-10 md:px-8 md:py-16">
-      {children}
-    </div>
-  );
+  return <div className="mx-auto w-full max-w-[872px] px-4 py-10 md:px-8 md:py-16">{children}</div>;
 }
 
 export function DevenirExpertClient() {
@@ -107,12 +104,10 @@ export function DevenirExpertClient() {
     return (
       <PageShell>
         <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-6 py-8 text-center md:px-8 md:py-10">
-          <h1 className="font-display text-h2 text-foreground">
-            Vous êtes déjà expert
-          </h1>
+          <h1 className="font-display text-h2 text-foreground">Vous êtes déjà expert</h1>
           <p className="font-body text-body-16 text-muted-foreground">
-            Votre compte expert est actif. Rendez-vous sur votre tableau de
-            bord pour publier vos analyses.
+            Votre compte expert est actif. Rendez-vous sur votre tableau de bord pour publier vos
+            analyses.
           </p>
           <Button variant="primary" size="lg" render={<Link href="/dashboard" />}>
             Accéder au dashboard
@@ -131,8 +126,8 @@ export function DevenirExpertClient() {
             Bienvenue parmi les experts <span className="text-accent">!</span>
           </h1>
           <p className="font-body text-body-16 text-muted-foreground">
-            Votre compte expert est en cours de création. Vous pourrez accéder
-            à votre dashboard dans quelques instants.
+            Votre compte expert est en cours de création. Vous pourrez accéder à votre dashboard
+            dans quelques instants.
           </p>
           <Button variant="primary" size="lg" render={<Link href="/dashboard" />}>
             Accéder au dashboard
@@ -147,9 +142,7 @@ export function DevenirExpertClient() {
     return (
       <PageShell>
         <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-6 py-8 text-center md:px-8 md:py-10">
-          <h1 className="font-display text-h2 text-foreground">
-            Paiement annulé
-          </h1>
+          <h1 className="font-display text-h2 text-foreground">Paiement annulé</h1>
           <p className="font-body text-body-16 text-muted-foreground">
             Vous pouvez réessayer quand vous le souhaitez.
           </p>
@@ -217,13 +210,7 @@ export function DevenirExpertClient() {
           <Label htmlFor="email" className={labelCls}>
             Email
           </Label>
-          <Input
-            id="email"
-            type="email"
-            value={user?.email || ""}
-            disabled
-            className={fieldCls}
-          />
+          <Input id="email" type="email" value={user?.email || ""} disabled className={fieldCls} />
         </div>
 
         {/* Bio */}
@@ -273,22 +260,14 @@ export function DevenirExpertClient() {
         <div className="rounded-xl border border-surface-elevated bg-black/40 p-5">
           <p className="font-body text-h5 text-foreground">39€ / trimestre</p>
           <p className="mt-2 font-body text-body-16 text-muted-foreground">
-            Accès au dashboard expert, publication d&apos;analyses, visibilité
-            sur la plateforme. Renouvellement automatique tous les 3 mois.
+            Accès au dashboard expert, publication d&apos;analyses, visibilité sur la plateforme.
+            Renouvellement automatique tous les 3 mois.
           </p>
         </div>
 
         {/* Submit — variant white du DS (équivalent CTA "Accéder (3,50€)") */}
-        <Button
-          type="submit"
-          variant="white"
-          size="lg"
-          disabled={submitting}
-          className="w-full"
-        >
-          {submitting
-            ? "Redirection vers le paiement..."
-            : "Devenir Expert (39€/trimestre)"}
+        <Button type="submit" variant="white" size="lg" disabled={submitting} className="w-full">
+          {submitting ? "Redirection vers le paiement..." : "Devenir Expert (39€/trimestre)"}
         </Button>
       </form>
     </PageShell>

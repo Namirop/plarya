@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+
 import { API_URL, SITE_URL } from "@/lib/site";
 
 // Shape minimal de l'API GET /experts pour la génération du sitemap.

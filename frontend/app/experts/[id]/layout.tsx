@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import { API_URL, SITE_NAME, SITE_URL } from "@/lib/site";
 
 // Shape minimal de la réponse GET /experts/:id qu'on utilise pour
@@ -82,28 +83,34 @@ export default async function ExpertProfileLayout({
   const { id } = await params;
   const expert = await fetchExpertForSeo(id);
 
-  // JSON-LD Person : enrichit les rich results Google sur la page
-  // expert (knowsAbout = sports couverts, image, description). Si
-  // le fetch échoue, on skip le JSON-LD plutôt que de pousser du
-  // schema vide ou incorrect.
-  const personLd = expert
+  // JSON-LD ProfilePage qui wrap un Person — Google reconnaît mieux
+  // ce type pour les pages de profil utilisateur (cf. Sprint Polish
+  // C.6, recommandation audit). Le `mainEntity` Person reste lisible
+  // par les bots qui ne supportent pas encore ProfilePage. Skip total
+  // si le fetch échoue plutôt que de pousser un schema incomplet.
+  const profilePageLd = expert
     ? {
         "@context": "https://schema.org",
-        "@type": "Person",
-        name: expert.pseudo,
+        "@type": "ProfilePage",
+        name: `Profil de ${expert.pseudo} — ${SITE_NAME}`,
         url: `${SITE_URL}/experts/${expert.id}`,
-        ...(expert.photoUrl ? { image: expert.photoUrl } : {}),
-        ...(expert.bio ? { description: expert.bio } : {}),
-        ...(expert.sports.length > 0 ? { knowsAbout: expert.sports } : {}),
+        mainEntity: {
+          "@type": "Person",
+          name: expert.pseudo,
+          url: `${SITE_URL}/experts/${expert.id}`,
+          ...(expert.photoUrl ? { image: expert.photoUrl } : {}),
+          ...(expert.bio ? { description: expert.bio } : {}),
+          ...(expert.sports.length > 0 ? { knowsAbout: expert.sports } : {}),
+        },
       }
     : null;
 
   return (
     <>
-      {personLd && (
+      {profilePageLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(personLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(profilePageLd) }}
         />
       )}
       {children}

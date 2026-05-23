@@ -19,9 +19,7 @@ export async function createMagicLink(email: string): Promise<string> {
   return token;
 }
 
-export async function verifyMagicLink(
-  token: string
-): Promise<{ email: string } | null> {
+export async function verifyMagicLink(token: string): Promise<{ email: string } | null> {
   const magicLink = await prisma.magicLink.findUnique({ where: { token } });
 
   if (!magicLink) return null;
@@ -48,7 +46,7 @@ export async function createSession(userId: string): Promise<string> {
 }
 
 export async function verifySession(
-  token: string
+  token: string,
 ): Promise<{ userId: string; role: string } | null> {
   const session = await prisma.session.findUnique({
     where: { token },

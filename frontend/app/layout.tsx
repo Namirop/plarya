@@ -1,5 +1,7 @@
-import type { Metadata } from "next";
 import { Work_Sans, DM_Serif_Display } from "next/font/google";
+
+import type { Metadata } from "next";
+
 import { HeaderAuth } from "@/components/layout/header-auth";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { CookieBanner } from "@/components/legal/cookie-banner";
@@ -105,10 +107,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="fr"
-      className={`${workSans.variable} ${dmSerif.variable}`}
-    >
+    <html lang="fr" className={`${workSans.variable} ${dmSerif.variable}`}>
       <body className="min-h-screen flex flex-col">
         {/* JSON-LD site-wide. dangerouslySetInnerHTML OK :
             le payload est 100 % contrôlé serveur, pas d'input user. */}

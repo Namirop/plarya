@@ -7,9 +7,9 @@ export function LegalWarning() {
   return (
     <div className="mt-6 rounded-xl border border-accent/30 bg-accent/10 p-4">
       <p className="font-body text-body-16 text-foreground">
-        <strong className="text-accent">Note :</strong> ces conditions
-        sont génériques. Elles doivent être validées par un juriste qualifié
-        avant la mise en production finale de la plateforme.
+        <strong className="text-accent">Note :</strong> ces conditions sont génériques. Elles
+        doivent être validées par un juriste qualifié avant la mise en production finale de la
+        plateforme.
       </p>
     </div>
   );

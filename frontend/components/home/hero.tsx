@@ -1,29 +1,25 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
 
+import { ArrowRight } from "@phosphor-icons/react";
+
+import { TrustRow } from "@/components/home/trust-row";
 import { Button } from "@/components/ui/button";
 import { GoldenBorderOverlay } from "@/components/ui/golden-border-overlay";
-import { TrustRow } from "@/components/home/trust-row";
 
 // Masque radial doux : l'image fond dans le background sur tous les
 // bords. Même pattern que le visuel hero desktop. Centre opaque jusqu'à
 // 42 %, transparence complète à 80 % → bords totalement fondus.
-const RADIAL_FADE_MASK =
-  "radial-gradient(circle at center, black 38%, transparent 80%)";
+const RADIAL_FADE_MASK = "radial-gradient(circle at center, black 38%, transparent 80%)";
 
 export function Hero() {
   function handleCtaClick() {
-    document
-      .getElementById("experts")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("experts")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function handleDomainsClick() {
-    document
-      .getElementById("domains")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("domains")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   return (
@@ -76,10 +72,8 @@ export function Hero() {
               priority
               className="size-[480px] object-cover xl:size-[624px]"
               style={{
-                WebkitMaskImage:
-                  "radial-gradient(circle at center, black 42%, transparent 75%)",
-                maskImage:
-                  "radial-gradient(circle at center, black 42%, transparent 75%)",
+                WebkitMaskImage: "radial-gradient(circle at center, black 42%, transparent 75%)",
+                maskImage: "radial-gradient(circle at center, black 42%, transparent 75%)",
               }}
             />
           </div>
@@ -107,13 +101,12 @@ export function Hero() {
                   leading-[30px]` car Tailwind v4 ne génère pas
                   d'utility pour un token avec suffixe (`-mobile`). */}
               <h1 className="mt-2 md:mt-8 font-display text-[32px] leading-[30px] md:text-h1 md:leading-[60px] text-foreground">
-                Accède aux <span className="text-accent">meilleurs</span>{" "}
-                analystes.
+                Accède aux <span className="text-accent">meilleurs</span> analystes.
               </h1>
 
               <p className="mt-4 md:mt-8 md:max-w-[592px] font-body text-body-16 md:text-h5 leading-[1.5] font-medium md:font-normal text-foreground">
-                Découvre des analyses et opinions exclusives dans les domaines
-                qui t&apos;intéressent.
+                Découvre des analyses et opinions exclusives dans les domaines qui
+                t&apos;intéressent.
               </p>
 
               {/* CTAs : taille `default` mobile (text-body-16 16px),
@@ -147,10 +140,7 @@ export function Hero() {
             </div>
 
             {/* Trust row embed desktop only */}
-            <TrustRow
-              variant="inline"
-              className="hidden md:flex"
-            />
+            <TrustRow variant="inline" className="hidden md:flex" />
           </div>
         </div>
       </div>

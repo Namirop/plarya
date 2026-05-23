@@ -1,7 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../lib/prisma";
-import { logger } from "../lib/logger";
+import { logger, maskEmail } from "../lib/logger";
 import { createMagicLink, verifyMagicLink, createSession, deleteSession } from "../lib/magic-link";
 import { validate } from "../middleware/validate";
 import { authMiddleware } from "../middleware/auth";
@@ -77,25 +77,66 @@ function setSessionCookie(res: import("express").Response, token: string) {
   });
 }
 
-// POST /auth/request-magic-link
-router.post("/request-magic-link", magicLinkRequestLimiter, validate(magicLinkRequestSchema), async (req, res) => {
-  try {
-    const { email } = req.body;
-    const normalizedEmail = email.toLowerCase();
-
-    const token = await createMagicLink(normalizedEmail);
-    const link = `${BACKEND_URL}/auth/verify?token=${token}`;
-
-    // Send email (fire-and-forget)
-    sendMagicLinkEmail(normalizedEmail, link);
-
-    // Always return 200 to not leak account existence
-    res.json({ message: "Si un compte existe avec cet email, un lien de connexion a été envoyé." });
-  } catch (err) {
-    logger.error({ err }, "Magic link request error");
-    res.status(500).json({ error: "Erreur serveur" });
-  }
+/**
+ * GET /auth/csrf
+ *
+ * Endpoint utilitaire pour le frontend : forcer le set du cookie
+ * `csrf_token` en cas où aucune requête n'a encore été faite à l'API
+ * (rare en pratique — la home appelle déjà GET /experts au mount).
+ * Le middleware csrfTokenIssuer pose le cookie si absent, on renvoie
+ * juste le token en JSON pour que le caller puisse confirmer.
+ */
+router.get("/csrf", (req, res) => {
+  res.json({ token: req.cookies?.csrf_token ?? null });
 });
+
+// POST /auth/request-magic-link
+router.post(
+  "/request-magic-link",
+  magicLinkRequestLimiter,
+  validate(magicLinkRequestSchema),
+  async (req, res) => {
+    try {
+      const { email } = req.body;
+      const normalizedEmail = email.toLowerCase();
+
+      // Cooldown post-suppression : si cet email a été soft-deleted
+      // dans la fenêtre de cooldown (cf. table DeletedEmailCooldown),
+      // on n'envoie PAS de magic-link. On reste sur la même réponse
+      // 200 générique pour éviter d'énumérer les comptes (l'attaquant
+      // ne doit pas pouvoir distinguer "email inconnu" de "email
+      // récemment supprimé").
+      const cooldown = await prisma.deletedEmailCooldown.findFirst({
+        where: { email: normalizedEmail, expiresAt: { gt: new Date() } },
+        select: { id: true, expiresAt: true },
+      });
+
+      if (cooldown) {
+        logger.warn(
+          {
+            email: maskEmail(normalizedEmail),
+            cooldownExpiresAt: cooldown.expiresAt,
+            ip: req.ip,
+          },
+          "Magic-link request blocked: email in deletion cooldown",
+        );
+      } else {
+        const token = await createMagicLink(normalizedEmail);
+        const link = `${BACKEND_URL}/auth/verify?token=${token}`;
+        // Send email (fire-and-forget)
+        sendMagicLinkEmail(normalizedEmail, link);
+      }
+
+      // Always return 200 to not leak account existence (et état du cooldown).
+      res.json({
+        message: "Si un compte existe avec cet email, un lien de connexion a été envoyé.",
+      });
+    } catch (err) {
+      logger.error({ err }, "Magic link request error");
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+);
 
 // GET /auth/verify?token=xxx&redirect=/some/path
 router.get("/verify", async (req, res) => {
@@ -109,10 +150,7 @@ router.get("/verify", async (req, res) => {
     if (rawRedirect !== "/" && isSafeRedirect(rawRedirect)) {
       redirect = rawRedirect;
     } else if (rawRedirect !== "/") {
-      logger.warn(
-        { rawRedirect, ip: req.ip },
-        "Unsafe redirect param blocked on /auth/verify",
-      );
+      logger.warn({ rawRedirect, ip: req.ip }, "Unsafe redirect param blocked on /auth/verify");
     }
 
     if (!token) {
@@ -123,6 +161,24 @@ router.get("/verify", async (req, res) => {
     const result = await verifyMagicLink(token);
     if (!result) {
       res.redirect(`${FRONTEND_URL}/auth/verify?error=expired`);
+      return;
+    }
+
+    // Garde-fou cooldown post-suppression : même si un magic-link a
+    // pu être créé avant ou pendant la suppression (race), on refuse
+    // sa consommation tant que la fenêtre de cooldown n'est pas
+    // expirée. Sinon un user qui a un lien encore valide en cache
+    // (15 min) pourrait recréer un compte juste après suppression.
+    const cooldown = await prisma.deletedEmailCooldown.findFirst({
+      where: { email: result.email, expiresAt: { gt: new Date() } },
+      select: { id: true },
+    });
+    if (cooldown) {
+      logger.warn(
+        { email: maskEmail(result.email), ip: req.ip },
+        "Magic-link verify blocked: email in deletion cooldown",
+      );
+      res.redirect(`${FRONTEND_URL}/auth/verify?error=deleted`);
       return;
     }
 
@@ -184,19 +240,31 @@ router.get("/me", authMiddleware, async (req, res) => {
 /**
  * GET /auth/me/deletion-status
  *
- * Pour piloter l'UI "Zone dangereuse" sur /compte : indique si l'user
- * peut supprimer son compte maintenant, et sinon pourquoi (raison
- * structurée pour i18n et debug futur).
+ * Pour piloter l'UI "Zone dangereuse" sur /compte. Trois états :
  *
- * Règle métier : un EXPERT avec des Subscriptions ACTIVE et non
- * expirées qui pointent vers son profil ne peut PAS supprimer son
- * compte (obligation contractuelle envers ses abonnés).
+ *  1. `canDelete: true` — soft delete immédiat possible (USER lambda
+ *     OU EXPERT sans subs actives).
+ *  2. `canDelete: false, reason: "active_subscriptions"` — EXPERT
+ *     avec subs ACTIVE en cours. L'user peut programmer la suppression
+ *     (DELETE /auth/me posera `pendingDeletionAt`). On renvoie
+ *     `activeSubscriptions` (nb) et `lastSubExpiresAt` (date max) pour
+ *     que l'UI puisse afficher "Effective au plus tôt le X".
+ *  3. `canDelete: false, reason: "scheduled"` — EXPERT qui a déjà
+ *     programmé la suppression. On renvoie `pendingDeletionAt` (date
+ *     du flag) + `lastSubExpiresAt`. L'UI affiche un banner + bouton
+ *     "Annuler" (POST /auth/me/cancel-deletion).
  */
 router.get("/me/deletion-status", authMiddleware, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { id: true, role: true, expert: { select: { id: true } } },
+      select: {
+        id: true,
+        role: true,
+        expert: {
+          select: { id: true, pendingDeletionAt: true },
+        },
+      },
     });
 
     if (!user) {
@@ -205,18 +273,45 @@ router.get("/me/deletion-status", authMiddleware, async (req, res) => {
     }
 
     if (user.role === "EXPERT" && user.expert) {
+      const expertId = user.expert.id;
+
+      // Date d'expiration la plus tardive parmi les subs actives —
+      // sert au moment où la suppression sera effectivement
+      // applicable (cron auto-delete).
+      const lastActiveSub = await prisma.subscription.findFirst({
+        where: {
+          expertId,
+          status: "ACTIVE",
+          expiresAt: { gt: new Date() },
+        },
+        orderBy: { expiresAt: "desc" },
+        select: { expiresAt: true },
+      });
       const activeSubsCount = await prisma.subscription.count({
         where: {
-          expertId: user.expert.id,
+          expertId,
           status: "ACTIVE",
           expiresAt: { gt: new Date() },
         },
       });
+
+      if (user.expert.pendingDeletionAt) {
+        res.json({
+          canDelete: false,
+          reason: "scheduled",
+          pendingDeletionAt: user.expert.pendingDeletionAt,
+          activeSubscriptions: activeSubsCount,
+          lastSubExpiresAt: lastActiveSub?.expiresAt ?? null,
+        });
+        return;
+      }
+
       if (activeSubsCount > 0) {
         res.json({
           canDelete: false,
           reason: "active_subscriptions",
           activeSubscriptions: activeSubsCount,
+          lastSubExpiresAt: lastActiveSub?.expiresAt ?? null,
         });
         return;
       }
@@ -232,24 +327,33 @@ router.get("/me/deletion-status", authMiddleware, async (req, res) => {
 /**
  * DELETE /auth/me
  *
- * Suppression de compte RGPD. Soft delete + anonymisation pour
- * préserver les FK des Subscriptions (obligation comptable 10 ans
- * en France). Le row User reste en DB mais filtré partout
- * publiquement.
+ * Suppression de compte RGPD. Deux comportements selon le contexte :
  *
- * Étapes :
- *  1. Vérifier que l'user n'est pas un EXPERT avec subscriptions
- *     actives (sinon 400).
- *  2. Soft delete Expert (deletedAt) si applicable.
- *  3. Soft delete User + anonymisation email →
- *     `deleted-{id}@plarya.local`. L'email original disparaît de la
- *     DB, conforme au droit à l'effacement.
- *  4. Invalider TOUTES les sessions de cet user (delete row).
- *  5. Clear le cookie session du caller pour le déconnecter en cours.
+ *  A. USER lambda OU EXPERT sans subs actives → soft delete immédiat
+ *     (200 + message "Compte supprimé"). Étapes :
+ *       1. Soft delete Expert si applicable (deletedAt = now).
+ *       2. Soft delete User + anonymisation email →
+ *          `deleted-{id}@plarya.local`.
+ *       3. Wipe toutes les sessions (cookie caller cleared).
  *
- * Pas de unique constraint sur stripeCustomerId qu'on doit relâcher :
- * Stripe Customer reste lié à l'ancien email côté Stripe — info
- * conservée pour audit Stripe Dashboard, normal.
+ *  B. EXPERT avec ≥1 sub ACTIVE en cours → suppression PROGRAMMÉE
+ *     (202 + message "Suppression programmée"). On pose
+ *     `pendingDeletionAt = now` sur Expert :
+ *       - Le profile est retiré des listings publics (cf. /experts)
+ *       - Tout nouveau paiement vers ce profile est refusé (cf.
+ *         /checkout/create-session).
+ *       - Les subs en cours restent actives jusqu'à leur expiresAt.
+ *       - Le cron quotidien "auto_delete_pending_experts" (cf.
+ *         lib/cron.ts) exécute le soft delete réel quand la dernière
+ *         sub a expiré.
+ *     L'expert peut annuler tant que le cron n'a pas tourné via
+ *     POST /auth/me/cancel-deletion.
+ *
+ *  C. EXPERT déjà en pendingDeletion → 400 (action déjà programmée).
+ *
+ * Note : on conserve les FK Subscriptions (obligation comptable 10 ans
+ * en France). Stripe Customer reste lié à l'ancien email côté Stripe
+ * — info conservée pour audit Stripe Dashboard, normal.
  */
 router.delete("/me", authMiddleware, async (req, res) => {
   try {
@@ -260,7 +364,9 @@ router.delete("/me", authMiddleware, async (req, res) => {
         id: true,
         email: true,
         role: true,
-        expert: { select: { id: true } },
+        expert: {
+          select: { id: true, pendingDeletionAt: true },
+        },
       },
     });
 
@@ -269,32 +375,66 @@ router.delete("/me", authMiddleware, async (req, res) => {
       return;
     }
 
-    // Bloque la suppression si EXPERT a des subscriptions actives.
+    const now = new Date();
+
+    // Branche EXPERT : vérifier subs actives + état pending.
     if (user.role === "EXPERT" && user.expert) {
-      const activeSubsCount = await prisma.subscription.count({
+      if (user.expert.pendingDeletionAt) {
+        res.status(400).json({
+          error: "Une suppression est déjà programmée pour ton compte.",
+        });
+        return;
+      }
+
+      const lastActiveSub = await prisma.subscription.findFirst({
         where: {
           expertId: user.expert.id,
           status: "ACTIVE",
-          expiresAt: { gt: new Date() },
+          expiresAt: { gt: now },
         },
+        orderBy: { expiresAt: "desc" },
+        select: { expiresAt: true },
       });
-      if (activeSubsCount > 0) {
-        res.status(400).json({
-          error:
-            "Tu ne peux pas supprimer ton compte tant que tu as des abonnés actifs. Attends que les subscriptions actuelles expirent.",
+
+      if (lastActiveSub) {
+        await prisma.expert.update({
+          where: { id: user.expert.id },
+          data: { pendingDeletionAt: now },
+        });
+
+        logger.warn(
+          {
+            userId,
+            expertId: user.expert.id,
+            lastSubExpiresAt: lastActiveSub.expiresAt,
+          },
+          "Expert account deletion scheduled (pending — active subs)",
+        );
+
+        res.status(202).json({
+          status: "scheduled",
+          pendingDeletionAt: now.toISOString(),
+          lastSubExpiresAt: lastActiveSub.expiresAt.toISOString(),
+          message:
+            "Ta suppression est programmée. Elle deviendra effective à la fin du dernier abonnement actif.",
         });
         return;
       }
     }
 
-    const now = new Date();
+    // Branche soft delete immédiat (USER ou EXPERT sans sub active).
     const anonymizedEmail = `deleted-${userId}@plarya.local`;
+    // Cooldown 7 jours avant qu'un magic-link puisse à nouveau être
+    // émis sur cet email (cf. table DeletedEmailCooldown). Évite la
+    // recréation immédiate de compte qui donnerait l'impression
+    // trompeuse d'une "reconnexion".
+    const cooldownExpiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     await prisma.$transaction(async (tx) => {
       if (user.expert) {
         await tx.expert.update({
           where: { id: user.expert.id },
-          data: { deletedAt: now },
+          data: { deletedAt: now, pendingDeletionAt: null },
         });
       }
       await tx.user.update({
@@ -304,6 +444,18 @@ router.delete("/me", authMiddleware, async (req, res) => {
           email: anonymizedEmail,
         },
       });
+      await tx.deletedEmailCooldown.create({
+        data: {
+          email: user.email,
+          deletedAt: now,
+          expiresAt: cooldownExpiresAt,
+        },
+      });
+      // Invalide aussi les magic-links pending pour cet email :
+      // sans ça un lien créé juste avant la suppression resterait
+      // valide 15 min et tomberait sur la garde cooldown au verify
+      // — mieux vaut le supprimer franchement.
+      await tx.magicLink.deleteMany({ where: { email: user.email } });
       // Invalide toutes les sessions du user supprimé. Le caller
       // est inclus → son cookie devient orphelin et sera rejeté
       // au prochain authMiddleware.
@@ -320,6 +472,53 @@ router.delete("/me", authMiddleware, async (req, res) => {
     res.json({ message: "Compte supprimé" });
   } catch (err) {
     logger.error({ err }, "Account deletion failed");
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+/**
+ * POST /auth/me/cancel-deletion
+ *
+ * Annule une suppression de compte programmée (Expert.pendingDeletionAt).
+ * Réservé aux EXPERT qui ont déjà déclenché DELETE /auth/me avec des
+ * subs actives. N'a aucun effet si le cron auto-delete a déjà tourné
+ * (Expert.deletedAt set) — dans ce cas on renvoie 404 (sessions wipe
+ * + cookie orphelin l'auront déjà éjecté).
+ */
+router.post("/me/cancel-deletion", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        expert: {
+          select: { id: true, pendingDeletionAt: true, deletedAt: true },
+        },
+      },
+    });
+
+    if (!user || !user.expert || user.expert.deletedAt) {
+      res.status(404).json({ error: "Aucune suppression à annuler" });
+      return;
+    }
+
+    if (!user.expert.pendingDeletionAt) {
+      res.status(400).json({ error: "Aucune suppression programmée" });
+      return;
+    }
+
+    await prisma.expert.update({
+      where: { id: user.expert.id },
+      data: { pendingDeletionAt: null },
+    });
+
+    logger.info({ userId, expertId: user.expert.id }, "Expert account deletion cancelled");
+
+    res.json({ message: "Suppression annulée" });
+  } catch (err) {
+    logger.error({ err }, "Cancel deletion failed");
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
@@ -474,9 +673,7 @@ router.post(
       // sessions Stripe ont créé une Subscription en DB.
       if (subscription) {
         const magicToken = await createMagicLink(subscription.user.email);
-        const redirectTarget = encodeURIComponent(
-          `/experts/${subscription.expert.id}`,
-        );
+        const redirectTarget = encodeURIComponent(`/experts/${subscription.expert.id}`);
         const magicLinkUrl = `${BACKEND_URL}/auth/verify?token=${magicToken}&redirect=${redirectTarget}`;
         // fire-and-forget — le wrapper sendEmailWithRetry log déjà
         // les échecs en error structuré
@@ -491,15 +688,11 @@ router.post(
           "Access unlocked email re-sent",
         );
       } else {
-        logger.warn(
-          { stripeSessionId },
-          "Resend access requested for unknown stripeSessionId",
-        );
+        logger.warn({ stripeSessionId }, "Resend access requested for unknown stripeSessionId");
       }
 
       res.json({
-        message:
-          "Si un paiement a été enregistré, un nouvel email a été envoyé.",
+        message: "Si un paiement a été enregistré, un nouvel email a été envoyé.",
       });
     } catch (err) {
       logger.error({ err }, "Resend access unlocked failed");

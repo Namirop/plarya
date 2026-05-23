@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Pencil, Star, X } from "lucide-react";
+
+import { Check, PencilSimple, Star, X } from "@phosphor-icons/react";
 
 import { TEASING_LABELS } from "@/lib/constants";
 import { formatStartTime } from "@/lib/date";
 import { getLeague } from "@/lib/sports";
-import { cn } from "@/lib/utils";
 import type { Prono } from "@/lib/types/dashboard";
+import { cn } from "@/lib/utils";
 
 // ───────────────────────────────────────────────────────────────────
 // Classes "boutons résultat" — inline plutôt qu'ajoutées au DS Button
@@ -25,11 +26,9 @@ const RESULT_BUTTON_BASE =
   "font-body text-body-16 transition-colors duration-200 cursor-pointer " +
   "disabled:cursor-not-allowed disabled:opacity-50";
 
-const RESULT_BUTTON_WIN =
-  "border-[#22c55e] text-[#22c55e] hover:bg-[#22c55e]/10";
+const RESULT_BUTTON_WIN = "border-[#22c55e] text-[#22c55e] hover:bg-[#22c55e]/10";
 
-const RESULT_BUTTON_LOSS =
-  "border-[#ef4444] text-[#ef4444] hover:bg-[#ef4444]/10";
+const RESULT_BUTTON_LOSS = "border-[#ef4444] text-[#ef4444] hover:bg-[#ef4444]/10";
 
 const RESULT_BADGE_BASE =
   "inline-flex items-center gap-1.5 rounded-full px-4 py-2 font-body text-body-16";
@@ -117,15 +116,8 @@ interface AnalysisCardProps {
   onResult: (result: "WON" | "LOST") => Promise<void> | void;
 }
 
-function AnalysisCard({
-  prono,
-  showActionButtons,
-  onEdit,
-  onResult,
-}: AnalysisCardProps) {
-  const leagueLabel = prono.league
-    ? getLeague(prono.league)?.name || prono.league
-    : null;
+function AnalysisCard({ prono, showActionButtons, onEdit, onResult }: AnalysisCardProps) {
+  const leagueLabel = prono.league ? getLeague(prono.league)?.name || prono.league : null;
   const publishedAt = new Date(prono.createdAt).toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "short",
@@ -157,8 +149,7 @@ function AnalysisCard({
 
         {/* Pick + cote (cote en doré). */}
         <p className="font-body text-body-16 text-foreground">
-          {prono.pick}{" "}
-          <span className="text-muted-foreground">— </span>
+          {prono.pick} <span className="text-muted-foreground">— </span>
           <span className="text-accent">@{prono.odds}</span>
         </p>
 
@@ -166,9 +157,7 @@ function AnalysisCard({
         {(leagueLabel || prono.startTime) && (
           <p className="font-body text-body-16 text-muted-foreground">
             {leagueLabel}
-            {leagueLabel && prono.startTime && (
-              <span className="mx-2 opacity-50">·</span>
-            )}
+            {leagueLabel && prono.startTime && <span className="mx-2 opacity-50">·</span>}
             {prono.startTime && formatStartTime(prono.startTime)}
           </p>
         )}
@@ -180,15 +169,11 @@ function AnalysisCard({
 
         {/* Argumentaire (paragraphe complet). */}
         {prono.argument && (
-          <p className="font-body text-body-16 leading-relaxed text-foreground">
-            {prono.argument}
-          </p>
+          <p className="font-body text-body-16 leading-relaxed text-foreground">{prono.argument}</p>
         )}
 
         {/* Date de publication en bas, plus petit + muted. */}
-        <p className="font-body text-[14px] text-muted-foreground/70">
-          Publié le {publishedAt}
-        </p>
+        <p className="font-body text-[14px] text-muted-foreground/70">Publié le {publishedAt}</p>
       </div>
 
       {/* Zone actions — alignée en haut sur desktop (top de la card),
@@ -201,11 +186,7 @@ function AnalysisCard({
             <button
               type="button"
               onClick={() => onResult("WON")}
-              className={cn(
-                RESULT_BUTTON_BASE,
-                RESULT_BUTTON_WIN,
-                "flex-1 md:flex-initial",
-              )}
+              className={cn(RESULT_BUTTON_BASE, RESULT_BUTTON_WIN, "flex-1 md:flex-initial")}
             >
               <Check className="size-4" strokeWidth={2.5} />
               Gagné
@@ -213,11 +194,7 @@ function AnalysisCard({
             <button
               type="button"
               onClick={() => onResult("LOST")}
-              className={cn(
-                RESULT_BUTTON_BASE,
-                RESULT_BUTTON_LOSS,
-                "flex-1 md:flex-initial",
-              )}
+              className={cn(RESULT_BUTTON_BASE, RESULT_BUTTON_LOSS, "flex-1 md:flex-initial")}
             >
               <X className="size-4" strokeWidth={2.5} />
               Perdu
@@ -242,7 +219,7 @@ function AnalysisCard({
               className={EDIT_BUTTON}
               aria-label="Modifier le résultat de cette analyse"
             >
-              <Pencil className="size-3.5" />
+              <PencilSimple className="size-3.5" />
               Modifier
             </button>
           </>

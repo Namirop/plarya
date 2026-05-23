@@ -19,10 +19,10 @@ export const createPronoSchema = z.object({
     "A_NE_PAS_RATER",
   ]),
   argument: z.string().max(2000).optional(),
-  startTime: z.string().datetime("Format de date invalide").refine(
-    (val) => new Date(val) > new Date(),
-    "L'heure de début doit être dans le futur"
-  ),
+  startTime: z
+    .string()
+    .datetime("Format de date invalide")
+    .refine((val) => new Date(val) > new Date(), "L'heure de début doit être dans le futur"),
   isFeatured: z.boolean().optional().default(false),
   matchDate: z.string().datetime().optional(),
   bookmakerOdds: z.array(bookmakerOddsItemSchema).optional(),

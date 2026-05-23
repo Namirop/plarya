@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 
 // Nom du cookie de consentement. Le cookie est posé par cette même
@@ -19,9 +21,7 @@ const HIDDEN_PREFIXES = ["/admin", "/dashboard"];
 
 function readConsentCookie(): "accepted" | "refused" | null {
   if (typeof document === "undefined") return null;
-  const match = document.cookie.match(
-    new RegExp(`(?:^|; )${CONSENT_COOKIE}=([^;]+)`),
-  );
+  const match = document.cookie.match(new RegExp(`(?:^|; )${CONSENT_COOKIE}=([^;]+)`));
   if (!match) return null;
   const value = decodeURIComponent(match[1]);
   return value === "accepted" || value === "refused" ? value : null;
@@ -78,19 +78,13 @@ export function CookieBanner() {
     >
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:gap-6">
         <div className="flex-1">
-          <h2
-            id="cookie-banner-title"
-            className="font-display text-h5 text-foreground"
-          >
+          <h2 id="cookie-banner-title" className="font-display text-h5 text-foreground">
             Cookies
           </h2>
-          <p
-            id="cookie-banner-desc"
-            className="mt-2 font-body text-body-16 text-muted-foreground"
-          >
-            Plarya utilise uniquement des cookies essentiels nécessaires au
-            fonctionnement du site (authentification, session). Pas
-            d&apos;analytics, pas de tracking tiers. En savoir plus dans notre{" "}
+          <p id="cookie-banner-desc" className="mt-2 font-body text-body-16 text-muted-foreground">
+            Plarya utilise uniquement des cookies essentiels nécessaires au fonctionnement du site
+            (authentification, session). Pas d&apos;analytics, pas de tracking tiers. En savoir plus
+            dans notre{" "}
             <Link
               href="/confidentialite"
               className="text-foreground underline transition-opacity hover:opacity-80"

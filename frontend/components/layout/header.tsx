@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+
 import Image from "next/image";
-import { Icon } from "@iconify/react";
+import Link from "next/link";
+
+import { List, X, CaretRight } from "@phosphor-icons/react";
 
 import { GoldenBorderOverlay } from "@/components/ui/golden-border-overlay";
 import { cn } from "@/lib/utils";
@@ -55,8 +57,7 @@ function navLinksForRole(role: HeaderRole): NavLink[] {
   }
 }
 
-const navItemClass =
-  "font-body text-body-16 text-foreground transition-opacity hover:opacity-70";
+const navItemClass = "font-body text-body-16 text-foreground transition-opacity hover:opacity-70";
 
 // Item à l'intérieur du pill bordé doré (desktop). Padding horizontal
 // confortable, fond transparent par défaut + léger fond blanc 5% au
@@ -130,9 +131,7 @@ export function Header({
         "relative h-[70px] w-full overflow-visible",
         "transition-colors duration-200 ease-out",
         "md:bg-background/90 md:backdrop-blur-md",
-        scrolled || menuOpen
-          ? "bg-background/90 backdrop-blur-md"
-          : "bg-transparent",
+        scrolled || menuOpen ? "bg-background/90 backdrop-blur-md" : "bg-transparent",
         sticky && "sticky top-0 z-50",
       )}
     >
@@ -140,85 +139,77 @@ export function Header({
           des sections de la home (mx-auto + max-w-content + même
           padding latéral). */}
       <div className="mx-auto flex h-full w-full max-w-content items-center justify-between px-6 py-2 sm:px-8 lg:px-0">
-      {/* Le PNG du logo (1536×1024, transparent) contient beaucoup de
+        {/* Le PNG du logo (1536×1024, transparent) contient beaucoup de
           padding autour du glyphe visible (le glyphe occupe ~30 % de la
           hauteur et est positionné légèrement au-dessus du centre vertical
           du canvas — d'où le `translate-y-[6px]` qui re-aligne le glyphe
           avec les boutons d'auth à droite, vertical-centrés sur la barre).
           Mobile : h-[140px] (vs 110 précédent — retour Romain logo trop
           petit en mobile). Desktop : h-[160px] inchangé. */}
-      <Link href="/" className="flex shrink-0 items-center">
-        <Image
-          src="/full-logo-remove.png"
-          alt="Plarya"
-          width={240}
-          height={160}
-          className="h-[140px] md:h-[160px] w-auto translate-y-[6px] md:translate-y-[10px]"
-          priority
-        />
-      </Link>
+        <Link href="/" className="flex shrink-0 items-center">
+          <Image
+            src="/full-logo-remove.png"
+            alt="Plarya"
+            width={240}
+            height={160}
+            className="h-[140px] md:h-[160px] w-auto translate-y-[6px] md:translate-y-[10px]"
+            priority
+          />
+        </Link>
 
-      {/* Nav desktop : visible md+. Pattern unifié "pill" — toutes les
+        {/* Nav desktop : visible md+. Pattern unifié "pill" — toutes les
           actions à droite sont enveloppées dans un container rounded-full
           bordé d'un GoldenBorderOverlay (même technique que le cadre du
           Hero + de "Devenir créateur"). Pendant variant="loading" : on
           ne rend RIEN à droite (évite le flash). */}
-      {variant === "loading" ? (
-        <div className="hidden md:block" aria-hidden />
-      ) : variant === "connected" ? (
-        <nav className="relative hidden items-center gap-1 rounded-full p-1.5 md:inline-flex">
-          <GoldenBorderOverlay className="rounded-full opacity-100" />
-          {navLinks.map((l) => (
-            <Link key={l.href} href={l.href} className={navPillItemCls}>
-              {l.label}
+        {variant === "loading" ? (
+          <div className="hidden md:block" aria-hidden />
+        ) : variant === "connected" ? (
+          <nav className="relative hidden items-center gap-1 rounded-full p-1.5 md:inline-flex">
+            <GoldenBorderOverlay className="rounded-full opacity-100" />
+            {navLinks.map((l) => (
+              <Link key={l.href} href={l.href} className={navPillItemCls}>
+                {l.label}
+              </Link>
+            ))}
+            <button
+              type="button"
+              onClick={onLogout}
+              className={cn(navPillItemCls, "text-muted-foreground hover:text-foreground")}
+            >
+              Déconnexion
+            </button>
+          </nav>
+        ) : (
+          <div className="relative hidden items-center gap-1 rounded-full p-1.5 md:inline-flex">
+            <GoldenBorderOverlay className="rounded-full opacity-100" />
+            <button type="button" onClick={onSignIn} className={navPillItemCls}>
+              Se connecter
+            </button>
+            <Link
+              href={signUpHref}
+              className="inline-flex items-center justify-center rounded-full border border-accent-strong bg-gradient-gold px-5 py-2 font-body text-body-16 text-black shadow-shine transition-all hover:brightness-105"
+            >
+              Créer un compte
             </Link>
-          ))}
-          <button
-            type="button"
-            onClick={onLogout}
-            className={cn(navPillItemCls, "text-muted-foreground hover:text-foreground")}
-          >
-            Déconnexion
-          </button>
-        </nav>
-      ) : (
-        <div className="relative hidden items-center gap-1 rounded-full p-1.5 md:inline-flex">
-          <GoldenBorderOverlay className="rounded-full opacity-100" />
-          <button
-            type="button"
-            onClick={onSignIn}
-            className={navPillItemCls}
-          >
-            Se connecter
-          </button>
-          <Link
-            href={signUpHref}
-            className="inline-flex items-center justify-center rounded-full border border-accent-strong bg-gradient-gold px-5 py-2 font-body text-body-16 text-black shadow-shine transition-all hover:brightness-105"
-          >
-            Créer un compte
-          </Link>
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* Burger mobile : visible <md uniquement. Caché pendant
+        {/* Burger mobile : visible <md uniquement. Caché pendant
           variant="loading" (même raison — évite le flash). */}
-      {variant !== "loading" && (
-        <button
-          type="button"
-          aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((v) => !v)}
-          className="md:hidden inline-flex size-10 items-center justify-center text-foreground cursor-pointer"
-        >
-          <Icon
-            icon={menuOpen ? "iconamoon:close" : "iconamoon:menu-burger-horizontal"}
-            width={24}
-            height={24}
-          />
-        </button>
-      )}
-      </div> {/* /inner wrapper */}
-
+        {variant !== "loading" && (
+          <button
+            type="button"
+            aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+            className="md:hidden inline-flex size-10 items-center justify-center text-foreground cursor-pointer"
+          >
+            {menuOpen ? <X size={24} /> : <List size={24} />}
+          </button>
+        )}
+      </div>{" "}
+      {/* /inner wrapper */}
       {menuOpen && (
         <div
           className={cn(
@@ -284,12 +275,7 @@ export function Header({
                 className="inline-flex items-center gap-2 font-body text-body-16 text-accent transition-opacity hover:opacity-80"
               >
                 Créer un compte
-                <Icon
-                  icon="iconamoon:arrow-right-2"
-                  width={18}
-                  height={18}
-                  aria-hidden
-                />
+                <CaretRight size={18} aria-hidden />
               </Link>
             </div>
           )}

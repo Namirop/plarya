@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+
 import { DevenirExpertClient } from "./DevenirExpert.client";
 
 // page.tsx server component. Pas de fetch SSR initial (toute la

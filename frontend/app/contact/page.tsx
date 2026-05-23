@@ -14,8 +14,7 @@ export default function ContactPage() {
 
       <section className="mt-12">
         <p className="font-body text-body-16 leading-relaxed text-foreground">
-          Pour toute question, suggestion ou problème, contactez-nous par
-          email à :
+          Pour toute question, suggestion ou problème, contactez-nous par email à :
         </p>
 
         <a

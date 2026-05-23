@@ -7,7 +7,7 @@ interface CheckoutResponse {
 export async function createCheckoutSession(
   expertId: string,
   type: "DAY_PASS" | "MONTHLY",
-  email?: string
+  email?: string,
 ): Promise<string> {
   const body: Record<string, string> = { expertId, type };
   if (email) body.email = email;
@@ -18,7 +18,7 @@ export async function createCheckoutSession(
 export async function createExpertCheckout(
   pseudo: string,
   bio: string,
-  sports: string[]
+  sports: string[],
 ): Promise<string> {
   const data = await apiPost<CheckoutResponse>("/checkout/become-expert", {
     pseudo,

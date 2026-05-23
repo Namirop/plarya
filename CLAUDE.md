@@ -51,26 +51,35 @@ Exemples :
 
 ### Frontend
 
-- Next.js 15 (App Router, PAS Pages Router)
-- TypeScript strict
-- Tailwind CSS
-- shadcn/ui pour composants de base
+- Next.js 16 (App Router + Server Components, PAS Pages Router)
+- React 19
+- TypeScript 5 strict
+- Tailwind v4 avec tokens custom DS golden-da (cf. `app/globals.css` `@theme`)
+- shadcn/ui pour primitives (Button, Label, Select, etc.)
+- **Phosphor Icons** (`@phosphor-icons/react`) — bibliothèque unique, plus de Lucide ni Iconify
+- Aucune lib state-management externe (useState + Context React suffisent)
 
 ### Backend (séparé)
 
-- Node.js + Express
-- Prisma ORM + PostgreSQL
+- Node.js + Express 5
+- Prisma 7 + PostgreSQL
 - Auth par magic link (PAS de password, PAS de JWT refresh classique)
+- **pino** pour logs structurés + masquage PII via `maskEmail()`
+- **Zod** pour validation runtime (schémas partagés via `validators/shared.ts`)
+- node-cron pour les jobs récurrents (en prod : Vercel Cron ou équivalent)
 
 ### Paiement
 
 - Stripe Checkout (Apple Pay + Google Pay activés)
-- Webhooks pour abonnements
-- Flow sans compte préalable (email only)
+- Webhooks idempotents (signature-verified + table `StripeWebhookEvent` event-level)
+- Flow sans compte préalable (email only) — création du compte au webhook
+- API version pinned 2026-03-25.dahlia
 
 ### Email
 
 - Resend pour emails transactionnels et magic links
+- Retry exponentiel intégré (cf. `lib/resend.ts`)
+- HTML emails échappés via `escapeHtml()` pour tout user-controlled content
 
 ---
 
@@ -404,8 +413,6 @@ Devenir expert se fait via paiement Stripe d'un abonnement récurrent.
 - L'utilisateur devient expert **immédiatement** après le paiement réussi (retour sur `/devenir-expert?checkout=success`).
 - Renouvellement automatique trimestriel via webhook `invoice.paid` (extension `subExpiresAt` de +90j). Annulation Stripe → `subStatus = EXPIRED` via webhook `customer.subscription.deleted`.
 
-⚠️ Restera à arbitrer plus tard : remettre un système de candidature manuelle gratuite (originellement prévu MVP), ou conserver ce paiement comme barrière qualité. Pour l'instant, le code et le brief sont alignés sur le paiement.
-
 ---
 
 ### PANEL ADMIN (`/admin`)
@@ -521,17 +528,59 @@ Chaque analyse (Prono) a un champ `startTime: DateTime` obligatoire. Le frontend
 
 ---
 
-## 7. SÉCURITÉ & PERFORMANCE
+## 7. SÉCURITÉ & RGPD
 
-- CORS configuré
-- Rate limiting (express-rate-limit) sur routes auth (magic link request)
-- Validation Zod sur toutes les routes
-- Magic link tokens cryptographiquement sécurisés (crypto.randomBytes)
-- Magic link expiration : 15 min, usage unique
-- Session cookie httpOnly, secure, SameSite=Lax, 30 jours
-- Stripe webhooks sécurisés (signature verification)
-- Images optimisées (next/image)
-- Lazy loading composants
+### Auth + Sessions
+
+- Magic link tokens cryptographiquement sécurisés (`crypto.randomBytes(32)`)
+- Magic link expiration : 15 min, usage unique (`usedAt` marqué à la consommation)
+- Sessions httpOnly + secure (prod) + SameSite=Lax, 30j TTL
+- Pas de password DB, pas de JWT refresh — magic link uniquement
+
+### CSRF
+
+- Double-submit cookie pattern (cf. `backend/src/lib/csrf.ts`)
+- Cookie `csrf_token` non-httpOnly généré sur 1re requête, lu en JS côté frontend
+- Header `X-CSRF-Token` requis sur toutes méthodes mutantes (POST/PATCH/PUT/DELETE)
+- Whitelist : `/webhooks/stripe` (signature Stripe), méthodes safe (GET/HEAD/OPTIONS)
+- Apply sur frontend via `apiFetch` qui injecte auto le header (cf. `lib/api.ts`)
+
+### Rate-limiters
+
+- Global fallback : 100 req/min/IP
+- `/auth/request-magic-link` : 5/15min/IP (anti-spam emails)
+- `/auth/resend-access-unlocked` : 3/15min/IP
+- `/auth/me/export` : 1/24h/IP (anti-DOS export volumineux)
+- `/checkout` : 5/min/IP
+- `/admin` : 100/min/IP
+- `/experts/:id/view` : 1h/(IP+expertId) — `ipKeyGenerator` IPv6-safe
+- `/subscriptions/check-stripe-session` : 60/min/IP
+
+### Headers + CSP
+
+- helmet avec CSP custom (cf. `backend/src/server.ts`) :
+  - `default-src 'self'`, `script-src 'self' 'unsafe-inline'`, `style-src 'self' 'unsafe-inline'`
+  - `img-src` whitelist : data: + SportsDB + Imgur + Cloudinary + Gravatar
+  - `connect-src` : self + api.stripe.com + r.stripe.com + api.resend.com
+  - `frame-src` : js.stripe.com + hooks.stripe.com
+  - `frame-ancestors 'none'` (anti-clickjacking)
+
+### RGPD
+
+- **Soft delete + anonymisation** : `DELETE /auth/me` → `User.deletedAt = now` + email anonymisé en `deleted-{id}@plarya.local`. Conserve les FK Subscriptions (obligation comptable FR 10 ans).
+- **Suppression programmée** : si EXPERT avec subs actives, `pendingDeletionAt` posé → profile retiré des listings + nouveaux paiements refusés ; le cron quotidien 03:15 finalise quand la dernière sub a expiré.
+- **Cooldown 7j post-suppression** (table `DeletedEmailCooldown`) : empêche un re-login immédiat avec le même email. Auto-purge cron quotidien 03:00.
+- **Export RGPD** : `GET /auth/me/export` → JSON complet (user + expert + subscriptions + pronos), rate-limited 1/24h.
+- **Cookie banner** : consent posé via cookie `plarya_cookie_consent`, banner masqué sur `/admin` et `/dashboard`.
+- **Webhooks Stripe** : signature verification + table `StripeWebhookEvent` event-level (idempotent, audit-friendly, conservation ≥ 90j pour la fenêtre dispute Stripe).
+
+### Performance
+
+- next/image activé (formats AVIF/WebP, lazy loading natif)
+- Cache HTTP `Cache-Control: public, max-age=60, s-maxage=120, stale-while-revalidate=600` sur `GET /experts` et `GET /experts/:id` (cache 10min sur `/bookmakers` qui change peu)
+- N+1 résolu sur `GET /experts` (1 query au lieu de O(N) — cf. Sprint Polish A.6)
+- Pagination `/admin/pronos` (limit/offset, default 50, max 200)
+- Tree-shaking icônes Phosphor (imports nommés)
 
 ---
 

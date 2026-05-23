@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
+
 import { API_URL } from "@/lib/site";
-import {
-  ExpertProfileClient,
-  type ExpertProfile,
-} from "./ExpertProfile.client";
+
+import { ExpertProfileClient, type ExpertProfile } from "./ExpertProfile.client";
 
 // Fetch server-side du profil expert. Le layout.tsx fait un fetch
 // similaire pour generateMetadata + JSON-LD Person ; Next dedupe les
@@ -23,11 +22,7 @@ async function fetchExpert(id: string): Promise<ExpertProfile | null> {
   }
 }
 
-export default async function ExpertProfilePage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function ExpertProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const expert = await fetchExpert(id);
 

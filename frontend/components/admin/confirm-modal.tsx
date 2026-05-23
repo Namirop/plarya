@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { X } from "lucide-react";
+
+import { X } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -87,9 +88,9 @@ export function ConfirmModal({
       }
       if (e.key !== "Tab" || !root) return;
 
-      const focusables = Array.from(
-        root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-      ).filter((el) => el.offsetParent !== null);
+      const focusables = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (el) => el.offsetParent !== null,
+      );
       if (focusables.length === 0) return;
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
@@ -140,16 +141,11 @@ export function ConfirmModal({
           <X className="size-5" />
         </button>
 
-        <h3
-          id="confirm-modal-title"
-          className="font-display text-h4 text-foreground"
-        >
+        <h2 id="confirm-modal-title" className="font-display text-h4 text-foreground">
           {title}
-        </h3>
+        </h2>
 
-        <div className="mt-3 font-body text-body-16 text-muted-foreground">
-          {description}
-        </div>
+        <div className="mt-3 font-body text-body-16 text-muted-foreground">{description}</div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
           <Button

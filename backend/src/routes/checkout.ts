@@ -17,10 +17,7 @@ const router = Router();
  * Acceptable en MVP (orphelin Stripe au pire). À renforcer en V2
  * via row lock ou pattern advisory lock Postgres si nécessaire.
  */
-async function getOrCreateStripeCustomer(
-  userId: string,
-  email: string,
-): Promise<string> {
+async function getOrCreateStripeCustomer(userId: string, email: string): Promise<string> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { stripeCustomerId: true },
@@ -102,6 +99,16 @@ router.post("/create-session", optionalAuthMiddleware, async (req, res) => {
       res.status(404).json({ error: "Expert introuvable" });
       return;
     }
+    // 400 si l'expert est en suppression programmée. Les subs
+    // existantes continuent à fonctionner jusqu'à expiresAt mais on
+    // refuse toute NOUVELLE sub — sinon le buyer paierait pour un
+    // profile qui va disparaître automatiquement sous peu.
+    if (expert.pendingDeletionAt) {
+      res.status(400).json({
+        error: "Cet expert ne prend plus de nouveaux abonnés. Choisis un autre expert.",
+      });
+      return;
+    }
 
     // For day pass: check that at least one analysis hasn't started yet
     if (type === "DAY_PASS") {
@@ -152,9 +159,7 @@ router.post("/create-session", optionalAuthMiddleware, async (req, res) => {
       // payment_method_types retiré : Stripe Checkout détecte
       // automatiquement les méthodes activées sur le compte (card,
       // Apple Pay sur iPhone Safari, Google Pay sur Android Chrome).
-      ...(stripeCustomerId
-        ? { customer: stripeCustomerId }
-        : { customer_email: customerEmail }),
+      ...(stripeCustomerId ? { customer: stripeCustomerId } : { customer_email: customerEmail }),
       line_items: [
         {
           price_data: {

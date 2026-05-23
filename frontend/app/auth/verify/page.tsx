@@ -1,9 +1,11 @@
 "use client";
 
 import { Suspense, useState } from "react";
+
 import { useSearchParams } from "next/navigation";
-import { useUser } from "@/hooks/use-user";
+
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/hooks/use-user";
 import { cn } from "@/lib/utils";
 
 // Pattern input DS aligné /devenir-expert + EmailCheckoutModal.
@@ -35,14 +37,29 @@ function VerifyContent() {
     return <ErrorState message="Lien de connexion invalide." />;
   }
 
+  if (error === "deleted") {
+    // Email récemment supprimé → en cooldown post-suppression.
+    // Pas de formulaire de renvoi (le request reste silencieusement
+    // bloqué côté backend pendant le cooldown).
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center px-4">
+        <div className="w-full max-w-sm text-center">
+          <h1 className="font-display text-h4 text-foreground">Ce compte a été supprimé.</h1>
+          <p className="mt-4 font-body text-body-16 text-muted-foreground">
+            La connexion avec cet email est temporairement indisponible. Réessaie dans quelques
+            jours, ou utilise un autre email pour créer un nouveau compte.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // If no error param, the backend redirect should have set the cookie
   // and redirected to the final destination. This page is a fallback.
   return (
     <div className="flex min-h-[50vh] items-center justify-center px-4">
       <div className="text-center">
-        <p className="font-body text-body-16 text-muted-foreground">
-          Connexion en cours...
-        </p>
+        <p className="font-body text-body-16 text-muted-foreground">Connexion en cours...</p>
       </div>
     </div>
   );
@@ -79,8 +96,7 @@ function ErrorState({ message }: { message: string }) {
 
         {sent ? (
           <p className="mt-4 font-body text-body-16 text-muted-foreground">
-            Un nouveau lien a été envoyé à{" "}
-            <strong className="text-foreground">{email}</strong>.
+            Un nouveau lien a été envoyé à <strong className="text-foreground">{email}</strong>.
           </p>
         ) : (
           <div className="mt-6 space-y-4">
@@ -89,10 +105,7 @@ function ErrorState({ message }: { message: string }) {
             </p>
 
             {error && (
-              <p
-                role="alert"
-                className="font-body text-body-16 text-destructive"
-              >
+              <p role="alert" className="font-body text-body-16 text-destructive">
                 {error}
               </p>
             )}

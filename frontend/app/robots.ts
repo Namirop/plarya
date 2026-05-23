@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+
 import { SITE_URL } from "@/lib/site";
 
 // robots.txt généré par Next à /robots.txt. Indexable par défaut

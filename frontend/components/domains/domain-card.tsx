@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+
+import { ArrowRight } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,8 +12,7 @@ import { cn } from "@/lib/utils";
 // qu'un overlay coloré (qui peignait par-dessus avec une couleur plate).
 // Stops calibrés sur Figma : image opaque jusqu'à ~40 %, fade jusqu'à
 // ~75 %, totalement transparent en bas (= zone titre/sous-titre/bouton).
-const IMAGE_FADE_MASK =
-  "linear-gradient(to bottom, black 0%, black 40%, transparent 75%)";
+const IMAGE_FADE_MASK = "linear-gradient(to bottom, black 0%, black 40%, transparent 75%)";
 
 export interface DomainCardProps {
   image: string;
@@ -69,10 +69,7 @@ export function DomainCard({
         alt={title}
         fill
         sizes="(max-width: 768px) 256px, 381px"
-        className={cn(
-          "object-cover rounded-2xl",
-          isComingSoon && "grayscale brightness-50",
-        )}
+        className={cn("object-cover rounded-2xl", isComingSoon && "grayscale brightness-50")}
         style={{
           maskImage: IMAGE_FADE_MASK,
           WebkitMaskImage: IMAGE_FADE_MASK,

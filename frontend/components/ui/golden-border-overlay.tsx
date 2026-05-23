@@ -21,16 +21,12 @@ export function GoldenBorderOverlay({ className }: GoldenBorderOverlayProps) {
   return (
     <span
       aria-hidden
-      className={cn(
-        "pointer-events-none absolute inset-0 rounded-2xl opacity-70",
-        className,
-      )}
+      className={cn("pointer-events-none absolute inset-0 rounded-2xl opacity-70", className)}
       style={{
         padding: "1px",
         background:
           "conic-gradient(from 30deg, transparent 8%, #DFB968 33%, transparent 47%, transparent 63%, #DFB968 75%, transparent 100%)",
-        WebkitMask:
-          "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+        WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
         WebkitMaskComposite: "xor",
         mask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
         maskComposite: "exclude",

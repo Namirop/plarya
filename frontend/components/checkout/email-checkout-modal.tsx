@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useEffect, useState } from "react";
 
-import { createCheckoutSession } from "@/lib/stripe";
+import { X } from "@phosphor-icons/react";
+
 import { Button } from "@/components/ui/button";
+import { createCheckoutSession } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 
 interface EmailCheckoutModalProps {
@@ -25,15 +26,49 @@ const fieldCls = cn(
   "disabled:cursor-not-allowed disabled:opacity-70",
 );
 
-export function EmailCheckoutModal({
-  open,
-  onClose,
-  expertId,
-  type,
-}: EmailCheckoutModalProps) {
+export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheckoutModalProps) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Reset des states à la fermeture. Pattern aligné sur
+  // DeleteAccountModal / LoginModal / ConfirmModal (cf. Sprint Polish
+  // B2.5 — homogénéisation a11y des modales).
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!open) {
+      setEmail("");
+      setError("");
+      setLoading(false);
+    }
+  }, [open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Scroll-lock du body pendant l'ouverture (empêche le scroll
+  // arrière-plan de défiler quand la modale est focusée).
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  // Escape pour fermer — bloqué pendant le loading (sinon l'user
+  // fermerait la modale entre le clic submit et le redirect Stripe,
+  // mauvaise UX).
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && !loading) {
+        e.preventDefault();
+        onClose();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, loading, onClose]);
 
   if (!open) return null;
 
@@ -60,10 +95,10 @@ export function EmailCheckoutModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Overlay : bg-black/80 + backdrop-blur DS. Clic = onClose
-          (comportement V1 conservé). */}
+          (sauf pendant loading — cf. Escape handler). */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
-        onClick={onClose}
+        onClick={loading ? undefined : onClose}
         aria-hidden
       />
 
@@ -76,21 +111,19 @@ export function EmailCheckoutModal({
         aria-labelledby="email-checkout-title"
         className="relative z-10 mx-4 w-full max-w-[480px] rounded-2xl border border-surface-elevated bg-background p-8"
       >
-        {/* Close X — lucide-react, taille 5 (=20 px), muted → foreground
+        {/* Close X — Phosphor, taille 5 (=20 px), muted → foreground
             au hover, transitions douces DS. */}
         <button
           type="button"
           onClick={onClose}
+          disabled={loading}
           aria-label="Fermer"
-          className="absolute right-4 top-4 cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+          className="absolute right-4 top-4 cursor-pointer p-2 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
         >
           <X className="size-5" />
         </button>
 
-        <h2
-          id="email-checkout-title"
-          className="font-display text-h4 text-foreground"
-        >
+        <h2 id="email-checkout-title" className="font-display text-h4 text-foreground">
           Accédez aux analyses
         </h2>
         <p className="mt-2 font-body text-body-16 text-muted-foreground">
@@ -98,7 +131,11 @@ export function EmailCheckoutModal({
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
+          <label htmlFor="checkout-email" className="sr-only">
+            Adresse email
+          </label>
           <input
+            id="checkout-email"
             type="email"
             placeholder="votre@email.com"
             value={email}
@@ -108,20 +145,11 @@ export function EmailCheckoutModal({
             disabled={loading}
           />
           {error && (
-            <p
-              role="alert"
-              className="font-body text-body-16 text-destructive"
-            >
+            <p role="alert" className="font-body text-body-16 text-destructive">
               {error}
             </p>
           )}
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            disabled={loading}
-            className="w-full"
-          >
+          <Button type="submit" variant="primary" size="lg" disabled={loading} className="w-full">
             {loading ? (
               <span className="inline-flex items-center gap-3">
                 {/* Spinner doré DS — même token que le loading state

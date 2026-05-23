@@ -42,7 +42,12 @@
       "Bash(awk 'NR==4' \"C:\\\\Users\\\\romai\\\\.claude\\\\projects\\\\C--Users-romai-Desktop-Plarya\\\\cc523e11-412c-4d87-ba5d-a66449404f89\\\\tool-results\\\\mcp-figma-get_design_context-1779287918474.txt\")",
       "Bash(echo \"EXIT=$?\")",
       "Read(//c/Users/romai/AppData/Local/Temp/claude/C--Users-romai-Desktop-Plarya/2dcc9038-7063-4e51-a27c-a3f1cf685730/tasks/**)",
-      "Bash(xargs wc -l)"
+      "Bash(xargs wc -l)",
+      "Bash(python3 -c \"import json,sys;d=json.load\\(sys.stdin\\); print\\(d.get\\('types'\\),d.get\\('typings'\\),d.get\\('exports'\\)\\)\")",
+      "Read(//c/Users/romai/AppData/Local/Temp/claude/C--Users-romai-Desktop-Plarya/3f5cef08-39f1-4382-bf68-b667c01825f1/tasks/**)",
+      "Bash(netstat -ano)",
+      "Bash(tasklist //FI \"PID eq 9912\")",
+      "Bash(wmic process *)"
     ]
   }
 }

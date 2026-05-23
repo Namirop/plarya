@@ -1,26 +1,33 @@
-import { Icon } from "@iconify/react";
-import { Fragment } from "react";
+import { Fragment, type ComponentType } from "react";
+
+import { Clock, Lightning, CreditCard, type IconProps } from "@phosphor-icons/react";
 
 import { DividerVertical } from "@/components/ui/divider-vertical";
 import { SectionTitle } from "@/components/ui/section-title";
 
+type Pillar = {
+  icon: ComponentType<IconProps>;
+  title: string;
+  description: string;
+};
+
 // 3 piliers de réassurance. Wording verbatim de la maquette Figma
 // (frame `94:824`), cf. pourquoi-plarya-section-spec.md §3.
-const PILLARS = [
+const PILLARS: Pillar[] = [
   {
-    icon: "solar:clock-circle-outline",
+    icon: Clock,
     title: "Gain de temps",
     description: "Accédez directement aux analyses. Pas de recherche, pas de bruit.",
   },
   {
-    icon: "mynaui:lightning",
+    icon: Lightning,
     title: "Simple",
     description: "Tout est prêt. Choisissez un expert, accédez à ses sélections.",
   },
   {
     // Même icône carte de crédit que le Trust row du Hero — cohérence
     // graphique entre les deux blocs de réassurance de la page.
-    icon: "f7:creditcard",
+    icon: CreditCard,
     title: "Sans engagements",
     description: "Paiement à l'acte. 3,50€ le jour, sans abonnement obligatoire.",
   },
@@ -62,22 +69,12 @@ export function PourquoiPlaryaSection() {
                       className="self-center md:hidden"
                     />
                     {/* Divider vertical desktop */}
-                    <DividerVertical
-                      height={192}
-                      className="hidden md:block"
-                    />
+                    <DividerVertical height={192} className="hidden md:block" />
                   </>
                 )}
                 <div className="flex flex-col items-start">
-                  <Icon
-                    icon={pillar.icon}
-                    width={30}
-                    height={30}
-                    className="text-accent"
-                  />
-                  <h3 className="mt-6 font-body text-h4 text-foreground">
-                    {pillar.title}
-                  </h3>
+                  <pillar.icon size={30} className="text-accent" />
+                  <h3 className="mt-6 font-body text-h4 text-foreground">{pillar.title}</h3>
                   <p className="mt-4 font-body text-body-16 leading-[1.4] text-muted-foreground">
                     {pillar.description}
                   </p>

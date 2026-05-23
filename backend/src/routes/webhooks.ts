@@ -1,12 +1,22 @@
 import { Router } from "express";
 import express from "express";
+import { z } from "zod";
 import { stripe } from "../lib/stripe";
 import { prisma } from "../lib/prisma";
 import { Prisma } from "../generated/prisma/client";
 import { logger, maskEmail } from "../lib/logger";
 import { sendAccessUnlockedEmail } from "../lib/emails";
 import { createMagicLink } from "../lib/magic-link";
-import type { Sport } from "../generated/prisma/enums";
+import { Sport } from "../generated/prisma/enums";
+
+// Sprint Polish A.10 — Zod parse de `sports` désérialisé du metadata
+// Stripe. La metadata est passée en string JSON par le frontend lors
+// du checkout (cf. checkout.ts becomeExpert). Sans validation, un
+// payload corrompu (Stripe Dashboard manipulé, retry sur un event
+// avec metadata altérée) ferait passer des strings invalides dans
+// l'enum Sport de Prisma → 500 plus tard. Zod garantit que ce qui
+// arrive en DB est strictement une valeur de l'enum.
+const sportsArraySchema = z.array(z.nativeEnum(Sport)).min(1);
 
 const webhookLogger = logger.child({ context: "webhook" });
 
@@ -40,83 +50,73 @@ async function markEventProcessed(
   });
 }
 
-router.post(
-  "/stripe",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    // 1. Vérification de signature : si invalide → 400. Stripe ne retry
-    //    PAS en 400, ce qui est OK : un payload truqué ne deviendra
-    //    pas magiquement valide au prochain retry.
-    const sig = req.headers["stripe-signature"] as string;
+router.post("/stripe", express.raw({ type: "application/json" }), async (req, res) => {
+  // 1. Vérification de signature : si invalide → 400. Stripe ne retry
+  //    PAS en 400, ce qui est OK : un payload truqué ne deviendra
+  //    pas magiquement valide au prochain retry.
+  const sig = req.headers["stripe-signature"] as string;
 
-    let event: StripeEvent;
-    try {
-      event = stripe.webhooks.constructEvent(
-        req.body,
-        sig,
-        process.env.STRIPE_WEBHOOK_SECRET!,
-      );
-    } catch (err) {
-      webhookLogger.error({ err }, "Signature verification failed");
-      res.status(400).send("Signature invalide");
-      return;
-    }
+  let event: StripeEvent;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+  } catch (err) {
+    webhookLogger.error({ err }, "Signature verification failed");
+    res.status(400).send("Signature invalide");
+    return;
+  }
 
-    // 2. Idempotence event-level : si on a déjà traité cet event,
-    //    on skip et on répond 200 (Stripe stoppe les retries).
-    const alreadyProcessed = await prisma.stripeWebhookEvent.findUnique({
-      where: { id: event.id },
-    });
-    if (alreadyProcessed) {
-      webhookLogger.info(
-        { eventId: event.id, eventType: event.type },
-        "Event already processed, skipping",
-      );
-      res.json({ received: true });
-      return;
-    }
-
-    // 3. Process event. PAS de try/catch global : si la logique métier
-    //    échoue (DB down, contrainte unique, etc.), on laisse remonter
-    //    → Express renvoie 500 → Stripe retry (jusqu'à 3 jours par
-    //    défaut). Le markEventProcessed dans la transaction garantit
-    //    qu'un succès est atomiquement enregistré, ou rien n'est
-    //    enregistré (et Stripe retentera).
-    switch (event.type) {
-      case "checkout.session.completed":
-        await handleCheckoutSessionCompleted(event);
-        break;
-
-      case "invoice.paid":
-        await handleInvoicePaid(event);
-        break;
-
-      case "customer.subscription.deleted":
-        await handleSubscriptionDeleted(event);
-        break;
-
-      case "payment_intent.payment_failed":
-        await handlePaymentFailed(event);
-        break;
-
-      case "charge.dispute.created":
-        await handleDisputeCreated(event);
-        break;
-
-      default:
-        // Event qu'on n'a pas à traiter : on le marque comme processed
-        // pour éviter le retry inutile par Stripe.
-        await markEventProcessed(prisma, event);
-        break;
-    }
-
+  // 2. Idempotence event-level : si on a déjà traité cet event,
+  //    on skip et on répond 200 (Stripe stoppe les retries).
+  const alreadyProcessed = await prisma.stripeWebhookEvent.findUnique({
+    where: { id: event.id },
+  });
+  if (alreadyProcessed) {
+    webhookLogger.info(
+      { eventId: event.id, eventType: event.type },
+      "Event already processed, skipping",
+    );
     res.json({ received: true });
-  },
-);
+    return;
+  }
 
-async function handleCheckoutSessionCompleted(
-  event: StripeEvent,
-): Promise<void> {
+  // 3. Process event. PAS de try/catch global : si la logique métier
+  //    échoue (DB down, contrainte unique, etc.), on laisse remonter
+  //    → Express renvoie 500 → Stripe retry (jusqu'à 3 jours par
+  //    défaut). Le markEventProcessed dans la transaction garantit
+  //    qu'un succès est atomiquement enregistré, ou rien n'est
+  //    enregistré (et Stripe retentera).
+  switch (event.type) {
+    case "checkout.session.completed":
+      await handleCheckoutSessionCompleted(event);
+      break;
+
+    case "invoice.paid":
+      await handleInvoicePaid(event);
+      break;
+
+    case "customer.subscription.deleted":
+      await handleSubscriptionDeleted(event);
+      break;
+
+    case "payment_intent.payment_failed":
+      await handlePaymentFailed(event);
+      break;
+
+    case "charge.dispute.created":
+      await handleDisputeCreated(event);
+      break;
+
+    default:
+      // Event qu'on n'a pas à traiter : on le marque comme processed
+      // pour éviter le retry inutile par Stripe.
+      await markEventProcessed(prisma, event);
+      break;
+  }
+
+  res.json({ received: true });
+});
+
+async function handleCheckoutSessionCompleted(event: StripeEvent): Promise<void> {
   // Le type réel est Stripe.Checkout.Session, mais le namespace n'est
   // pas exposé proprement — on lit les champs nécessaires via cast
   // ciblé.
@@ -135,7 +135,25 @@ async function handleCheckoutSessionCompleted(
   // avant le rename portent encore "become_tipster".
   if (purpose === "become_expert" || purpose === "become_tipster") {
     const { pseudo, bio, sports: sportsJson } = metadata;
-    const sports = JSON.parse(sportsJson) as Sport[];
+    // Validation stricte du metadata. Si le payload est corrompu (cas
+    // d'attaque ou bug Stripe Dashboard), on log un error et on
+    // marque comme processed pour éviter retry storm → un humain
+    // pourra ré-attribuer le sub manuellement via l'admin.
+    const sportsParsed = sportsArraySchema.safeParse(JSON.parse(sportsJson));
+    if (!sportsParsed.success) {
+      webhookLogger.error(
+        {
+          eventId: event.id,
+          eventType: event.type,
+          rawSports: sportsJson,
+          zodErrors: sportsParsed.error.flatten(),
+        },
+        "Invalid sports metadata in become_expert payload — skipping",
+      );
+      await markEventProcessed(prisma, event);
+      return;
+    }
+    const sports = sportsParsed.data;
     const stripeSubId = session.subscription as string;
 
     await prisma.$transaction(async (tx) => {
@@ -229,12 +247,8 @@ async function handleCheckoutSessionCompleted(
     return;
   }
 
-  const stripeSubId =
-    type === "MONTHLY" ? (session.subscription as string) : null;
-  const expiresAt =
-    type === "DAY_PASS"
-      ? new Date(Date.now() + DAY)
-      : new Date(Date.now() + MONTH);
+  const stripeSubId = type === "MONTHLY" ? (session.subscription as string) : null;
+  const expiresAt = type === "DAY_PASS" ? new Date(Date.now() + DAY) : new Date(Date.now() + MONTH);
 
   await prisma.$transaction(async (tx) => {
     const existing = await tx.subscription.findFirst({
@@ -288,20 +302,33 @@ async function handleCheckoutSessionCompleted(
     // d'acheter.
     const redirectTarget = encodeURIComponent(`/experts/${expertId}`);
     const magicLinkUrl = `${backendUrl}/auth/verify?token=${magicToken}&redirect=${redirectTarget}`;
-    sendAccessUnlockedEmail(
-      buyer.email,
-      expertRecord.pseudo,
-      expertId,
-      magicLinkUrl,
-    );
+    sendAccessUnlockedEmail(buyer.email, expertRecord.pseudo, expertId, magicLinkUrl);
   }
 }
 
 async function handleInvoicePaid(event: StripeEvent): Promise<void> {
-  const invoice = event.data.object as unknown as {
-    subscription?: string | null;
+  // Le champ `invoice.subscription` est présent en runtime sur les
+  // events Stripe API 2024+ mais a été retiré du type officiel
+  // Stripe.Invoice à partir de l'API 2026-03-25.dahlia (déplacé vers
+  // `invoice.parent.subscription_details.subscription`). Pour rester
+  // compatible avec les events des deux schémas, on lit en best-effort
+  // via une shape minimale typée (pas d'`any`, juste les champs
+  // qu'on consomme).
+  type LegacyInvoiceShape = {
+    subscription?: string | { id: string } | null;
+    parent?: {
+      subscription_details?: { subscription?: string | null } | null;
+    } | null;
   };
-  const subscriptionId = invoice.subscription ?? null;
+  const invoice = event.data.object as unknown as LegacyInvoiceShape;
+  const legacyRef = invoice.subscription;
+  const newRef = invoice.parent?.subscription_details?.subscription ?? null;
+  const subscriptionId =
+    typeof legacyRef === "string"
+      ? legacyRef
+      : typeof legacyRef === "object" && legacyRef !== null
+        ? legacyRef.id
+        : newRef;
   if (!subscriptionId) {
     // Invoice non liée à un abonnement (paiement one-shot, etc.).
     // Marqué processed pour éviter le retry inutile.
@@ -342,10 +369,7 @@ async function handleInvoicePaid(event: StripeEvent): Promise<void> {
           expiresAt: new Date(Date.now() + MONTH),
         },
       });
-      webhookLogger.info(
-        { eventId: event.id, subscriptionId: sub.id },
-        "Subscription renewed",
-      );
+      webhookLogger.info({ eventId: event.id, subscriptionId: sub.id }, "Subscription renewed");
     }
     await markEventProcessed(tx, event);
   });
@@ -381,10 +405,7 @@ async function handleSubscriptionDeleted(event: StripeEvent): Promise<void> {
         where: { id: sub.id },
         data: { status: "CANCELLED" },
       });
-      webhookLogger.info(
-        { eventId: event.id, subscriptionId: sub.id },
-        "Subscription cancelled",
-      );
+      webhookLogger.info({ eventId: event.id, subscriptionId: sub.id }, "Subscription cancelled");
     }
     await markEventProcessed(tx, event);
   });

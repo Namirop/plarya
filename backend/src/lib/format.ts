@@ -3,9 +3,7 @@
 // (pas d'import cross-package — backend autonome).
 export function formatPrice(cents: number): string {
   const euros = cents / 100;
-  return euros % 1 === 0
-    ? `${euros.toFixed(0)}€`
-    : `${euros.toFixed(2).replace(".", ",")}€`;
+  return euros % 1 === 0 ? `${euros.toFixed(0)}€` : `${euros.toFixed(2).replace(".", ",")}€`;
 }
 
 // Escape les caractères HTML dangereux d'une string user-controlled

@@ -2,14 +2,9 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Devenir expert — Plarya",
-  description:
-    "Rejoignez Plarya en tant qu'expert et partagez vos analyses sportives.",
+  description: "Rejoignez Plarya en tant qu'expert et partagez vos analyses sportives.",
 };
 
-export default function DevenirExpertLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DevenirExpertLayout({ children }: { children: React.ReactNode }) {
   return children;
 }

@@ -83,17 +83,48 @@ router.post("/experts", validate(createExpertSchema), async (req, res) => {
   }
 });
 
-// GET /admin/pronos — List all pronos
-router.get("/pronos", async (_req, res) => {
+// GET /admin/pronos?limit=50&offset=0 — Liste paginée des pronos.
+//
+// Sans pagination, à 10k+ pronos le payload pesait des centaines de
+// Ko et bloquait l'UI admin. Defaults choisis pour tenir confortable
+// dans une page admin (50 = ~3 scroll-pages, raisonnable).
+//
+// Cap dur `MAX_LIMIT` = 200 pour éviter qu'un client malicieux ou
+// buggé demande limit=99999 et fasse exploser le payload.
+router.get("/pronos", async (req, res) => {
   try {
-    const pronos = await prisma.prono.findMany({
-      include: {
-        expert: { select: { pseudo: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const MAX_LIMIT = 200;
+    const DEFAULT_LIMIT = 50;
 
-    res.json(pronos);
+    const limit = Math.min(
+      MAX_LIMIT,
+      Math.max(1, parseInt(req.query.limit as string) || DEFAULT_LIMIT),
+    );
+    const offset = Math.max(0, parseInt(req.query.offset as string) || 0);
+
+    // Total + page en parallèle (countDistinct n'est pas nécessaire
+    // ici, prono.id est PK donc count() suffit).
+    const [total, items] = await Promise.all([
+      prisma.prono.count(),
+      prisma.prono.findMany({
+        include: {
+          expert: { select: { pseudo: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip: offset,
+        take: limit,
+      }),
+    ]);
+
+    res.json({
+      items,
+      meta: {
+        total,
+        limit,
+        offset,
+        hasMore: offset + items.length < total,
+      },
+    });
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur" });
   }
@@ -144,13 +175,12 @@ router.patch("/experts/:id/warning", validate(warningSchema), async (req, res) =
 // GET /admin/stats — Global stats
 router.get("/stats", async (_req, res) => {
   try {
-    const [usersCount, expertsCount, pronosCount, subscriptionsCount] =
-      await Promise.all([
-        prisma.user.count(),
-        prisma.expert.count(),
-        prisma.prono.count(),
-        prisma.subscription.count({ where: { status: "ACTIVE" } }),
-      ]);
+    const [usersCount, expertsCount, pronosCount, subscriptionsCount] = await Promise.all([
+      prisma.user.count(),
+      prisma.expert.count(),
+      prisma.prono.count(),
+      prisma.subscription.count({ where: { status: "ACTIVE" } }),
+    ]);
 
     // Estimate revenue from active subscriptions. Prix lu sur l'expert
     // lié (et non hardcodé) — cf. audit-final.md §J : chaque expert
@@ -165,9 +195,7 @@ router.get("/stats", async (_req, res) => {
     });
 
     const revenue = activeSubscriptions.reduce((total, sub) => {
-      const amount = sub.type === "DAY_PASS"
-        ? sub.expert.dayPassPrice
-        : sub.expert.monthlyPrice;
+      const amount = sub.type === "DAY_PASS" ? sub.expert.dayPassPrice : sub.expert.monthlyPrice;
       return total + amount;
     }, 0);
 
@@ -237,9 +265,7 @@ router.get("/stats/revenue", async (_req, res) => {
     for (const sub of subscriptions) {
       const key = sub.createdAt.toISOString().slice(0, 10);
       if (!byDay[key]) byDay[key] = { revenue: 0, salesCount: 0 };
-      const amount = sub.type === "DAY_PASS"
-        ? sub.expert.dayPassPrice
-        : sub.expert.monthlyPrice;
+      const amount = sub.type === "DAY_PASS" ? sub.expert.dayPassPrice : sub.expert.monthlyPrice;
       byDay[key].revenue += amount;
       byDay[key].salesCount += 1;
     }

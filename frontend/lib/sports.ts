@@ -1,3 +1,5 @@
+import { LEAGUE_BADGES } from "./league-logo";
+
 const SPORT_NAMES: Record<string, string> = {
   FOOTBALL: "Football",
   TENNIS: "Tennis",
@@ -17,58 +19,41 @@ export interface League {
   name: string;
   shortName: string;
   sport: string;
+  /**
+   * URL du badge SportsDB pour cette ligue (cf. lib/league-logo.ts).
+   * `null` quand SportsDB ne référence pas la ligue (tennis grand slams,
+   * MMA, F1, esport) → l'UI doit fallback sur le SportIcon générique.
+   */
   logo: string | null;
   country: string;
 }
 
-export const LEAGUES: League[] = [
+interface LeagueMeta {
+  id: string;
+  name: string;
+  shortName: string;
+  sport: string;
+  country: string;
+}
+
+const LEAGUES_META: LeagueMeta[] = [
   // Football
-  {
-    id: "ligue-1",
-    name: "Ligue 1",
-    shortName: "LIGUE 1",
-    sport: "FOOTBALL",
-    logo: "/leagues/ligue-1.svg",
-    country: "🇫🇷",
-  },
-  {
-    id: "ligue-2",
-    name: "Ligue 2",
-    shortName: "LIGUE 2",
-    sport: "FOOTBALL",
-    logo: null,
-    country: "🇫🇷",
-  },
+  { id: "ligue-1", name: "Ligue 1", shortName: "LIGUE 1", sport: "FOOTBALL", country: "🇫🇷" },
+  { id: "ligue-2", name: "Ligue 2", shortName: "LIGUE 2", sport: "FOOTBALL", country: "🇫🇷" },
   {
     id: "premier-league",
     name: "Premier League",
     shortName: "PREMIER LEAGUE",
     sport: "FOOTBALL",
-    logo: "/leagues/premier-league.svg",
     country: "🇬🇧",
   },
-  {
-    id: "la-liga",
-    name: "La Liga",
-    shortName: "LA LIGA",
-    sport: "FOOTBALL",
-    logo: "/leagues/la-liga.svg",
-    country: "🇪🇸",
-  },
-  {
-    id: "serie-a",
-    name: "Serie A",
-    shortName: "SERIE A",
-    sport: "FOOTBALL",
-    logo: "/leagues/serie-a.svg",
-    country: "🇮🇹",
-  },
+  { id: "la-liga", name: "La Liga", shortName: "LA LIGA", sport: "FOOTBALL", country: "🇪🇸" },
+  { id: "serie-a", name: "Serie A", shortName: "SERIE A", sport: "FOOTBALL", country: "🇮🇹" },
   {
     id: "bundesliga",
     name: "Bundesliga",
     shortName: "BUNDESLIGA",
     sport: "FOOTBALL",
-    logo: "/leagues/bundesliga.svg",
     country: "🇩🇪",
   },
   {
@@ -76,7 +61,6 @@ export const LEAGUES: League[] = [
     name: "Champions League",
     shortName: "CHAMPIONS LEAGUE",
     sport: "FOOTBALL",
-    logo: "/leagues/champions-league.png",
     country: "🇪🇺",
   },
 
@@ -86,158 +70,57 @@ export const LEAGUES: League[] = [
     name: "Roland-Garros",
     shortName: "ROLAND-GARROS",
     sport: "TENNIS",
-    logo: "/leagues/roland-garros.svg",
     country: "🇫🇷",
   },
-  {
-    id: "wimbledon",
-    name: "Wimbledon",
-    shortName: "WIMBLEDON",
-    sport: "TENNIS",
-    logo: "/leagues/wimbledon.png",
-    country: "🇬🇧",
-  },
-  {
-    id: "us-open-tennis",
-    name: "US Open",
-    shortName: "US OPEN",
-    sport: "TENNIS",
-    logo: "/leagues/us-open-tennis.svg",
-    country: "🇺🇸",
-  },
-  {
-    id: "atp",
-    name: "ATP Tour",
-    shortName: "ATP",
-    sport: "TENNIS",
-    logo: "/leagues/atp.svg",
-    country: "🌍",
-  },
-  {
-    id: "wta",
-    name: "WTA Tour",
-    shortName: "WTA",
-    sport: "TENNIS",
-    logo: "/leagues/wta.svg",
-    country: "🌍",
-  },
+  { id: "wimbledon", name: "Wimbledon", shortName: "WIMBLEDON", sport: "TENNIS", country: "🇬🇧" },
+  { id: "us-open-tennis", name: "US Open", shortName: "US OPEN", sport: "TENNIS", country: "🇺🇸" },
+  { id: "atp", name: "ATP Tour", shortName: "ATP", sport: "TENNIS", country: "🌍" },
+  { id: "wta", name: "WTA Tour", shortName: "WTA", sport: "TENNIS", country: "🌍" },
 
   // Basketball
-  {
-    id: "nba",
-    name: "NBA",
-    shortName: "NBA",
-    sport: "BASKETBALL",
-    logo: "/leagues/nba.svg",
-    country: "🇺🇸",
-  },
+  { id: "nba", name: "NBA", shortName: "NBA", sport: "BASKETBALL", country: "🇺🇸" },
   {
     id: "euroleague",
     name: "EuroLeague",
     shortName: "EUROLEAGUE",
     sport: "BASKETBALL",
-    logo: "/leagues/euroleague.svg",
     country: "🇪🇺",
   },
 
   // Rugby
-  {
-    id: "top-14",
-    name: "Top 14",
-    shortName: "TOP 14",
-    sport: "RUGBY",
-    logo: "/leagues/top-14.png",
-    country: "🇫🇷",
-  },
+  { id: "top-14", name: "Top 14", shortName: "TOP 14", sport: "RUGBY", country: "🇫🇷" },
   {
     id: "six-nations",
     name: "Six Nations",
     shortName: "SIX NATIONS",
     sport: "RUGBY",
-    logo: "/leagues/six-nations.png",
     country: "🌍",
   },
 
   // MMA / Combat
-  {
-    id: "ufc",
-    name: "UFC",
-    shortName: "UFC",
-    sport: "MMA",
-    logo: "/leagues/ufc.svg",
-    country: "🇺🇸",
-  },
+  { id: "ufc", name: "UFC", shortName: "UFC", sport: "MMA", country: "🇺🇸" },
 
   // Hockey
-  {
-    id: "nhl",
-    name: "NHL",
-    shortName: "NHL",
-    sport: "HOCKEY",
-    logo: "/leagues/nhl.png",
-    country: "🇺🇸",
-  },
+  { id: "nhl", name: "NHL", shortName: "NHL", sport: "HOCKEY", country: "🇺🇸" },
 
   // Sports auto
-  {
-    id: "f1",
-    name: "Formule 1",
-    shortName: "F1",
-    sport: "AUTRE",
-    logo: "/leagues/f1.svg",
-    country: "🌍",
-  },
+  { id: "f1", name: "Formule 1", shortName: "F1", sport: "AUTRE", country: "🌍" },
 
   // Esport
-  {
-    id: "lck",
-    name: "LCK",
-    shortName: "LCK",
-    sport: "ESPORT",
-    logo: null,
-    country: "🇰🇷",
-  },
-  {
-    id: "lec",
-    name: "LEC",
-    shortName: "LEC",
-    sport: "ESPORT",
-    logo: null,
-    country: "🇪🇺",
-  },
-  {
-    id: "lpl",
-    name: "LPL",
-    shortName: "LPL",
-    sport: "ESPORT",
-    logo: null,
-    country: "🇨🇳",
-  },
-  {
-    id: "lol-worlds",
-    name: "LoL Worlds",
-    shortName: "WORLDS",
-    sport: "ESPORT",
-    logo: "/leagues/lol-worlds.svg",
-    country: "🌍",
-  },
-  {
-    id: "valorant",
-    name: "Valorant (VCT)",
-    shortName: "VALORANT",
-    sport: "ESPORT",
-    logo: "/leagues/valorant.png",
-    country: "🌍",
-  },
-  {
-    id: "cs2",
-    name: "CS2",
-    shortName: "CS2",
-    sport: "ESPORT",
-    logo: "/leagues/cs2.svg",
-    country: "🌍",
-  },
+  { id: "lck", name: "LCK", shortName: "LCK", sport: "ESPORT", country: "🇰🇷" },
+  { id: "lec", name: "LEC", shortName: "LEC", sport: "ESPORT", country: "🇪🇺" },
+  { id: "lpl", name: "LPL", shortName: "LPL", sport: "ESPORT", country: "🇨🇳" },
+  { id: "lol-worlds", name: "LoL Worlds", shortName: "WORLDS", sport: "ESPORT", country: "🌍" },
+  { id: "valorant", name: "Valorant (VCT)", shortName: "VALORANT", sport: "ESPORT", country: "🌍" },
+  { id: "cs2", name: "CS2", shortName: "CS2", sport: "ESPORT", country: "🌍" },
 ];
+
+// LEAGUES enrichi à l'import avec les badges SportsDB. Pas de fetch
+// live — tout est résolu en synchrone depuis le mapping hardcoded.
+export const LEAGUES: League[] = LEAGUES_META.map((m) => ({
+  ...m,
+  logo: LEAGUE_BADGES[m.id] ?? null,
+}));
 
 const LEAGUE_MAP = new Map(LEAGUES.map((l) => [l.id, l]));
 

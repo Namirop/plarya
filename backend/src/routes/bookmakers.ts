@@ -15,6 +15,10 @@ router.get("/", async (_req, res) => {
       orderBy: { name: "asc" },
     });
 
+    // Cache long (Sprint Polish A.9) : la liste des bookmakers
+    // bouge rarement (édition admin ponctuelle). 10 min max-age =
+    // 99% des visiteurs hittent le cache.
+    res.set("Cache-Control", "public, max-age=600, s-maxage=1200, stale-while-revalidate=3600");
     res.json(bookmakers);
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur" });

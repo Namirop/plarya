@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { X } from "lucide-react";
 
-import { useUser } from "@/hooks/use-user";
+import { X } from "@phosphor-icons/react";
+
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/hooks/use-user";
 import { cn } from "@/lib/utils";
 
 // Clé sessionStorage utilisée pour porter une destination "post-login"
@@ -100,9 +101,9 @@ export function LoginModal({
       }
       if (e.key !== "Tab" || !root) return;
 
-      const focusables = Array.from(
-        root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-      ).filter((el) => el.offsetParent !== null); // visible only
+      const focusables = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (el) => el.offsetParent !== null,
+      ); // visible only
 
       if (focusables.length === 0) return;
       const first = focusables[0];
@@ -177,7 +178,7 @@ export function LoginModal({
         aria-labelledby="login-modal-title"
         className="relative z-10 mx-4 w-full max-w-[480px] rounded-2xl border border-surface-elevated bg-background p-8"
       >
-        {/* Close X — lucide-react, taille 5 (=20 px), pattern Bloc 2. */}
+        {/* Close X — Phosphor, taille 5 (=20 px), pattern Bloc 2. */}
         <button
           type="button"
           onClick={handleClose}
@@ -189,16 +190,12 @@ export function LoginModal({
 
         {sent ? (
           <>
-            <h3
-              id="login-modal-title"
-              className="font-display text-h4 text-foreground"
-            >
+            <h2 id="login-modal-title" className="font-display text-h4 text-foreground">
               Vérifie ta boîte mail
-            </h3>
+            </h2>
             <p className="mt-3 font-body text-body-16 text-muted-foreground">
               Un lien de connexion a été envoyé à{" "}
-              <strong className="text-foreground">{email}</strong>. Clique
-              dessus pour te connecter.
+              <strong className="text-foreground">{email}</strong>. Clique dessus pour te connecter.
             </p>
             <p className="mt-3 font-body text-body-16 text-muted-foreground/70">
               Le lien expire dans 15 minutes.
@@ -215,25 +212,20 @@ export function LoginModal({
           </>
         ) : (
           <>
-            <h3
-              id="login-modal-title"
-              className="font-display text-h4 text-foreground"
-            >
+            <h2 id="login-modal-title" className="font-display text-h4 text-foreground">
               {title}
-            </h3>
-            <p className="mt-2 font-body text-body-16 text-muted-foreground">
-              {description}
-            </p>
+            </h2>
+            <p className="mt-2 font-body text-body-16 text-muted-foreground">{description}</p>
 
             <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
               {error && (
-                <p
-                  role="alert"
-                  className="font-body text-body-16 text-destructive"
-                >
+                <p role="alert" className="font-body text-body-16 text-destructive">
                   {error}
                 </p>
               )}
+              <label htmlFor="login-email" className="sr-only">
+                Ton email
+              </label>
               <input
                 id="login-email"
                 type="email"

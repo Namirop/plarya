@@ -79,7 +79,7 @@ export async function sendAccessUnlockedEmail(
   email: string,
   expertPseudo: string,
   expertId: string,
-  magicLinkUrl: string
+  magicLinkUrl: string,
 ): Promise<void> {
   // Escape user-controlled : pseudo peut contenir des caractères
   // HTML dangereux. expertId est un cuid contrôlé backend, pas
@@ -115,7 +115,7 @@ export async function sendWinningPronoEmail(
   email: string,
   expertPseudo: string,
   expertId: string,
-  matchName: string
+  matchName: string,
 ): Promise<void> {
   // Escape user-controlled : pseudo (Expert.pseudo) et matchName
   // (Prono.matchName) viennent de la DB côté user (set par l'expert

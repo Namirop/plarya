@@ -15,12 +15,68 @@ import checkoutRoutes from "./routes/checkout";
 import webhookRoutes from "./routes/webhooks";
 import bookmakerRoutes from "./routes/bookmakers";
 import { initCronJobs } from "./lib/cron";
+import { csrfTokenIssuer, csrfValidator } from "./lib/csrf";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Security headers
-app.use(helmet());
+// Security headers + CSP strict (cf. audit Polish A.8).
+//
+// On configure helmet manuellement plutôt qu'en defaults pour pouvoir
+// définir une Content-Security-Policy adaptée au projet :
+//  - script-src 'self' + 'unsafe-inline' : nécessaire pour Next dev
+//    (HMR injecte des scripts inline). En prod on durcira via nonce
+//    quand on aura une étape de build dédiée — pour l'instant accepté
+//    car le risque XSS reste limité par les autres mitigations.
+//  - style-src 'self' + 'unsafe-inline' : Tailwind v4 + Next CSS-in-JS
+//    posent des styles inline nécessaires pour l'hydratation.
+//  - img-src 'self' + data: + SportsDB (badges ligues) + hôtes
+//    images whitelistés (cf. next.config.ts remotePatterns).
+//  - connect-src 'self' + api.stripe.com (Stripe.js fetch) + r.stripe.com
+//    (Stripe Radar) + api.resend.com (envoi mails).
+//  - frame-src js.stripe.com + hooks.stripe.com : Stripe Checkout
+//    embed iframe.
+//  - frame-ancestors 'none' : empêche le clickjacking (iframe Plarya
+//    depuis un autre site).
+//  - object-src 'none' : pas de Flash/applets.
+//  - upgrade-insecure-requests : force https si headers passent en
+//    prod.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "https://r2.thesportsdb.com",
+          "https://www.thesportsdb.com",
+          "https://i.imgur.com",
+          "https://res.cloudinary.com",
+          "https://www.gravatar.com",
+        ],
+        connectSrc: [
+          "'self'",
+          "https://api.stripe.com",
+          "https://r.stripe.com",
+          "https://api.resend.com",
+        ],
+        fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+        frameSrc: ["https://js.stripe.com", "https://hooks.stripe.com"],
+        frameAncestors: ["'none'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+      },
+    },
+    // crossOriginEmbedderPolicy par défaut "require-corp" casse le
+    // chargement des badges SportsDB qui n'exposent pas CORP. On
+    // désactive — la CSP img-src couvre déjà le risque.
+    crossOriginEmbedderPolicy: false,
+  }),
+);
 
 // CORS — restrict to allowed origins
 const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000").split(",");
@@ -28,7 +84,7 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-  })
+  }),
 );
 
 // Webhook route MUST be before express.json() (needs raw body for signature verification)
@@ -36,6 +92,15 @@ app.use("/webhooks", webhookRoutes);
 
 app.use(express.json());
 app.use(cookieParser());
+
+// CSRF — double-submit cookie pattern (cf. lib/csrf.ts). Issuer pose le
+// cookie csrf_token si absent ; validator bloque les requêtes mutantes
+// sans header X-CSRF-Token correspondant. Monté APRÈS cookieParser
+// (requis pour lire le cookie) et APRÈS le mount /webhooks (Stripe ne
+// connaît évidemment pas notre token — il signe ses requêtes via le
+// secret webhook).
+app.use(csrfTokenIssuer);
+app.use(csrfValidator);
 
 // --- Rate limiters ---
 

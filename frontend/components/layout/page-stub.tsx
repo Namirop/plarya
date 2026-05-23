@@ -19,9 +19,7 @@ export function PageStub({
   return (
     <div className="mx-auto flex min-h-[60vh] w-full max-w-content flex-col items-center justify-center px-6 py-16 text-center">
       <h1 className="font-display text-h2 text-foreground">{title}</h1>
-      <p className="mt-6 font-body text-body-18 text-muted-foreground">
-        {description}
-      </p>
+      <p className="mt-6 font-body text-body-18 text-muted-foreground">{description}</p>
       <Button variant="secondary" render={<Link href="/" />} className="mt-10">
         Retour à l&apos;accueil
       </Button>

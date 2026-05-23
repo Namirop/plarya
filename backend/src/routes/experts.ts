@@ -1,4 +1,7 @@
 import { Router } from "express";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+
+import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../lib/prisma";
 import { logger } from "../lib/logger";
 import { calcWinRate } from "../lib/stats";
@@ -7,6 +10,54 @@ import { expertMiddleware } from "../middleware/expert";
 import { updateExpertSchema } from "../validators/expert-self";
 
 const router = Router();
+
+/**
+ * Rate-limit pour POST /experts/:id/view — dédoublonnement compteur
+ * de vues.
+ *
+ * Sans ce limiter, un attaquant peut spammer cet endpoint avec une
+ * boucle (curl, F5 répété, bot) pour gonfler artificiellement le
+ * `viewsToday` d'un expert et fausser la preuve sociale affichée
+ * publiquement.
+ *
+ * Clé : IP + expertId (issu de req.params.id). 1 incrément par
+ * couple par heure → un user légitime qui rafraîchit la page voit
+ * le compteur progresser une seule fois sur la fenêtre. Les visites
+ * via NAT / IP partagée d'entreprise restent acceptables (1
+ * incrément par IP, pas par device — cohérent avec le principe
+ * "vues" plutôt que "visiteurs uniques").
+ *
+ * 1h plutôt qu'1j : reset viewsToday est de toute façon nocturne
+ * (cf. cron midnight_reset) ; au pire un user qui revient 3× dans
+ * la journée incrémente 3× sur 24h, ce qui est OK.
+ */
+const viewIncrementLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1h
+  max: 1,
+  // Pas de message d'erreur visible à l'user : les hits throttlés
+  // sont silencieux (handler custom → 200 sans incrément), sinon
+  // chaque rafraîchissement de page afficherait une erreur.
+  skipFailedRequests: false,
+  // Standard headers, useful in dev to verify behavior via DevTools.
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    // ipKeyGenerator normalise l'IP : pour IPv6 il colle le préfixe
+    // /64 (sinon un user IPv6 bouge dans son /64 et contourne le
+    // limiter — un seul ISP attribue typiquement le même /64 à un
+    // device, donc /64 = "1 device"). Pour IPv4 il renvoie l'IP telle
+    // quelle. Sans ce helper, express-rate-limit 8+ refuse de démarrer
+    // (ERR_ERL_KEY_GEN_IPV6).
+    const ip = ipKeyGenerator(req.ip ?? "unknown");
+    return `view:${ip}:${req.params.id}`;
+  },
+  // Handler custom : on renvoie 200 (throttled silently) plutôt que
+  // 429. Le frontend continue à recevoir un succès apparent, juste
+  // sans incrément en DB. UX douce.
+  handler: (_req, res) => {
+    res.json({ ok: true, throttled: true });
+  },
+});
 
 // GET /experts/me — Expert's own profile + stats (must be before /:id)
 router.get("/me", authMiddleware, expertMiddleware, async (req, res) => {
@@ -81,7 +132,13 @@ router.patch("/me", authMiddleware, expertMiddleware, async (req, res) => {
       }
     }
 
-    const updateData: Record<string, unknown> = {};
+    // Prisma.ExpertUpdateInput — type strict pour le patch partiel
+    // (Sprint Polish B2.6). Avant on utilisait `Record<string, unknown>`
+    // qui laissait passer n'importe quel champ (silent ignore Prisma
+    // si nom invalide, mais aucun type-check à la rédaction). Avec
+    // ExpertUpdateInput, toute typo (`dailyNotes` au lieu de
+    // `dailyNote`) crashe le tsc.
+    const updateData: Prisma.ExpertUpdateInput = {};
     if (pseudo !== undefined) updateData.pseudo = pseudo;
     if (bio !== undefined) updateData.bio = bio;
     if (sports !== undefined) updateData.sports = sports;
@@ -109,27 +166,36 @@ router.patch("/me", authMiddleware, expertMiddleware, async (req, res) => {
 });
 
 // GET /experts — Experts sorted by displayOrder ASC, createdAt DESC.
+//
+// Performance : avant Sprint Polish A.6, on faisait 2 queries
+// supplémentaires PAR expert (count + findMany pronosToday) → O(N)
+// avec N = nombre d'experts. Refacto avec `include` Prisma : on
+// récupère expert + ses pronos du jour en UNE seule query (Prisma
+// génère un JOIN ou prefetch). pronosToday se calcule ensuite côté
+// JS (length de l'array). Total : 1 query au lieu de 1 + 2N.
+//
+// Champs sélectionnés sur pronos : uniquement les champs publics
+// (matchName/league/odds/teasing/result/startTime/isFeatured/
+// matchDate/createdAt). PAS `pick` ni `argument` qui sont gated
+// derrière la sub active — on ne veut pas les exposer ici via une
+// query non-authentifiée.
 router.get("/", async (req, res) => {
   try {
-    const experts = await prisma.expert.findMany({
-      // Filtrer les experts soft-deleted (RGPD) : leur profile ne
-      // doit plus apparaître dans le listing public.
-      where: { deletedAt: null },
-      orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }],
-    });
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const enriched = await Promise.all(
-      experts.map(async (e) => {
-        const pronosToday = await prisma.prono.count({
-          where: { expertId: e.id, createdAt: { gte: today } },
-        });
-
-        // Get today's pronos for teasing (without pick/argument)
-        const todayPronos = await prisma.prono.findMany({
-          where: { expertId: e.id, createdAt: { gte: today } },
+    const experts = await prisma.expert.findMany({
+      // Filtrer :
+      //  - deletedAt: les experts soft-deleted (RGPD).
+      //  - pendingDeletionAt: les experts en suppression programmée
+      //    (n'acceptent plus de nouveaux abonnés → pas de raison de
+      //    les pousser sur la homepage). Les abonnés existants
+      //    accèdent toujours au profile via /experts/:id direct.
+      where: { deletedAt: null, pendingDeletionAt: null },
+      orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }],
+      include: {
+        pronos: {
+          where: { createdAt: { gte: today } },
           select: {
             id: true,
             matchName: true,
@@ -142,26 +208,34 @@ router.get("/", async (req, res) => {
             matchDate: true,
             createdAt: true,
           },
-        });
+        },
+      },
+    });
 
-        return {
-          id: e.id,
-          pseudo: e.pseudo,
-          bio: e.bio,
-          dailyNote: e.dailyNote,
-          photoUrl: e.photoUrl,
-          sports: e.sports,
-          dayPassPrice: e.dayPassPrice,
-          monthlyPrice: e.monthlyPrice,
-          warningMessage: e.warningMessage,
-          viewsToday: e.viewsToday,
-          pronosToday,
-          todayPronos,
-        };
-      }),
-    );
+    const enriched = experts.map((e) => ({
+      id: e.id,
+      pseudo: e.pseudo,
+      bio: e.bio,
+      dailyNote: e.dailyNote,
+      photoUrl: e.photoUrl,
+      sports: e.sports,
+      dayPassPrice: e.dayPassPrice,
+      monthlyPrice: e.monthlyPrice,
+      warningMessage: e.warningMessage,
+      viewsToday: e.viewsToday,
+      pronosToday: e.pronos.length,
+      todayPronos: e.pronos,
+    }));
 
     const limit = req.query.all === "true" ? enriched.length : 6;
+    // Cache public (Sprint Polish A.9) : la homepage est servie au
+    // même contenu à tous les visiteurs anonymes ; 60s max-age est
+    // un compromis fraîcheur (un expert publie une nouvelle analyse
+    // → visible en <1 min) / charge (60s × N visiteurs = 1 hit
+    // backend au lieu de N). stale-while-revalidate=600 → si Vercel/
+    // Cloudflare front-cache, ils peuvent re-servir l'ancienne valeur
+    // jusqu'à 10 min en revalidant en arrière-plan.
+    res.set("Cache-Control", "public, max-age=60, s-maxage=120, stale-while-revalidate=600");
     res.json(enriched.slice(0, limit));
   } catch (err) {
     logger.error({ err, route: "GET /experts" }, "List experts failed");
@@ -217,6 +291,11 @@ router.get("/:id", async (req, res) => {
       pick: p.result === "PENDING" ? null : p.pick,
     }));
 
+    // Cache public (Sprint Polish A.9) — même rationnel que GET /experts.
+    // Note : pas d'effet pour les visiteurs LOGGÉS qui ont une sub
+    // active (ils fetchent /experts/:id/pronos en plus, gated). On
+    // cache la version masquée (pick=null sur PENDING) ; pas de fuite.
+    res.set("Cache-Control", "public, max-age=60, s-maxage=120, stale-while-revalidate=600");
     res.json({
       id: expert.id,
       pseudo: expert.pseudo,
@@ -228,6 +307,11 @@ router.get("/:id", async (req, res) => {
       monthlyPrice: expert.monthlyPrice,
       warningMessage: expert.warningMessage,
       viewsToday: expert.viewsToday,
+      // Flag exposé publiquement pour que le frontend désactive les
+      // CTA d'achat et affiche un banner explicite. On ne 404 PAS le
+      // profile : les abonnés existants doivent pouvoir continuer à
+      // accéder à leurs analyses jusqu'à expiration de leur sub.
+      pendingDeletion: !!expert.pendingDeletionAt,
       pronosToday,
       pronos,
     });
@@ -237,7 +321,10 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST /experts/:id/view — Increment view counter
-router.post("/:id/view", async (req, res) => {
+// Le limiter passe AVANT le handler : si le couple (IP, expertId) a
+// déjà incrémenté dans la fenêtre, le handler custom renvoie
+// { ok: true, throttled: true } sans toucher la DB.
+router.post("/:id/view", viewIncrementLimiter, async (req, res) => {
   try {
     await prisma.expert.update({
       where: { id: req.params.id as string },

@@ -11,7 +11,9 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "db:seed:reset": "tsx prisma/seed.ts --reset"
+    "db:seed:reset": "tsx prisma/seed.ts --reset",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [],
   "author": "",
@@ -42,6 +44,7 @@
     "@types/node": "^25.5.2",
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.20.0",
+    "prettier": "^3.8.3",
     "prisma": "^7.6.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",

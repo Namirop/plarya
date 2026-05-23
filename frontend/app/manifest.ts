@@ -8,8 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Plarya — Analyses sportives par des experts",
     short_name: "Plarya",
-    description:
-      "Découvre les analyses sportives quotidiennes d'experts vérifiés.",
+    description: "Découvre les analyses sportives quotidiennes d'experts vérifiés.",
     start_url: "/",
     display: "standalone",
     background_color: "#000000",

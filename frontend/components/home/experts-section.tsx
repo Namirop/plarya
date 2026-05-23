@@ -1,23 +1,18 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
+import { ArrowRight } from "@phosphor-icons/react";
+
 import { ExpertCard, type ExpertCardProps } from "@/components/experts/expert-card";
-import { SectionTitle } from "@/components/ui/section-title";
-import { SPORT_DOMAIN, ESPORT_DOMAIN } from "@/lib/sports";
 import type { DomainId } from "@/components/home/domains-section";
+import { Button } from "@/components/ui/button";
+import { SectionTitle } from "@/components/ui/section-title";
 import { apiGet } from "@/lib/api";
 import { allStarted } from "@/lib/date";
+import { SPORT_DOMAIN, ESPORT_DOMAIN } from "@/lib/sports";
 import { cn } from "@/lib/utils";
 
 // Shape renvoyée par GET /experts (cf. backend/src/routes/experts.ts).
@@ -67,9 +62,7 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
   // qui remplace les anciens mocks codés en dur (id "1" → "6"). En cas
   // d'erreur réseau, on garde la liste vide (la section ne s'affiche
   // pas en dessous des dots).
-  const [experts, setExperts] = useState<(ExpertCardProps & { id: string })[]>(
-    [],
-  );
+  const [experts, setExperts] = useState<(ExpertCardProps & { id: string })[]>([]);
   useEffect(() => {
     apiGet<ExpertListItem[]>("/experts")
       .then((data) => {
@@ -87,9 +80,7 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
           // analyses PENDING du jour ont déjà commencé. allStarted()
           // renvoie aussi true pour une liste vide → un expert sans
           // analyse du jour apparaît en "Terminé".
-          locked: allStarted(
-            t.todayPronos.filter((p) => p.result === "PENDING"),
-          ),
+          locked: allStarted(t.todayPronos.filter((p) => p.result === "PENDING")),
         }));
         setExperts(mapped);
       })
@@ -103,19 +94,13 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
   // dans le domaine.
   const filteredExperts = useMemo(() => {
     if (!filterDomain) return experts;
-    const domainSports =
-      filterDomain === "SPORT" ? SPORT_DOMAIN : ESPORT_DOMAIN;
-    return experts.filter((e) =>
-      e.categories.some((s) => domainSports.includes(s)),
-    );
+    const domainSports = filterDomain === "SPORT" ? SPORT_DOMAIN : ESPORT_DOMAIN;
+    return experts.filter((e) => e.categories.some((s) => domainSports.includes(s)));
   }, [experts, filterDomain]);
 
   // Nombre de "pages" = ceil(total / per_page). Minimum 1 pour éviter
   // un render à 0 dots quand la liste est encore vide (fetch initial).
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredExperts.length / CARDS_PER_PAGE),
-  );
+  const totalPages = Math.max(1, Math.ceil(filteredExperts.length / CARDS_PER_PAGE));
 
   const updateState = useCallback(() => {
     const el = scrollerRef.current;
@@ -224,11 +209,7 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
             )}
           >
             {filteredExperts.map((expert) => (
-              <div
-                key={expert.id}
-                className="shrink-0 snap-start"
-                style={{ width: CARD_WIDTH }}
-              >
+              <div key={expert.id} className="shrink-0 snap-start" style={{ width: CARD_WIDTH }}>
                 <ExpertCard
                   id={expert.id}
                   avatar={expert.avatar}
@@ -280,9 +261,7 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
               aria-label={`Aller à la page ${i + 1}`}
               className={cn(
                 "size-[10px] rounded-full transition-all duration-200 cursor-pointer",
-                i === activePage
-                  ? "bg-accent"
-                  : "bg-muted-foreground opacity-40 hover:opacity-70",
+                i === activePage ? "bg-accent" : "bg-muted-foreground opacity-40 hover:opacity-70",
               )}
             />
           ))}

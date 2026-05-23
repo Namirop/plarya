@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { useRouter } from "next/navigation";
 
-import { Header } from "@/components/layout/header";
 import { LoginModal, POST_LOGIN_REDIRECT_KEY } from "@/components/auth/login-modal";
+import { Header } from "@/components/layout/header";
 import { useUser } from "@/hooks/use-user";
 
 // Wrapper client qui branche le Header DS sur l'auth maison (magic-link

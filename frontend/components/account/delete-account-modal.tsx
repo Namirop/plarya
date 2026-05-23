@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+
+import { X } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,27 @@ interface DeleteAccountModalProps {
   userEmail: string;
   /** Appelé une fois que l'user a tapé son email et confirmé. */
   onConfirm: () => Promise<void>;
+  /**
+   * `immediate` → suppression directe (USER lambda OU EXPERT sans sub
+   * active). Le texte explique que c'est irréversible.
+   * `scheduled` → EXPERT avec subs actives. Le texte explique que la
+   * suppression sera programmée (pendingDeletionAt) et annulable
+   * jusqu'à l'expiration de la dernière sub.
+   */
+  mode?: "immediate" | "scheduled";
+  /** ISO date — date à laquelle la suppression deviendra effective (mode scheduled). */
+  lastSubExpiresAt?: string | null;
+  /** Nombre de subs actives bloquantes (mode scheduled). */
+  activeSubscriptions?: number;
+}
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 export function DeleteAccountModal({
@@ -28,6 +50,9 @@ export function DeleteAccountModal({
   onClose,
   userEmail,
   onConfirm,
+  mode = "immediate",
+  lastSubExpiresAt = null,
+  activeSubscriptions = 0,
 }: DeleteAccountModalProps) {
   const [typedEmail, setTypedEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -113,18 +138,28 @@ export function DeleteAccountModal({
           <X className="size-5" />
         </button>
 
-        <h2
-          id="delete-account-title"
-          className="font-display text-h4 text-destructive"
-        >
-          Supprimer ton compte ?
+        <h2 id="delete-account-title" className="font-display text-h4 text-destructive">
+          {mode === "scheduled" ? "Programmer la suppression ?" : "Supprimer ton compte ?"}
         </h2>
-        <p className="mt-3 font-body text-body-16 text-muted-foreground">
-          Cette action est <strong className="text-foreground">irréversible</strong>.
-          Tape ton email{" "}
-          <span className="text-foreground">({userEmail})</span> pour
-          confirmer.
-        </p>
+        {mode === "scheduled" ? (
+          <p className="mt-3 font-body text-body-16 text-muted-foreground">
+            Tu as{" "}
+            <strong className="text-foreground">
+              {activeSubscriptions} abonné{activeSubscriptions > 1 ? "s" : ""}
+            </strong>{" "}
+            actif{activeSubscriptions > 1 ? "s" : ""}. Ton profil sera retiré des listings publics
+            et n&apos;acceptera plus de nouveaux abonnés. La suppression deviendra effective le{" "}
+            <strong className="text-foreground">{formatDate(lastSubExpiresAt)}</strong>. Tu peux
+            annuler à tout moment d&apos;ici là. <br />
+            <br />
+            Tape ton email <span className="text-foreground">({userEmail})</span> pour confirmer.
+          </p>
+        ) : (
+          <p className="mt-3 font-body text-body-16 text-muted-foreground">
+            Cette action est <strong className="text-foreground">irréversible</strong>. Tape ton
+            email <span className="text-foreground">({userEmail})</span> pour confirmer.
+          </p>
+        )}
 
         <div className="mt-6 space-y-2">
           <label
@@ -146,10 +181,7 @@ export function DeleteAccountModal({
         </div>
 
         {error && (
-          <p
-            role="alert"
-            className="mt-4 font-body text-body-16 text-destructive"
-          >
+          <p role="alert" className="mt-4 font-body text-body-16 text-destructive">
             {error}
           </p>
         )}
@@ -173,7 +205,13 @@ export function DeleteAccountModal({
             disabled={!emailMatches || submitting}
             className="flex-1 !bg-destructive !border-destructive hover:!brightness-110"
           >
-            {submitting ? "Suppression…" : "Supprimer définitivement"}
+            {submitting
+              ? mode === "scheduled"
+                ? "Programmation…"
+                : "Suppression…"
+              : mode === "scheduled"
+                ? "Programmer la suppression"
+                : "Supprimer définitivement"}
           </Button>
         </div>
       </div>

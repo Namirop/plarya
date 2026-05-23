@@ -25,40 +25,40 @@ Plarya/
 
 ### Frontend — `frontend/`
 
-| Dossier        | Fichiers TS/TSX | Sous-dossiers notables                                                       |
-| -------------- | --------------- | ---------------------------------------------------------------------------- |
-| `app/`         | 20              | `admin/`, `auth/verify/`, `cgu/`, `compte/`, `confidentialite/`, `contact/`, `dashboard/`, `devenir-tipster/`, `experts/`, `mentions-legales/`, `tipsters/[id]/` |
-| `components/`  | 32              | `admin/`, `auth/`, `checkout/`, `dashboard/`, `domains/`, `experts/`, `home/`, `layout/`, `legal/`, `ui/` |
-| `hooks/`       | 1               | `use-user.tsx` (seul hook)                                                   |
-| `lib/`         | 8               | `api.ts`, `constants.ts`, `date.ts`, `sports.ts`, `sports-icons.tsx`, `stripe.ts`, `utils.ts`, `types/` |
-| **Total**      | **61**          | **~5 200 lignes TS/TSX** (hors next-env)                                     |
+| Dossier       | Fichiers TS/TSX | Sous-dossiers notables                                                                                                                                           |
+| ------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/`        | 20              | `admin/`, `auth/verify/`, `cgu/`, `compte/`, `confidentialite/`, `contact/`, `dashboard/`, `devenir-tipster/`, `experts/`, `mentions-legales/`, `tipsters/[id]/` |
+| `components/` | 32              | `admin/`, `auth/`, `checkout/`, `dashboard/`, `domains/`, `experts/`, `home/`, `layout/`, `legal/`, `ui/`                                                        |
+| `hooks/`      | 1               | `use-user.tsx` (seul hook)                                                                                                                                       |
+| `lib/`        | 8               | `api.ts`, `constants.ts`, `date.ts`, `sports.ts`, `sports-icons.tsx`, `stripe.ts`, `utils.ts`, `types/`                                                          |
+| **Total**     | **61**          | **~5 200 lignes TS/TSX** (hors next-env)                                                                                                                         |
 
 ### Backend — `backend/`
 
-| Dossier               | Fichiers TS | Contenu                                                              |
-| --------------------- | ----------- | -------------------------------------------------------------------- |
-| `src/routes/`         | 8           | `auth`, `tipsters`, `pronos`, `subscriptions`, `admin`, `checkout`, `webhooks`, `bookmakers` |
-| `src/middleware/`     | 4           | `auth`, `admin`, `tipster`, `validate`                               |
-| `src/lib/`            | 8           | `prisma`, `stripe`, `jwt`, `magic-link`, `emails`, `resend`, `stats`, `cron` |
-| `src/validators/`     | 5           | `auth`, `checkout`, `prono`, `tipster`, `tipsters`                   |
-| `src/server.ts`       | 1           | Entry point                                                          |
-| `src/generated/prisma/` | (générés) | Client Prisma (ignoré)                                              |
-| `prisma/migrations/`  | 4 migrations | `init`, `add_start_time_to_prono`, `add_views_and_featured`, `add_checkout_session_used` |
-| **Total source**      | **26**      | **~2 300 lignes**                                                    |
+| Dossier                 | Fichiers TS  | Contenu                                                                                      |
+| ----------------------- | ------------ | -------------------------------------------------------------------------------------------- |
+| `src/routes/`           | 8            | `auth`, `tipsters`, `pronos`, `subscriptions`, `admin`, `checkout`, `webhooks`, `bookmakers` |
+| `src/middleware/`       | 4            | `auth`, `admin`, `tipster`, `validate`                                                       |
+| `src/lib/`              | 8            | `prisma`, `stripe`, `jwt`, `magic-link`, `emails`, `resend`, `stats`, `cron`                 |
+| `src/validators/`       | 5            | `auth`, `checkout`, `prono`, `tipster`, `tipsters`                                           |
+| `src/server.ts`         | 1            | Entry point                                                                                  |
+| `src/generated/prisma/` | (générés)    | Client Prisma (ignoré)                                                                       |
+| `prisma/migrations/`    | 4 migrations | `init`, `add_start_time_to_prono`, `add_views_and_featured`, `add_checkout_session_used`     |
+| **Total source**        | **26**       | **~2 300 lignes**                                                                            |
 
 ### Conventions
 
-| Convention                 | État                                                                                       |
-| -------------------------- | ------------------------------------------------------------------------------------------ |
-| TypeScript `strict`        | ✅ frontend + backend                                                                       |
-| ESLint                     | ⚠️ frontend uniquement (config Next par défaut, aucune règle custom, **pas d'a11y plugin**) |
-| Prettier                   | ❌ **non configuré** (ni `.prettierrc`, ni dans `package.json`)                              |
-| Tests                      | ❌ **zéro test** (unit, integration, e2e)                                                    |
-| README                     | ❌ **aucun README** à la racine ni dans `frontend/` ou `backend/`                             |
-| CLAUDE.md                  | ✅ très complet (530 lignes, spec produit + DS)                                              |
-| `.env.example`             | ❌ **absent** (root, frontend, backend) — onboarding difficile                                |
-| Validation Zod             | ✅ sur la plupart des endpoints critiques (auth, checkout, prono, tipster)                   |
-| Magic-link auth            | ✅ table `MagicLink` + `Session` propres, tokens crypto-secure                               |
+| Convention          | État                                                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| TypeScript `strict` | ✅ frontend + backend                                                                       |
+| ESLint              | ⚠️ frontend uniquement (config Next par défaut, aucune règle custom, **pas d'a11y plugin**) |
+| Prettier            | ❌ **non configuré** (ni `.prettierrc`, ni dans `package.json`)                             |
+| Tests               | ❌ **zéro test** (unit, integration, e2e)                                                   |
+| README              | ❌ **aucun README** à la racine ni dans `frontend/` ou `backend/`                           |
+| CLAUDE.md           | ✅ très complet (530 lignes, spec produit + DS)                                             |
+| `.env.example`      | ❌ **absent** (root, frontend, backend) — onboarding difficile                              |
+| Validation Zod      | ✅ sur la plupart des endpoints critiques (auth, checkout, prono, tipster)                  |
+| Magic-link auth     | ✅ table `MagicLink` + `Session` propres, tokens crypto-secure                              |
 
 ---
 
@@ -71,12 +71,14 @@ Plarya est dans un état **BETA fonctionnel mais imparfait**. La majorité du pa
 **Niveau global : BETA fonctionnel imparfait** — on est plus proche de RC1 que d'ALPHA grâce à la propreté du flux principal, mais on n'est pas RC1 tant que les CRITICAL pricing/vocabulaire/sécurité ne sont pas traités.
 
 **Findings totaux : 87**
+
 - CRITICAL : **14** (à corriger avant prod absolument)
 - IMPORTANT : **34** (qualité du produit, à traiter dans la foulée)
 - NICE_TO_HAVE : **27** (dette technique, à planifier)
 - IGNORABLE : **12** (cosmétique, peut attendre une V2)
 
 **Top 3 trous critiques :**
+
 1. **Pricing désynchronisé entre DB / CGU / emails (19€ vs 29€ vs 19€)** — risque légal et conversion ratée.
 2. **Flow `/devenir-tipster` charge 39€/trimestre via Stripe** alors que la spec produit veut une candidature gratuite validée par admin.
 3. **Webhook Stripe avale toutes les erreurs (200 systématique)** — perte silencieuse de paiements si la création de Subscription échoue après que Stripe ait débité.
@@ -523,7 +525,7 @@ Plarya est dans un état **BETA fonctionnel mais imparfait**. La majorité du pa
   - Effort : S (mais nécessite décision business).
 
 - **CRITICAL** Flow `/devenir-tipster` charge 39€/trimestre alors que la spec dit "candidature manuelle gratuite MVP".
-  - Constat : `backend/src/routes/checkout.ts:135-198` crée une session Stripe `subscription` à 3900 centimes (`recurring: { interval: "month", interval_count: 3 }`). `frontend/app/devenir-tipster/page.tsx:93` appelle `createTipsterCheckout()`. CLAUDE.md §5 "DEVENIR EXPERT" est explicite : *"Pas de paiement 39€/trimestre pour l'instant... formulaire de candidature → soumission → email à l'admin → validation manuelle."*
+  - Constat : `backend/src/routes/checkout.ts:135-198` crée une session Stripe `subscription` à 3900 centimes (`recurring: { interval: "month", interval_count: 3 }`). `frontend/app/devenir-tipster/page.tsx:93` appelle `createTipsterCheckout()`. CLAUDE.md §5 "DEVENIR EXPERT" est explicite : _"Pas de paiement 39€/trimestre pour l'instant... formulaire de candidature → soumission → email à l'admin → validation manuelle."_
   - Impact : produit out-of-spec. Un visiteur qui clique sur "Devenir expert" est envoyé sur Stripe au lieu de soumettre une candidature → conversion impossible.
   - Fix : remplacer la création de session Stripe par un POST sur `/admin/candidatures` (nouveau) qui crée une row `TipsterApplication { pseudo, email, bio, sports, motivation, status: PENDING }` + envoie un mail à l'admin via Resend. Côté admin, ajouter un onglet "Candidatures" pour valider/refuser.
   - Effort : M (nouvelle table + nouveau endpoint + nouvel onglet admin + désactivation du flow Stripe).
@@ -597,7 +599,7 @@ Plarya est dans un état **BETA fonctionnel mais imparfait**. La majorité du pa
 ### L. Conformité RGPD / juridique
 
 - **CRITICAL** CGU / Mentions légales avec contenu placeholder explicite.
-  - Constat : `components/legal/legal-shell.tsx:6-16` affiche un `LegalWarning` jaune : *"ces conditions sont génériques. Elles doivent être validées par un juriste qualifié avant la mise en production finale."* Sur `mentions-legales/page.tsx`, l'adresse est `plarya.com` sans SIREN ni capital social. CGU mentionne `29€` ce qui contredit la DB (cf. catégorie J).
+  - Constat : `components/legal/legal-shell.tsx:6-16` affiche un `LegalWarning` jaune : _"ces conditions sont génériques. Elles doivent être validées par un juriste qualifié avant la mise en production finale."_ Sur `mentions-legales/page.tsx`, l'adresse est `plarya.com` sans SIREN ni capital social. CGU mentionne `29€` ce qui contredit la DB (cf. catégorie J).
   - Impact : non-conforme RGPD/LCEN dès le premier visiteur français. Risque CNIL / DGCCRF.
   - Fix : faire valider par un juriste (Kamel ?), remplir SIREN, hébergeur, DPO, durée de conservation des données, droits d'accès, finalité des cookies, etc.
   - Effort : M (côté juriste) + S (intégration).

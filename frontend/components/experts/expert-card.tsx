@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Star } from "lucide-react";
+
+import { ArrowRight, Star } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { SportIcon } from "@/lib/sports-icons";
@@ -56,9 +57,7 @@ export function ExpertCard({
           className="size-[68px] shrink-0 rounded-full object-cover"
         />
         <div className="min-w-0 flex-1 pt-[11px]">
-          <h3 className="font-body text-h5 text-foreground truncate">
-            {pseudo}
-          </h3>
+          <h3 className="font-body text-h5 text-foreground truncate">{pseudo}</h3>
           <p className="mt-[19px] font-body text-body-16 whitespace-nowrap">
             <span className="text-accent">EXPERT</span>{" "}
             <span className="text-muted-foreground">{viewsCount} vues</span>
@@ -70,10 +69,7 @@ export function ExpertCard({
               key={sport}
               className="flex size-[21px] items-center justify-center rounded-lg bg-surface-elevated"
             >
-              <SportIcon
-                sport={sport}
-                className="size-[13px] text-foreground"
-              />
+              <SportIcon sport={sport} className="size-[13px] text-foreground" />
             </span>
           ))}
         </div>
@@ -101,23 +97,12 @@ export function ExpertCard({
           la vitrine homepage). */}
       <ul className="mt-4 flex min-h-[40px] flex-col gap-2">
         {analyses.slice(0, 2).map((a, i) => (
-          <li
-            key={i}
-            className="flex items-center gap-6 font-body text-body-16"
-          >
-            <ArrowRight
-              color={ACCENT_GOLD}
-              strokeWidth={1.5}
-              className="size-[14px] shrink-0"
-            />
+          <li key={i} className="flex items-center gap-6 font-body text-body-16">
+            <ArrowRight color={ACCENT_GOLD} strokeWidth={1.5} className="size-[14px] shrink-0" />
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <span className="truncate text-foreground">{a.label}</span>
               {a.isPickOfTheDay && (
-                <Star
-                  color={ACCENT_GOLD}
-                  fill={ACCENT_GOLD}
-                  className="size-[14px] shrink-0"
-                />
+                <Star color={ACCENT_GOLD} fill={ACCENT_GOLD} className="size-[14px] shrink-0" />
               )}
             </div>
           </li>
@@ -137,20 +122,11 @@ export function ExpertCard({
           card reste cliquable même en "terminé". */}
       <div className="mt-20 flex justify-center">
         {locked ? (
-          <Button
-            variant="white"
-            disabled
-            className="w-[290px]"
-            tabIndex={-1}
-          >
+          <Button variant="white" disabled className="w-[290px]" tabIndex={-1}>
             Terminé pour aujourd&apos;hui
           </Button>
         ) : (
-          <Button
-            variant="white"
-            className="w-[290px] pointer-events-none"
-            tabIndex={-1}
-          >
+          <Button variant="white" className="w-[290px] pointer-events-none" tabIndex={-1}>
             Accéder (3,50€)
           </Button>
         )}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type FormEvent, type ReactNode } from "react";
-import { Check } from "lucide-react";
+
+import { Check } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,13 +15,13 @@ import {
 import { apiGet, apiPost } from "@/lib/api";
 import { TEASING_OPTIONS, TEASING_LABELS } from "@/lib/constants";
 import { getLeaguesGroupedBySport, getSportLabel, getLeague } from "@/lib/sports";
-import { cn } from "@/lib/utils";
 import type {
   Bookmaker,
   Prono,
   PublishFormFieldErrors,
   ExpertProfile,
 } from "@/lib/types/dashboard";
+import { cn } from "@/lib/utils";
 
 // ───────────────────────────────────────────────────────────────────
 // Tokens visuels — appliqués partout dans le form pour homogénéité.
@@ -103,10 +104,7 @@ export interface PublishAnalysisFormProps {
   onPublished: (newProno: Prono, updatedProfile: ExpertProfile) => void;
 }
 
-export function PublishAnalysisForm({
-  bookmakers,
-  onPublished,
-}: PublishAnalysisFormProps) {
+export function PublishAnalysisForm({ bookmakers, onPublished }: PublishAnalysisFormProps) {
   // ── State : reproduction exacte du V1 (cf. app/dashboard/page.tsx
   //    lignes 73-87 avant Bloc 2). 12 useState pour rester fidèle.
   const [matchName, setMatchName] = useState("");
@@ -134,8 +132,7 @@ export function PublishAnalysisForm({
     const errors: PublishFormFieldErrors = {};
     if (!matchName.trim()) errors.matchName = "Le match est requis";
     if (!pick.trim()) errors.pick = "Le pick est requis";
-    if (!odds || parseFloat(odds) <= 0)
-      errors.odds = "La cote doit être positive";
+    if (!odds || parseFloat(odds) <= 0) errors.odds = "La cote doit être positive";
     if (!teasing) errors.teasing = "Le teasing est requis";
     if (!startTime) {
       errors.startTime = "L'heure de début est requise";
@@ -186,9 +183,7 @@ export function PublishAnalysisForm({
       const updatedProfile = await apiGet<ExpertProfile>("/experts/me");
       onPublished(newProno, updatedProfile);
     } catch (err) {
-      setFormError(
-        err instanceof Error ? err.message : "Erreur lors de la publication",
-      );
+      setFormError(err instanceof Error ? err.message : "Erreur lors de la publication");
     } finally {
       setSubmitting(false);
     }
@@ -204,8 +199,8 @@ export function PublishAnalysisForm({
 
   // Liste des ligues regroupées par sport, pour le Select Ligue (V1).
   const leaguesGrouped = getLeaguesGroupedBySport();
-  const leagueOptions = Object.entries(leaguesGrouped).flatMap(
-    ([sport, leagues]) => leagues.map((l) => ({ sport, league: l })),
+  const leagueOptions = Object.entries(leaguesGrouped).flatMap(([sport, leagues]) =>
+    leagues.map((l) => ({ sport, league: l })),
   );
 
   // Format des selects HH/MM séparés (V1 stockait startTime en "HH:MM").
@@ -232,12 +227,7 @@ export function PublishAnalysisForm({
       <div className="flex flex-col gap-6">
         {/* ─── Ligne 1 : Match + Ligue ─── */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <Field
-            label="Match"
-            htmlFor="matchName"
-            required
-            error={fieldErrors.matchName}
-          >
+          <Field label="Match" htmlFor="matchName" required error={fieldErrors.matchName}>
             <input
               id="matchName"
               type="text"
@@ -257,10 +247,7 @@ export function PublishAnalysisForm({
               value={league || undefined}
               onValueChange={(v) => setLeague(v === "__none__" ? "" : (v ?? ""))}
             >
-              <SelectTrigger
-                size="default"
-                className={SELECT_TRIGGER_BASE}
-              >
+              <SelectTrigger size="default" className={SELECT_TRIGGER_BASE}>
                 <SelectValue placeholder="Aucune / Autre">
                   {league ? getLeague(league)?.name || league : undefined}
                 </SelectValue>
@@ -270,15 +257,9 @@ export function PublishAnalysisForm({
                   Aucune / Autre
                 </SelectItem>
                 {leagueOptions.map(({ sport, league: l }) => (
-                  <SelectItem
-                    key={l.id}
-                    value={l.id}
-                    className={SELECT_ITEM_CLASS}
-                  >
+                  <SelectItem key={l.id} value={l.id} className={SELECT_ITEM_CLASS}>
                     <span className="inline-flex items-center gap-2">
-                      <span className="text-muted-foreground/60 text-[14px]">
-                        {l.country}
-                      </span>
+                      <span className="text-muted-foreground/60 text-[14px]">{l.country}</span>
                       <span>{l.name}</span>
                       <span className="text-muted-foreground/40 text-[12px]">
                         {getSportLabel(sport)}
@@ -293,12 +274,7 @@ export function PublishAnalysisForm({
 
         {/* ─── Ligne 2 : Pick + Cote ─── */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <Field
-            label="Pick"
-            htmlFor="pick"
-            required
-            error={fieldErrors.pick}
-          >
+          <Field label="Pick" htmlFor="pick" required error={fieldErrors.pick}>
             <input
               id="pick"
               type="text"
@@ -313,12 +289,7 @@ export function PublishAnalysisForm({
             />
           </Field>
 
-          <Field
-            label="Cote"
-            htmlFor="odds"
-            required
-            error={fieldErrors.odds}
-          >
+          <Field label="Cote" htmlFor="odds" required error={fieldErrors.odds}>
             <input
               id="odds"
               type="number"
@@ -356,11 +327,7 @@ export function PublishAnalysisForm({
             </SelectTrigger>
             <SelectContent className={SELECT_CONTENT_CLASS}>
               {TEASING_OPTIONS.map((opt) => (
-                <SelectItem
-                  key={opt.value}
-                  value={opt.value}
-                  className={SELECT_ITEM_CLASS}
-                >
+                <SelectItem key={opt.value} value={opt.value} className={SELECT_ITEM_CLASS}>
                   {opt.label}
                 </SelectItem>
               ))}
@@ -369,11 +336,7 @@ export function PublishAnalysisForm({
         </Field>
 
         {/* ─── Ligne 4 : Heure de début (HH : MM côte à côte) ─── */}
-        <Field
-          label="Heure de début du match"
-          required
-          error={fieldErrors.startTime}
-        >
+        <Field label="Heure de début du match" required error={fieldErrors.startTime}>
           <div className="flex items-center gap-3">
             <Select
               value={hourValue || undefined}
@@ -385,18 +348,12 @@ export function PublishAnalysisForm({
             >
               <SelectTrigger
                 size="default"
-                className={cn(
-                  SELECT_TRIGGER_BASE,
-                  "w-32",
-                  fieldErrors.startTime && FIELD_INVALID,
-                )}
+                className={cn(SELECT_TRIGGER_BASE, "w-32", fieldErrors.startTime && FIELD_INVALID)}
               >
                 <SelectValue placeholder="HH" />
               </SelectTrigger>
               <SelectContent className={cn(SELECT_CONTENT_CLASS, "max-h-52")}>
-                {Array.from({ length: 24 }, (_, i) =>
-                  String(i).padStart(2, "0"),
-                ).map((h) => (
+                {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")).map((h) => (
                   <SelectItem key={h} value={h} className={SELECT_ITEM_CLASS}>
                     {h}h
                   </SelectItem>
@@ -416,11 +373,7 @@ export function PublishAnalysisForm({
             >
               <SelectTrigger
                 size="default"
-                className={cn(
-                  SELECT_TRIGGER_BASE,
-                  "w-32",
-                  fieldErrors.startTime && FIELD_INVALID,
-                )}
+                className={cn(SELECT_TRIGGER_BASE, "w-32", fieldErrors.startTime && FIELD_INVALID)}
               >
                 <SelectValue placeholder="MM" />
               </SelectTrigger>
@@ -444,9 +397,7 @@ export function PublishAnalysisForm({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {bookmakers.map((bm) => (
                 <div key={bm.id} className="flex flex-col gap-1.5">
-                  <span className="font-body text-[14px] text-muted-foreground">
-                    {bm.name}
-                  </span>
+                  <span className="font-body text-[14px] text-muted-foreground">{bm.name}</span>
                   <input
                     type="number"
                     step="0.01"
@@ -459,6 +410,7 @@ export function PublishAnalysisForm({
                         [bm.id]: e.target.value,
                       }))
                     }
+                    aria-label={`Cote ${bm.name}`}
                     className={FIELD_BASE}
                   />
                 </div>
@@ -488,14 +440,10 @@ export function PublishAnalysisForm({
             onClick={() => setIsFeatured((v) => !v)}
             className={cn(
               "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors cursor-pointer",
-              isFeatured
-                ? "border-accent bg-accent"
-                : "border-[#181818] bg-black/40",
+              isFeatured ? "border-accent bg-accent" : "border-[#181818] bg-black/40",
             )}
           >
-            {isFeatured && (
-              <Check className="size-3.5 text-black" strokeWidth={3} />
-            )}
+            {isFeatured && <Check className="size-3.5 text-black" strokeWidth={3} />}
           </button>
           <div className="flex flex-col gap-1">
             <span className="font-body text-body-16 text-foreground">
@@ -508,12 +456,7 @@ export function PublishAnalysisForm({
         </div>
 
         {/* ─── Bouton submit pleine largeur ─── */}
-        <Button
-          type="submit"
-          variant="white"
-          disabled={submitting}
-          className="mt-2 w-full"
-        >
+        <Button type="submit" variant="white" disabled={submitting} className="mt-2 w-full">
           {submitting ? "Publication..." : "Publier l'analyse"}
         </Button>
       </div>

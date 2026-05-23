@@ -11,19 +11,19 @@
      ════════════════════════════════════════════════════════════════ */
 
   /* ── Backgrounds ── */
-  --color-background: #000000;          /* page bg (DS: bg-primary) */
-  --color-surface: #131212;             /* surfaces sombres (DS: bg-secondary) */
-  --color-surface-elevated: #181818;    /* boutons/icônes (DS: bg-tertiary) */
+  --color-background: #000000; /* page bg (DS: bg-primary) */
+  --color-surface: #131212; /* surfaces sombres (DS: bg-secondary) */
+  --color-surface-elevated: #181818; /* boutons/icônes (DS: bg-tertiary) */
 
   /* ── Texte ── */
-  --color-foreground: #ffffff;          /* DS: text-primary */
-  --color-muted-foreground: #898181;    /* DS: text-secondary/muted */
+  --color-foreground: #ffffff; /* DS: text-primary */
+  --color-muted-foreground: #898181; /* DS: text-secondary/muted */
   --color-placeholder: #d9d9d9;
 
   /* ── Accents dorés ── */
-  --color-accent: #dfb968;              /* doré principal (label EXPERT) */
-  --color-accent-strong: #e1aa36;       /* Golden Stroke (bordures CTA) */
-  --color-accent-soft: #dfb968;         /* Shining Effect 2 color */
+  --color-accent: #dfb968; /* doré principal (label EXPERT) */
+  --color-accent-strong: #e1aa36; /* Golden Stroke (bordures CTA) */
+  --color-accent-soft: #dfb968; /* Shining Effect 2 color */
   --color-accent-glow: rgba(255, 174, 0, 0.7); /* Shining Effect color */
 
   /* ── Bordures ── */
@@ -68,27 +68,30 @@
      H5 (20) et body-16 (16) restent inchangés en mobile. */
 
   /* ── Border radius ── */
-  --radius: 16px;            /* DS : 16px par défaut partout (cards, boutons) */
-  --radius-sm: 8px;          /* icônes catégorie, swatches */
+  --radius: 16px; /* DS : 16px par défaut partout (cards, boutons) */
+  --radius-sm: 8px; /* icônes catégorie, swatches */
 
   /* ── Box shadows ── */
-  --shadow-shine: 0 0 15px 0 rgba(255, 174, 0, 0.7);   /* Shining Effect (CTA glow) */
-  --shadow-shine-soft: 0 0 7px 0 #dfb968;              /* Shining Effect 2 (Domain card glow) */
+  --shadow-shine: 0 0 15px 0 rgba(255, 174, 0, 0.7); /* Shining Effect (CTA glow) */
+  --shadow-shine-soft: 0 0 7px 0 #dfb968; /* Shining Effect 2 (Domain card glow) */
 
   /* ── Gradients ── */
   /* ancienne valeur 80% — voir si besoin de revenir :
      linear-gradient(to right, rgba(223, 185, 104, 0.8) 0%, rgba(255, 255, 255, 0.8) 100%) */
-  --background-image-gradient-gold:
-    linear-gradient(to right, #dfb968 0%, #ffffff 100%);
+  --background-image-gradient-gold: linear-gradient(to right, #dfb968 0%, #ffffff 100%);
 
   /* Divider doré qui s'estompe aux bords (Expert Card, profil expert).
      Appliquer opacity-30 sur l'élément pour le rendu final (≈ 30%). */
-  --background-image-divider-gold:
-    linear-gradient(to right, transparent 0%, #dfb968 51%, transparent 100%);
+  --background-image-divider-gold: linear-gradient(
+    to right,
+    transparent 0%,
+    #dfb968 51%,
+    transparent 100%
+  );
 
   /* ── Container (max-widths sémantiques) ── */
-  --container-content: 1175px;   /* sections régulières + Devenir créateur card (1169 ≈ 1175) */
-  --container-hero: 1308px;      /* Hero — container plus large, padding horizontal réduit */
+  --container-content: 1175px; /* sections régulières + Devenir créateur card (1169 ≈ 1175) */
+  --container-hero: 1308px; /* Hero — container plus large, padding horizontal réduit */
 
   /* ════════════════════════════════════════════════════════════════
      shadcn/ui — mapping des variables shadcn (:root ci-dessous) vers
@@ -128,7 +131,6 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-
 }
 
 /* ════════════════════════════════════════════════════════════════

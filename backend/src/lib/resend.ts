@@ -25,7 +25,9 @@ function isPermanentError(err: unknown): boolean {
   // statusCode est posé par le SDK Resend sur les erreurs HTTP.
   if (typeof e.statusCode === "number") {
     // 400-499 = client error = permanent (sauf 408 timeout et 429 rate-limit)
-    return e.statusCode >= 400 && e.statusCode < 500 && e.statusCode !== 408 && e.statusCode !== 429;
+    return (
+      e.statusCode >= 400 && e.statusCode < 500 && e.statusCode !== 408 && e.statusCode !== 429
+    );
   }
   // Pas de statusCode → erreur network/timeout → retry.
   return false;

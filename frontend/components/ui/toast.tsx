@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+
+import { X } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
 
@@ -27,12 +28,7 @@ const VARIANT_BORDERS: Record<ToastVariant, string> = {
 // Toast unitaire — slide-in from right via setState au mount (pas
 // de dépendance à une lib d'animation externe). Auto-dismiss via
 // setTimeout. Bouton X manuel toujours dispo.
-export function Toast({
-  message,
-  variant,
-  onClose,
-  duration = 5000,
-}: ToastProps) {
+export function Toast({ message, variant, onClose, duration = 5000 }: ToastProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
