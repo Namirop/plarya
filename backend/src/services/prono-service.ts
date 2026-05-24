@@ -1,5 +1,6 @@
-import { prisma } from "../lib/prisma";
+import { Prisma, type Prono } from "../generated/prisma/client";
 import type { UserRole } from "../generated/prisma/enums";
+import { prisma } from "../lib/prisma";
 import type { CreatePronoInput, UpdateResultInput } from "../validators/prono";
 
 import {
@@ -40,6 +41,44 @@ export const bookmakerOddsInclude = {
 } as const;
 
 /**
+ * Type de retour pour les services qui renvoient un Prono avec ses
+ * cotes bookmaker (publishProno, listPronosByExpertId). Généré via
+ * `Prisma.PronoGetPayload<{ include: ... }>` — type exact incluant
+ * toutes les relations imbriquées, exporté comme contrat consommable
+ * par les routes et autres services.
+ */
+export type PronoWithBookmakers = Prisma.PronoGetPayload<{
+  include: typeof bookmakerOddsInclude;
+}>;
+
+/**
+ * Type de retour pour getPronoDetailForUser — include enrichi avec
+ * expert.userId + expert.pseudo (pour les checks d'autorisation et
+ * l'affichage) + expert.subscriptions (gating sub active du caller,
+ * filtrée à 0 ou 1 row au runtime via le where dynamique).
+ *
+ * Le `subscriptions: { select: { id: true } }` ci-dessous décrit la
+ * SHAPE des rows retournées, pas le WHERE — le filtre runtime est
+ * appliqué dans la query.
+ */
+export type PronoDetailPayload = Prisma.PronoGetPayload<{
+  include: {
+    expert: {
+      select: {
+        userId: true;
+        pseudo: true;
+        subscriptions: { select: { id: true } };
+      };
+    };
+    bookmakerOdds: {
+      include: {
+        bookmaker: { include: { affiliateLinks: true } };
+      };
+    };
+  };
+}>;
+
+/**
  * Récupère l'Expert lié à un userId.
  *
  * Throw ExpertProfileNotFoundError si :
@@ -77,7 +116,10 @@ export async function getExpertByUserIdOrThrow(userId: string): Promise<{ id: st
  * cohérent : ancienne analyse défoglée + nouvelle non créée. L'expert
  * reposte → on retombe sur ses pieds.
  */
-export async function publishProno(expertId: string, data: CreatePronoInput): Promise<unknown> {
+export async function publishProno(
+  expertId: string,
+  data: CreatePronoInput,
+): Promise<PronoWithBookmakers> {
   if (data.isFeatured) {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -112,7 +154,7 @@ export async function publishProno(expertId: string, data: CreatePronoInput): Pr
  * Inclut bookmakerOdds pour permettre l'affichage cotes dans le
  * dashboard expert sans round-trip supplémentaire.
  */
-export async function listPronosByExpertId(expertId: string): Promise<unknown[]> {
+export async function listPronosByExpertId(expertId: string): Promise<PronoWithBookmakers[]> {
   return prisma.prono.findMany({
     where: { expertId },
     orderBy: { createdAt: "desc" },
@@ -137,7 +179,7 @@ export async function updatePronoResult(
   pronoId: string,
   data: UpdateResultInput,
   caller: { userId: string; role: UserRole },
-): Promise<unknown> {
+): Promise<Prono> {
   const prono = await prisma.prono.findUnique({
     where: { id: pronoId },
     include: { expert: { select: { userId: true } } },
@@ -168,6 +210,13 @@ export async function updatePronoResult(
  *  - autres users : doivent avoir une Subscription ACTIVE non-expirée
  *    sur l'expert auteur
  *
+ * Optim : 1 seul round-trip DB. On inclut directement
+ * `expert.subscriptions` filtrée sur le caller (where + take: 1).
+ * Si la liste retournée est vide, le caller n'a pas de sub active.
+ * Avant : 2 queries séparées (findUnique prono + findFirst
+ * subscription) — gain net en latence sur le cas le plus chaud
+ * (utilisateur abonné qui consulte une analyse).
+ *
  * Throw PronoNotFoundError si l'ID n'existe pas (404), ou
  * SubscriptionRequiredError si l'user n'est ni owner ni admin ni
  * abonné (403).
@@ -175,11 +224,28 @@ export async function updatePronoResult(
 export async function getPronoDetailForUser(
   pronoId: string,
   caller: { userId: string; role: UserRole },
-): Promise<unknown> {
+): Promise<PronoDetailPayload> {
   const prono = await prisma.prono.findUnique({
     where: { id: pronoId },
     include: {
-      expert: { select: { userId: true, pseudo: true } },
+      expert: {
+        select: {
+          userId: true,
+          pseudo: true,
+          // Sub active du caller filtrée DANS la query principale.
+          // take: 1 : on n'a besoin que de connaître l'existence
+          // (le contenu de la sub n'est pas exposé au caller).
+          subscriptions: {
+            where: {
+              userId: caller.userId,
+              status: "ACTIVE",
+              expiresAt: { gt: new Date() },
+            },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      },
       ...bookmakerOddsInclude,
     },
   });
@@ -190,21 +256,10 @@ export async function getPronoDetailForUser(
 
   const isOwner = prono.expert.userId === caller.userId;
   const isAdmin = caller.role === "ADMIN";
+  const hasActiveSubscription = prono.expert.subscriptions.length > 0;
 
-  if (!isOwner && !isAdmin) {
-    const subscription = await prisma.subscription.findFirst({
-      where: {
-        userId: caller.userId,
-        expertId: prono.expertId,
-        status: "ACTIVE",
-        expiresAt: { gt: new Date() },
-      },
-      select: { id: true },
-    });
-
-    if (!subscription) {
-      throw new SubscriptionRequiredError();
-    }
+  if (!isOwner && !isAdmin && !hasActiveSubscription) {
+    throw new SubscriptionRequiredError();
   }
 
   return prono;

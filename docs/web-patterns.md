@@ -55,44 +55,53 @@ backend/src/
 
 ```ts
 // routes/pronos.ts — tout dans le handler
-router.post("/", authMiddleware, expertMiddleware, validate(createPronoSchema), async (req, res) => {
-  try {
-    const expert = await prisma.expert.findUnique({
-      where: { userId: req.user!.userId },
-      select: { id: true },
-    });
-    if (!expert) {
-      res.status(404).json({ error: "Profil expert introuvable" });
-      return;
-    }
-
-    const { bookmakerOdds, ...pronoData } = req.body;
-    if (pronoData.isFeatured) {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      await prisma.prono.updateMany({
-        where: { expertId: expert.id, isFeatured: true, createdAt: { gte: todayStart } },
-        data: { isFeatured: false },
+router.post(
+  "/",
+  authMiddleware,
+  expertMiddleware,
+  validate(createPronoSchema),
+  async (req, res) => {
+    try {
+      const expert = await prisma.expert.findUnique({
+        where: { userId: req.user!.userId },
+        select: { id: true },
       });
+      if (!expert) {
+        res.status(404).json({ error: "Profil expert introuvable" });
+        return;
+      }
+
+      const { bookmakerOdds, ...pronoData } = req.body;
+      if (pronoData.isFeatured) {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        await prisma.prono.updateMany({
+          where: { expertId: expert.id, isFeatured: true, createdAt: { gte: todayStart } },
+          data: { isFeatured: false },
+        });
+      }
+
+      const prono = await prisma.prono.create({
+        data: {
+          expertId: expert.id,
+          matchName: pronoData.matchName,
+          // … 10 champs ré-énumérés à la main
+          bookmakerOdds:
+            bookmakerOdds && bookmakerOdds.length > 0
+              ? { create: bookmakerOdds.map((bo: { bookmakerId: string; odds: number }) => bo) }
+              : undefined,
+        },
+        include: {
+          /* gros include */
+        },
+      });
+
+      res.status(201).json(prono);
+    } catch (err) {
+      res.status(500).json({ error: "Erreur serveur" }); // ← err swallowed
     }
-
-    const prono = await prisma.prono.create({
-      data: {
-        expertId: expert.id,
-        matchName: pronoData.matchName,
-        // … 10 champs ré-énumérés à la main
-        bookmakerOdds: bookmakerOdds && bookmakerOdds.length > 0
-          ? { create: bookmakerOdds.map((bo: { bookmakerId: string; odds: number }) => bo) }
-          : undefined,
-      },
-      include: { /* gros include */ },
-    });
-
-    res.status(201).json(prono);
-  } catch (err) {
-    res.status(500).json({ error: "Erreur serveur" }); // ← err swallowed
-  }
-});
+  },
+);
 ```
 
 #### Après (route mince + service)
@@ -223,13 +232,19 @@ export class ConflictError extends ServiceError {
 
 // Erreurs domaine — sous-classer pour un mapping gratuit
 export class ExpertProfileNotFoundError extends NotFoundError {
-  constructor() { super("Profil expert introuvable"); }
+  constructor() {
+    super("Profil expert introuvable");
+  }
 }
 export class PseudoTakenError extends BadRequestError {
-  constructor() { super("Ce pseudo est déjà pris"); }
+  constructor() {
+    super("Ce pseudo est déjà pris");
+  }
 }
 export class EmailAlreadyUsedError extends ConflictError {
-  constructor() { super("Email déjà utilisé"); }
+  constructor() {
+    super("Email déjà utilisé");
+  }
 }
 ```
 
@@ -283,6 +298,97 @@ try {
 
 ---
 
+### Pattern : consolider les checks d'autorisation dans la query principale
+
+Quand une route lit une ressource ET vérifie un droit d'accès sur le
+caller (sub active, ownership, etc.), faire UNE seule query Prisma
+avec un `include` filtré plutôt que deux queries séquentielles.
+
+#### Avant (2 round-trips DB)
+
+```ts
+const prono = await prisma.prono.findUnique({
+  where: { id },
+  include: { expert: { select: { userId: true } } },
+});
+
+if (!prono) throw new PronoNotFoundError();
+
+if (!isOwner && !isAdmin) {
+  // 2e round-trip — alors qu'on a déjà l'expertId
+  const sub = await prisma.subscription.findFirst({
+    where: {
+      userId: caller.userId,
+      expertId: prono.expertId,
+      status: "ACTIVE",
+      expiresAt: { gt: new Date() },
+    },
+  });
+  if (!sub) throw new SubscriptionRequiredError();
+}
+```
+
+Sur un endpoint chaud (page profil expert, consulté par tous les
+abonnés), 2 queries = 2× la latence DB pour chaque hit.
+
+#### Après (1 seul round-trip)
+
+```ts
+const prono = await prisma.prono.findUnique({
+  where: { id },
+  include: {
+    expert: {
+      select: {
+        userId: true,
+        subscriptions: {
+          // where filtré au caller — Prisma génère un JOIN avec filter
+          where: {
+            userId: caller.userId,
+            status: "ACTIVE",
+            expiresAt: { gt: new Date() },
+          },
+          select: { id: true },
+          take: 1, // existence seulement, pas besoin du contenu
+        },
+      },
+    },
+  },
+});
+
+if (!prono) throw new PronoNotFoundError();
+
+const hasActiveSubscription = prono.expert.subscriptions.length > 0;
+if (!isOwner && !isAdmin && !hasActiveSubscription) {
+  throw new SubscriptionRequiredError();
+}
+```
+
+**Pourquoi** :
+
+- 1 query au lieu de 2 — gain net en latence côté API (round-trip DB
+  économisé sur le chemin chaud).
+- La jointure est indexée (FK `subscriptions.userId` + FK
+  `subscriptions.expertId`), coût DB négligeable.
+- Le `take: 1` + `select: { id }` minimise le payload : on ne charge
+  qu'un row vide minimal, juste pour tester l'existence.
+- La logique reste lisible : "donne-moi le prono ET ses subs filtrées
+  au caller" est une intention unique exprimée en une query.
+
+**Quand l'éviter** :
+
+- Si le check d'autorisation est rare (admin-only route accédée
+  10×/jour), la query plate reste plus lisible.
+- Si l'include filtré complique trop la query (3+ niveaux imbriqués,
+  conditions exotiques), garder séparé. Lisibilité > micro-optim.
+
+**Variante owner-OR-subscriber** : quand l'autorisation accepte
+plusieurs voies (propriétaire OU abonné), Prisma ne peut pas
+exprimer "OR sur une jointure conditionnelle" en une query. Solution :
+inclure la sub ET le `expert.userId` (déjà nécessaire pour l'owner
+check), évaluer les deux conditions en JS sur le résultat.
+
+---
+
 ### Pattern : middleware chain (auth → role → validation → handler)
 
 Ordre canonique d'une route protégée + validée :
@@ -290,11 +396,13 @@ Ordre canonique d'une route protégée + validée :
 ```ts
 router.post(
   "/pronos/:id/result",
-  authMiddleware,                          // 1. Authentification (401 si KO)
-  expertMiddleware,                        // 2. Autorisation rôle (403 si KO)
-  validateParams(pronoIdParamsSchema),     // 3. Validation params (400 si KO)
-  validate(updateResultSchema),            // 4. Validation body (400 si KO)
-  async (req, res) => { /* handler */ },   // 5. Logique métier
+  authMiddleware, // 1. Authentification (401 si KO)
+  expertMiddleware, // 2. Autorisation rôle (403 si KO)
+  validateParams(pronoIdParamsSchema), // 3. Validation params (400 si KO)
+  validate(updateResultSchema), // 4. Validation body (400 si KO)
+  async (req, res) => {
+    /* handler */
+  }, // 5. Logique métier
 );
 ```
 
@@ -369,6 +477,95 @@ services et handlers consomment ces types — jamais de redéclaration.
 
 ---
 
+### Pattern : types de retour services via `Prisma.<Model>GetPayload`
+
+Les services qui font des queries Prisma avec `include` doivent
+exposer le type EXACT du payload retourné — pas `unknown`, pas
+`Prisma.Prono` (qui ignore les relations).
+
+#### Avant
+
+```ts
+export async function publishProno(...): Promise<unknown> { ... }
+```
+
+Problème : casse le typage côté caller. `res.json(prono)` accepte
+n'importe quoi, l'accès à `prono.matchName` depuis une route ou un
+autre service n'est plus type-checké, et l'IDE perd l'autocomplete
+sur les relations.
+
+#### Après
+
+```ts
+import { Prisma, type Prono } from "../generated/prisma/client";
+
+export const bookmakerOddsInclude = {
+  bookmakerOdds: {
+    include: {
+      bookmaker: { include: { affiliateLinks: true } },
+    },
+  },
+} as const;
+
+// Type exact incluant les relations
+export type PronoWithBookmakers = Prisma.PronoGetPayload<{
+  include: typeof bookmakerOddsInclude;
+}>;
+
+export async function publishProno(
+  expertId: string,
+  data: CreatePronoInput,
+): Promise<PronoWithBookmakers> {
+  return prisma.prono.create({
+    data: { /* … */ },
+    include: bookmakerOddsInclude,
+  });
+}
+
+// Pour un update sans include particulier : juste le type modèle
+export async function updatePronoResult(
+  pronoId: string,
+  data: UpdateResultInput,
+): Promise<Prono> {
+  return prisma.prono.update({ where: { id: pronoId }, data });
+}
+```
+
+**Pourquoi** :
+
+- `Prisma.<Model>GetPayload<{ include: typeof X }>` génère le type
+  EXACT incluant les relations imbriquées. Renommer un champ dans le
+  schema Prisma propage automatiquement.
+- `as const` sur l'include est requis pour préserver la shape
+  littérale — sans lui, TS widen vers `{ [key: string]: unknown }` et
+  `GetPayload` ne sait plus quoi inclure.
+- Le type devient un **contrat exporté** réutilisable par les callers
+  (routes, autres services, tests). Le changement d'include est un
+  changement de contrat → visible à la review.
+- Pour les opérations sans include, importer directement le type
+  modèle (`type Prono`) suffit.
+
+**Variante pour les includes dynamiques** (where filter qui dépend
+d'un param caller, cf. consolidation queries §1) : décrire la SHAPE
+des rows dans le type, le WHERE n'affecte pas le shape :
+
+```ts
+export type PronoDetailPayload = Prisma.PronoGetPayload<{
+  include: {
+    expert: {
+      select: {
+        userId: true;
+        pseudo: true;
+        subscriptions: { select: { id: true } }; // shape, pas where
+      };
+    };
+    bookmakerOdds: typeof bookmakerOddsInclude.bookmakerOdds;
+  };
+}>;
+```
+
+---
+
 ### Pattern : middleware validate générique typé
 
 Le middleware `validate(schema)` parse `req.body` ET propage le type
@@ -380,11 +577,7 @@ import type { Request, Response, NextFunction } from "express";
 import { ZodError, type ZodSchema, type z } from "zod";
 
 export function validate<T extends ZodSchema>(schema: T) {
-  return (
-    req: Request<unknown, unknown, z.infer<T>>,
-    res: Response,
-    next: NextFunction,
-  ): void => {
+  return (req: Request<unknown, unknown, z.infer<T>>, res: Response, next: NextFunction): void => {
     try {
       req.body = schema.parse(req.body);
       next();
@@ -507,7 +700,9 @@ export interface AuthenticatedRequest extends Request {
 
 ```ts
 // Anti-pattern
-where: { userId: req.user!.userId }
+where: {
+  userId: req.user!.userId;
+}
 //                      ^^^ le ! masque le fait que TS ne peut pas garantir user
 ```
 
@@ -524,8 +719,8 @@ where: { userId: req.user!.userId }
 // Après
 router.post("/", authMiddleware, async (req, res) => {
   const authReq = req as AuthenticatedRequest;
-  const userId = authReq.user.userId;  // pas de !, type-checked
-  const role = authReq.user.role;       // pas de !
+  const userId = authReq.user.userId; // pas de !, type-checked
+  const role = authReq.user.role; // pas de !
   // …
 });
 ```
@@ -559,11 +754,20 @@ dépasse ~15 routes.
 export function authMiddleware(req, res, next) {
   verifySession(token)
     .then((sessionUser) => {
-      if (!sessionUser) { res.status(401).json({ /* … */ }); return; }
+      if (!sessionUser) {
+        res.status(401).json({
+          /* … */
+        });
+        return;
+      }
       req.user = sessionUser;
       next();
     })
-    .catch(() => res.status(401).json({ /* … */ })); // ← err swallowed
+    .catch(() =>
+      res.status(401).json({
+        /* … */
+      }),
+    ); // ← err swallowed
 }
 ```
 
@@ -573,7 +777,12 @@ export function authMiddleware(req, res, next) {
 export async function authMiddleware(req, res, next) {
   try {
     const sessionUser = await verifySession(token);
-    if (!sessionUser) { res.status(401).json({ /* … */ }); return; }
+    if (!sessionUser) {
+      res.status(401).json({
+        /* … */
+      });
+      return;
+    }
     req.user = sessionUser;
     next();
   } catch (err) {
@@ -596,9 +805,9 @@ forget qu'on ne veut pas faire bloquer la route, ex :
 
 ```ts
 // magic-link.ts — cleanup d'une session expirée
-await prisma.session
-  .delete({ where: { id: session.id } })
-  .catch(() => { /* swallow, cron de cleanup ramassera */ });
+await prisma.session.delete({ where: { id: session.id } }).catch(() => {
+  /* swallow, cron de cleanup ramassera */
+});
 ```
 
 C'est une exception explicite, commentée, pas un style général.
@@ -615,7 +824,9 @@ export interface SessionUser {
   role: string; // ← n'importe quelle string passe
 }
 
-if (req.user!.role === "EXPRT") { /* typo silencieuse, jamais vrai */ }
+if (req.user!.role === "EXPRT") {
+  /* typo silencieuse, jamais vrai */
+}
 ```
 
 #### Après
@@ -628,7 +839,9 @@ export interface SessionUser {
   role: UserRole; // ← "USER" | "EXPERT" | "ADMIN"
 }
 
-if (req.user!.role === "EXPRT") { /* TS error: Type '"EXPRT"' is not assignable */ }
+if (req.user!.role === "EXPRT") {
+  /* TS error: Type '"EXPRT"' is not assignable */
+}
 ```
 
 **Pourquoi** : la source de vérité des rôles est dans `schema.prisma`.
@@ -725,11 +938,9 @@ raison de swallow l'erreur (best-effort cleanup non-bloquant), le
 commenter explicitement :
 
 ```ts
-await prisma.session
-  .delete({ where: { id: sessionId } })
-  .catch(() => {
-    /* swallow — best-effort cleanup, cron ramasse les expirés */
-  });
+await prisma.session.delete({ where: { id: sessionId } }).catch(() => {
+  /* swallow — best-effort cleanup, cron ramasse les expirés */
+});
 ```
 
 Le commentaire fait foi : sans lui, c'est un anti-pattern.
@@ -745,7 +956,9 @@ droit ?) en deux middlewares composables.
 
 ```ts
 // middleware/auth.ts — vérifie un session token, attache req.user
-export async function authMiddleware(req, res, next) { /* … */ }
+export async function authMiddleware(req, res, next) {
+  /* … */
+}
 
 // middleware/admin.ts — vérifie req.user.role === "ADMIN"
 export function adminMiddleware(req, res, next) {
@@ -762,7 +975,8 @@ router.use("/admin", authMiddleware, adminMiddleware);
 
 **Pourquoi** : un middleware = une responsabilité. On peut composer
 `authMiddleware + expertMiddleware` pour /dashboard et `authMiddleware
-+ adminMiddleware` pour /admin sans dupliquer la logique de session.
+
+- adminMiddleware` pour /admin sans dupliquer la logique de session.
 
 ---
 
@@ -803,7 +1017,7 @@ const magicLinkRequestLimiter = rateLimit({
   message: { error: "Trop de demandes" },
 });
 
-router.post("/request-magic-link", magicLinkRequestLimiter, /* … */);
+router.post("/request-magic-link", magicLinkRequestLimiter /* … */);
 ```
 
 **Bornes utiles** :
@@ -829,7 +1043,7 @@ if (already) return res.json({ received: true });
 // 3. Process + mark processed DANS UNE TRANSACTION
 await prisma.$transaction(async (tx) => {
   // logique métier
-  await tx.stripeWebhookEvent.create({ data: { id: event.id, /* … */ } });
+  await tx.stripeWebhookEvent.create({ data: { id: event.id /* … */ } });
 });
 ```
 
@@ -888,7 +1102,9 @@ await prisma.$transaction(async (tx) => {
     await markEventProcessed(tx, event);
     return;
   }
-  await tx.subscription.create({ /* … */ });
+  await tx.subscription.create({
+    /* … */
+  });
   await markEventProcessed(tx, event); // ← dans la même transaction
 });
 ```
@@ -917,7 +1133,9 @@ Quand une mutation métier doit s'accompagner d'une trace immuable
 
 ```ts
 await prisma.$transaction(async (tx) => {
-  await tx.subscription.create({ /* mutation métier */ });
+  await tx.subscription.create({
+    /* mutation métier */
+  });
   await markEventProcessed(tx, event); // audit
 });
 ```
@@ -936,7 +1154,9 @@ export async function markEventProcessed(
   client: EventStoreClient,
   event: StripeEvent,
 ): Promise<void> {
-  await client.stripeWebhookEvent.create({ /* … */ });
+  await client.stripeWebhookEvent.create({
+    /* … */
+  });
 }
 ```
 
@@ -959,16 +1179,28 @@ et être réutilisée — pas duplicée.
 // routes/auth.ts — DELETE /me, branche soft delete immédiat
 await prisma.$transaction(async (tx) => {
   await tx.expert.update({ where: { id: expert.id }, data: { deletedAt: now } });
-  await tx.user.update({ /* … */ });
-  await tx.deletedEmailCooldown.create({ /* … */ });
-  await tx.magicLink.deleteMany({ /* … */ });
-  await tx.session.deleteMany({ /* … */ });
+  await tx.user.update({
+    /* … */
+  });
+  await tx.deletedEmailCooldown.create({
+    /* … */
+  });
+  await tx.magicLink.deleteMany({
+    /* … */
+  });
+  await tx.session.deleteMany({
+    /* … */
+  });
 });
 
 // lib/cron.ts — autoDeletePendingExperts (MÊME bloc copié)
 await prisma.$transaction(async (tx) => {
-  await tx.expert.update({ /* … */ });
-  await tx.user.update({ /* … */ });
+  await tx.expert.update({
+    /* … */
+  });
+  await tx.user.update({
+    /* … */
+  });
   // … exactement le même code
 });
 ```
@@ -978,17 +1210,30 @@ await prisma.$transaction(async (tx) => {
 ```ts
 // services/account-service.ts
 export async function softDeleteUserNow(input: {
-  userId: string; email: string; expertId: string | null; now: Date;
+  userId: string;
+  email: string;
+  expertId: string | null;
+  now: Date;
 }): Promise<void> {
   const cooldownExpiresAt = new Date(input.now.getTime() + COOLDOWN_MS);
   await prisma.$transaction(async (tx) => {
     if (input.expertId) {
-      await tx.expert.update({ /* … */ });
+      await tx.expert.update({
+        /* … */
+      });
     }
-    await tx.user.update({ /* … */ });
-    await tx.deletedEmailCooldown.create({ /* … */ });
-    await tx.magicLink.deleteMany({ /* … */ });
-    await tx.session.deleteMany({ /* … */ });
+    await tx.user.update({
+      /* … */
+    });
+    await tx.deletedEmailCooldown.create({
+      /* … */
+    });
+    await tx.magicLink.deleteMany({
+      /* … */
+    });
+    await tx.session.deleteMany({
+      /* … */
+    });
   });
 }
 
@@ -1067,20 +1312,24 @@ message exact.
 Section ouverte pour les patterns à ajouter au fur et à mesure des
 nouveaux fichiers audités. Structure attendue pour chaque ajout :
 
-```markdown
+````markdown
 ### Pattern : <nom du pattern>
 
 #### Avant
+
 ```ts
 // code anti-pattern
 ```
+````
 
 #### Après
+
 ```ts
 // code corrigé
 ```
 
 **Pourquoi** : <justification>
+
 ```
 
 ### Patterns observés mais pas encore documentés (à creuser)
@@ -1100,3 +1349,4 @@ nouveaux fichiers audités. Structure attendue pour chaque ajout :
   patterns de modale avec focus trap + scroll-lock.
 
 À documenter quand on aura accumulé assez d'exemples concrets.
+```
