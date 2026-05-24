@@ -4,6 +4,44 @@ const CSRF_COOKIE = "csrf_token";
 const CSRF_HEADER = "X-CSRF-Token";
 
 /**
+ * Erreur thrown par les helpers apiGet/apiPost/apiPatch en cas de
+ * réponse HTTP non-2xx.
+ *
+ * Expose en plus du `message` (texte FR user-facing) :
+ *  - `code`   : identifiant stable machine-readable renvoyé par le
+ *               backend (cf. backend/src/services/errors.ts — chaque
+ *               sous-classe domaine override `code` avec une valeur
+ *               snake_case discriminante : "pseudo_taken",
+ *               "email_required", "already_subscribed", etc.).
+ *  - `status` : HTTP status code (utile pour les fallbacks génériques
+ *               quand `code` n'est pas exploité).
+ *
+ * Backward-compat : `err.message` reste disponible partout. Les
+ * composants existants qui catch et affichent juste le message
+ * continuent à fonctionner sans changement.
+ *
+ * Pour brancher sur le code :
+ *   } catch (err) {
+ *     if (err instanceof ApiError && err.code === "pseudo_taken") {
+ *       setFieldError("pseudo", err.message);
+ *       return;
+ *     }
+ *     setFormError(err instanceof Error ? err.message : "Erreur");
+ *   }
+ */
+export class ApiError extends Error {
+  readonly code: string | null;
+  readonly status: number;
+
+  constructor(message: string, options: { code?: string | null; status: number }) {
+    super(message);
+    this.name = "ApiError";
+    this.code = options.code ?? null;
+    this.status = options.status;
+  }
+}
+
+/**
  * Lit le cookie csrf_token (posé par le backend, NON-httpOnly, donc
  * accessible via document.cookie). Renvoie null en SSR.
  */
@@ -56,11 +94,22 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
   });
 }
 
+/**
+ * Parse une réponse d'erreur backend en ApiError typée. Lit `error`
+ * (message FR) et `code` (discriminant). Tombe sur un fallback générique
+ * si le body n'est pas du JSON parsable (réseau down, 502 nginx, etc.).
+ */
+async function parseApiError(res: Response): Promise<ApiError> {
+  const body = await res.json().catch(() => null);
+  const message = body?.error ?? `Erreur ${res.status}`;
+  const code = typeof body?.code === "string" ? body.code : null;
+  return new ApiError(message, { code, status: res.status });
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await apiFetch(path);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Erreur réseau" }));
-    throw new Error(err.error || `Erreur ${res.status}`);
+    throw await parseApiError(res);
   }
   return res.json();
 }
@@ -71,8 +120,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Erreur réseau" }));
-    throw new Error(err.error || `Erreur ${res.status}`);
+    throw await parseApiError(res);
   }
   return res.json();
 }
@@ -83,8 +131,7 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Erreur réseau" }));
-    throw new Error(err.error || `Erreur ${res.status}`);
+    throw await parseApiError(res);
   }
   return res.json();
 }

@@ -296,6 +296,120 @@ try {
   d'intégration ("attendez code: 'not_found'") sans dépendre du
   message FR qui peut bouger.
 
+#### Sous-pattern : `code` discriminant par sous-classe domaine
+
+Le `code` d'une sous-classe domaine doit être PLUS spécifique que
+celui de son pivot HTTP parent — sinon le frontend ne peut pas
+distinguer deux erreurs partageant le même status sans matcher sur le
+message FR.
+
+##### Anti-pattern
+
+```ts
+export class BadRequestError extends ServiceError {
+  readonly code = "bad_request";
+  readonly httpStatus = 400;
+}
+
+// Les deux sous-classes héritent code: "bad_request"
+export class PseudoTakenError extends BadRequestError {
+  constructor() { super("Ce pseudo est déjà pris"); }
+}
+export class AlreadyExpertError extends BadRequestError {
+  constructor() { super("Vous êtes déjà expert"); }
+}
+```
+
+Le frontend voit `{ code: "bad_request" }` dans les deux cas. Pour
+distinguer "pseudo déjà pris" (highlight le champ pseudo) de "déjà
+expert" (rediriger vers le dashboard), il doit matcher sur le message
+FR — fragile, casse au moindre changement de wording.
+
+##### Pattern
+
+```ts
+// Le pivot expose `code: string` (pas littéral) pour permettre l'override
+export class BadRequestError extends ServiceError {
+  readonly code: string = "bad_request"; // ← `: string` explicite
+  readonly httpStatus = 400;
+}
+
+export class PseudoTakenError extends BadRequestError {
+  readonly code = "pseudo_taken"; // ← override discriminant
+  constructor() { super("Ce pseudo est déjà pris"); }
+}
+export class AlreadyExpertError extends BadRequestError {
+  readonly code = "already_expert";
+  constructor() { super("Vous êtes déjà expert"); }
+}
+```
+
+Le frontend fait alors `if (data.code === "pseudo_taken") showField("pseudo")`
+proprement, sans dépendre du wording FR.
+
+**Détail TypeScript** : sans l'annotation `: string` explicite sur le
+pivot, TS narrow le type de `code` à la chaîne littérale
+`"bad_request"`, et les sous-classes ne peuvent plus override avec
+une autre valeur (erreur TS2416). L'annotation widen au type `string`,
+autorisant l'override.
+
+**Convention de naming** : snake_case, descriptif, aligné sur le nom
+de classe sans le suffixe `Error` (ex: `PseudoTakenError` →
+`pseudo_taken`). Évite les codes numériques custom (`PLY-001`) qui
+imposent une table de correspondance externe.
+
+**Pourquoi** : le `code` existe précisément pour donner un identifiant
+stable machine-readable. S'il duplique l'info du `httpStatus`, il ne
+sert à rien. La discrimination doit se faire au niveau le plus fin où
+le frontend a besoin d'agir différemment.
+
+#### Sous-pattern : chaîner les erreurs externes avec `Error.cause`
+
+Quand un service catch une erreur d'une lib externe (Prisma, Stripe,
+fetch) et la rethrow en `ServiceError`, on perd la stack et le
+contexte d'origine sans `cause`.
+
+```ts
+// Constructor base avec support cause (ES2022, Node 16.9+)
+export abstract class ServiceError extends Error {
+  abstract readonly code: string;
+  abstract readonly httpStatus: number;
+
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = this.constructor.name;
+  }
+}
+
+// Usage : préserver la cause Prisma
+try {
+  await prisma.user.create({ data: { email } });
+} catch (err) {
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+    throw new EmailAlreadyUsedError({ cause: err });
+    //                                ^^^^^^^^^^^^ propage stack Prisma
+  }
+  throw err;
+}
+
+// Le log structuré accède à la cause via err.cause :
+logger.error({ err, cause: (err as Error).cause }, "Failed");
+```
+
+**Pourquoi** : la stack de l'erreur d'origine reste accessible via
+`err.cause`, ce qui simplifie le debug en prod (les logs structurés
+contiennent automatiquement le contexte Prisma / Stripe sans devoir
+corréler manuellement). Dispo nativement depuis Node 16.9 / ES2022.
+
+**Note rétro-compat** : les sous-classes domaine existantes
+(`new EmailAlreadyUsedError()` sans args) restent valides — l'argument
+`options` est optionnel. À ajouter au case par case quand le wrap
+d'une erreur externe a du sens.
+
+**Pré-requis tsconfig** : `"target": "ES2022"` (ou plus récent) pour
+que TS connaisse l'option `cause` de `Error`. ES2020 → erreur TS2554
+"Expected 0-1 arguments, but got 2".
+
 ---
 
 ### Pattern : consolider les checks d'autorisation dans la query principale
