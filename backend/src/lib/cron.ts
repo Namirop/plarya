@@ -1,7 +1,9 @@
 import cron from "node-cron";
-import { prisma } from "./prisma";
-import { logger } from "./logger";
+
+import { softDeleteUserNow } from "../services/account-service";
 import { sendWinningPronoEmail } from "./emails";
+import { logger } from "./logger";
+import { prisma } from "./prisma";
 
 const cronLogger = logger.child({ context: "cron" });
 
@@ -138,33 +140,16 @@ export async function autoDeletePendingExperts(): Promise<void> {
       continue;
     }
 
-    const anonymizedEmail = `deleted-${expert.userId}@plarya.local`;
-    // Même cooldown 7j que la branche immediate de DELETE /auth/me —
-    // empêche la recréation rapide d'un compte avec cet email après
-    // que le cron a finalisé la suppression.
-    const cooldownExpiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
     try {
-      await prisma.$transaction(async (tx) => {
-        await tx.expert.update({
-          where: { id: expert.id },
-          data: { deletedAt: now, pendingDeletionAt: null },
-        });
-        await tx.user.update({
-          where: { id: expert.userId },
-          data: { deletedAt: now, email: anonymizedEmail },
-        });
-        await tx.deletedEmailCooldown.create({
-          data: {
-            email: expert.user.email,
-            deletedAt: now,
-            expiresAt: cooldownExpiresAt,
-          },
-        });
-        await tx.magicLink.deleteMany({
-          where: { email: expert.user.email },
-        });
-        await tx.session.deleteMany({ where: { userId: expert.userId } });
+      // Réutilise softDeleteUserNow (account-service) : MÊME logique
+      // que la branche immédiate de DELETE /auth/me. Sans cette
+      // dédup, les deux chemins divergent au fil des refactos (cf.
+      // audit-final.md §K).
+      await softDeleteUserNow({
+        userId: expert.userId,
+        email: expert.user.email,
+        expertId: expert.id,
+        now,
       });
       deletedCount++;
       cronLogger.warn(

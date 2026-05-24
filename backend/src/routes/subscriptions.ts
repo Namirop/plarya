@@ -1,7 +1,8 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../lib/prisma";
-import { authMiddleware } from "../middleware/auth";
+import { logger } from "../lib/logger";
+import { authMiddleware, type AuthenticatedRequest } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import { checkSubscriptionSchema } from "../validators/checkout";
 
@@ -20,12 +21,13 @@ const sessionLookupLimiter = rateLimit({
 
 // POST /subscriptions/check — Check if user has access to an expert's pronos
 router.post("/check", authMiddleware, validate(checkSubscriptionSchema), async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
   try {
     const { expertId } = req.body;
 
     const subscription = await prisma.subscription.findFirst({
       where: {
-        userId: req.user!.userId,
+        userId: authReq.user.userId,
         expertId,
         status: "ACTIVE",
         expiresAt: { gt: new Date() },
@@ -34,6 +36,7 @@ router.post("/check", authMiddleware, validate(checkSubscriptionSchema), async (
 
     res.json({ hasAccess: !!subscription, subscription });
   } catch (err) {
+    logger.error({ err, route: "POST /subscriptions/check" }, "Sub check failed");
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
@@ -69,16 +72,21 @@ router.get("/check-stripe-session", sessionLookupLimiter, async (req, res) => {
     });
 
     res.json({ ready: !!sub });
-  } catch {
+  } catch (err) {
+    logger.error(
+      { err, route: "GET /subscriptions/check-stripe-session" },
+      "Session lookup failed",
+    );
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
 // GET /subscriptions/me — User's active subscriptions
 router.get("/me", authMiddleware, async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
   try {
     const subscriptions = await prisma.subscription.findMany({
-      where: { userId: req.user!.userId },
+      where: { userId: authReq.user.userId },
       include: {
         expert: {
           select: { id: true, pseudo: true, photoUrl: true, sports: true },
@@ -89,6 +97,7 @@ router.get("/me", authMiddleware, async (req, res) => {
 
     res.json(subscriptions);
   } catch (err) {
+    logger.error({ err, route: "GET /subscriptions/me" }, "List own subs failed");
     res.status(500).json({ error: "Erreur serveur" });
   }
 });

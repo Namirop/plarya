@@ -28,3 +28,13 @@ export const warningSchema = z.object({
 export const displayOrderSchema = z.object({
   displayOrder: z.number().int().min(0),
 });
+
+// Params route partagés (admin/experts/:id/*, /experts/:id, etc.).
+export const expertIdParamsSchema = z.object({
+  id: z.string().cuid("ID expert invalide"),
+});
+
+export type CreateExpertInput = z.infer<typeof createExpertSchema>;
+export type WarningInput = z.infer<typeof warningSchema>;
+export type DisplayOrderInput = z.infer<typeof displayOrderSchema>;
+export type ExpertIdParams = z.infer<typeof expertIdParamsSchema>;

@@ -1,4 +1,6 @@
 import crypto from "crypto";
+
+import type { UserRole } from "../generated/prisma/enums";
 import { prisma } from "./prisma";
 
 const MAGIC_LINK_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
@@ -47,7 +49,7 @@ export async function createSession(userId: string): Promise<string> {
 
 export async function verifySession(
   token: string,
-): Promise<{ userId: string; role: string } | null> {
+): Promise<{ userId: string; role: UserRole } | null> {
   const session = await prisma.session.findUnique({
     where: { token },
     include: { user: { select: { id: true, role: true } } },
@@ -55,8 +57,13 @@ export async function verifySession(
 
   if (!session) return null;
   if (session.expiresAt < new Date()) {
-    // Clean up expired session
-    await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
+    // Clean up expired session. Le `.catch` est intentionnel : on est
+    // dans un GET ; on ne veut pas faire échouer la requête si la
+    // suppression rate (race condition, contention). Au pire un cron
+    // ramasse les sessions expirées ; ici on log juste en debug.
+    await prisma.session.delete({ where: { id: session.id } }).catch(() => {
+      /* swallow — best-effort cleanup */
+    });
     return null;
   }
 

@@ -31,3 +31,19 @@ export const createPronoSchema = z.object({
 export const updateResultSchema = z.object({
   result: z.enum(["WON", "LOST"]),
 });
+
+// Validation des params route (ID dans /pronos/:id, /pronos/:id/result).
+// Le CUID Prisma fait ~25 chars, format cXXXXXXXXX... — le rejeter en
+// amont évite un Prisma findUnique vers la DB pour un ID malformé.
+export const pronoIdParamsSchema = z.object({
+  id: z.string().cuid("ID prono invalide"),
+});
+
+// Types inférés depuis les schemas — source unique de vérité. Tous les
+// services + handlers qui manipulent ces shapes devraient consommer
+// ces types plutôt que de redéclarer leurs propres interfaces (cf.
+// web-patterns.md §"Inférence Zod").
+export type CreatePronoInput = z.infer<typeof createPronoSchema>;
+export type UpdateResultInput = z.infer<typeof updateResultSchema>;
+export type BookmakerOddsItem = z.infer<typeof bookmakerOddsItemSchema>;
+export type PronoIdParams = z.infer<typeof pronoIdParamsSchema>;

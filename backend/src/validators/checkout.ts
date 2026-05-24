@@ -22,3 +22,7 @@ export const becomeExpertSchema = z.object({
 export const checkSubscriptionSchema = z.object({
   expertId: z.string().min(1, "expertId requis"),
 });
+
+export type CreateCheckoutInput = z.infer<typeof createCheckoutSchema>;
+export type BecomeExpertInput = z.infer<typeof becomeExpertSchema>;
+export type CheckSubscriptionInput = z.infer<typeof checkSubscriptionSchema>;

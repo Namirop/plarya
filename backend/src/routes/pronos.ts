@@ -1,22 +1,34 @@
 import { Router } from "express";
-import { prisma } from "../lib/prisma";
-import { authMiddleware } from "../middleware/auth";
+
+import { handleError } from "../lib/http-errors";
+import { authMiddleware, type AuthenticatedRequest } from "../middleware/auth";
 import { expertMiddleware } from "../middleware/expert";
 import { validate } from "../middleware/validate";
-import { createPronoSchema, updateResultSchema } from "../validators/prono";
+import { validateParams } from "../middleware/validate-params";
+import {
+  getExpertByUserIdOrThrow,
+  getPronoDetailForUser,
+  listPronosByExpertId,
+  publishProno,
+  updatePronoResult,
+} from "../services/prono-service";
+import { createPronoSchema, pronoIdParamsSchema, updateResultSchema } from "../validators/prono";
+
+/**
+ * Routes /pronos — orchestration HTTP uniquement.
+ *
+ * Convention :
+ *  - Extraction des inputs depuis req
+ *  - Appel d'un service (cf. services/prono-service.ts)
+ *  - Sérialisation HTTP (status + json)
+ *  - Gestion d'erreur centralisée via handleError() (mapping
+ *    ServiceError → status code, fallback 500 + log structuré)
+ *
+ * Le pattern routes minces permet de tester la logique métier
+ * sans monter Express (cf. web-patterns.md §"Service layer").
+ */
 
 const router = Router();
-
-// Reusable include for bookmaker odds
-const bookmakerOddsInclude = {
-  bookmakerOdds: {
-    include: {
-      bookmaker: {
-        include: { affiliateLinks: true },
-      },
-    },
-  },
-} as const;
 
 // POST /pronos — Expert publishes a prono
 router.post(
@@ -25,169 +37,55 @@ router.post(
   expertMiddleware,
   validate(createPronoSchema),
   async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
     try {
-      const expert = await prisma.expert.findUnique({
-        where: { userId: req.user!.userId },
-        select: { id: true },
-      });
-
-      if (!expert) {
-        res.status(404).json({ error: "Profil expert introuvable" });
-        return;
-      }
-
-      const { bookmakerOdds, ...pronoData } = req.body;
-
-      // Auto-deflag previous featured prono for this expert today
-      if (pronoData.isFeatured) {
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-        await prisma.prono.updateMany({
-          where: {
-            expertId: expert.id,
-            isFeatured: true,
-            createdAt: { gte: todayStart },
-          },
-          data: { isFeatured: false },
-        });
-      }
-
-      const prono = await prisma.prono.create({
-        data: {
-          expertId: expert.id,
-          matchName: pronoData.matchName,
-          league: pronoData.league,
-          pick: pronoData.pick,
-          odds: pronoData.odds,
-          teasing: pronoData.teasing,
-          argument: pronoData.argument,
-          startTime: new Date(pronoData.startTime),
-          isFeatured: pronoData.isFeatured ?? false,
-          matchDate: pronoData.matchDate ? new Date(pronoData.matchDate) : undefined,
-          ...(bookmakerOdds && bookmakerOdds.length > 0
-            ? {
-                bookmakerOdds: {
-                  create: bookmakerOdds.map((bo: { bookmakerId: string; odds: number }) => ({
-                    bookmakerId: bo.bookmakerId,
-                    odds: bo.odds,
-                  })),
-                },
-              }
-            : {}),
-        },
-        include: bookmakerOddsInclude,
-      });
-
+      const expert = await getExpertByUserIdOrThrow(authReq.user.userId);
+      const prono = await publishProno(expert.id, req.body);
       res.status(201).json(prono);
     } catch (err) {
-      res.status(500).json({ error: "Erreur serveur" });
+      handleError(err, res, "POST /pronos");
     }
   },
 );
 
 // GET /pronos/mine — Expert's own pronos (must be before /:id)
 router.get("/mine", authMiddleware, expertMiddleware, async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
   try {
-    const expert = await prisma.expert.findUnique({
-      where: { userId: req.user!.userId },
-      select: { id: true },
-    });
-
-    if (!expert) {
-      res.status(404).json({ error: "Profil expert introuvable" });
-      return;
-    }
-
-    const pronos = await prisma.prono.findMany({
-      where: { expertId: expert.id },
-      orderBy: { createdAt: "desc" },
-      include: bookmakerOddsInclude,
-    });
-
+    const expert = await getExpertByUserIdOrThrow(authReq.user.userId);
+    const pronos = await listPronosByExpertId(expert.id);
     res.json(pronos);
   } catch (err) {
-    res.status(500).json({ error: "Erreur serveur" });
+    handleError(err, res, "GET /pronos/mine");
   }
 });
 
-// PATCH /pronos/:id/result — Expert validates won/lost
+// PATCH /pronos/:id/result — Expert (owner) or admin updates result
 router.patch(
   "/:id/result",
   authMiddleware,
   expertMiddleware,
+  validateParams(pronoIdParamsSchema),
   validate(updateResultSchema),
   async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
     try {
-      const id = req.params.id as string;
-      const prono = await prisma.prono.findUnique({
-        where: { id },
-        include: { expert: { select: { userId: true } } },
-      });
-
-      if (!prono) {
-        res.status(404).json({ error: "Prono introuvable" });
-        return;
-      }
-
-      // Only the prono's expert or admin can update
-      if (prono.expert.userId !== req.user!.userId && req.user!.role !== "ADMIN") {
-        res.status(403).json({ error: "Non autorisé" });
-        return;
-      }
-
-      const updated = await prisma.prono.update({
-        where: { id },
-        data: { result: req.body.result },
-      });
-
+      const updated = await updatePronoResult(req.params.id, req.body, authReq.user);
       res.json(updated);
     } catch (err) {
-      res.status(500).json({ error: "Erreur serveur" });
+      handleError(err, res, "PATCH /pronos/:id/result");
     }
   },
 );
 
-// GET /pronos/:id — Single prono detail (checks subscription)
-router.get("/:id", authMiddleware, async (req, res) => {
+// GET /pronos/:id — Single prono detail (subscription-gated)
+router.get("/:id", authMiddleware, validateParams(pronoIdParamsSchema), async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
   try {
-    const id = req.params.id as string;
-    const prono = await prisma.prono.findUnique({
-      where: { id },
-      include: {
-        expert: { select: { userId: true, pseudo: true } },
-        ...bookmakerOddsInclude,
-      },
-    });
-
-    if (!prono) {
-      res.status(404).json({ error: "Prono introuvable" });
-      return;
-    }
-
-    const userId = req.user!.userId;
-    const isOwner = prono.expert.userId === userId;
-    const isAdmin = req.user!.role === "ADMIN";
-
-    if (!isOwner && !isAdmin) {
-      // Check subscription
-      const subscription = await prisma.subscription.findFirst({
-        where: {
-          userId,
-          expertId: prono.expertId,
-          status: "ACTIVE",
-          expiresAt: { gt: new Date() },
-        },
-      });
-
-      if (!subscription) {
-        res.status(403).json({ error: "Abonnement requis" });
-        return;
-      }
-    }
-
+    const prono = await getPronoDetailForUser(req.params.id, authReq.user);
     res.json(prono);
   } catch (err) {
-    res.status(500).json({ error: "Erreur serveur" });
+    handleError(err, res, "GET /pronos/:id");
   }
 });
 

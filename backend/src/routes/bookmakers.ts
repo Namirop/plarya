@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -21,6 +22,7 @@ router.get("/", async (_req, res) => {
     res.set("Cache-Control", "public, max-age=600, s-maxage=1200, stale-while-revalidate=3600");
     res.json(bookmakers);
   } catch (err) {
+    logger.error({ err, route: "GET /bookmakers" }, "List bookmakers failed");
     res.status(500).json({ error: "Erreur serveur" });
   }
 });

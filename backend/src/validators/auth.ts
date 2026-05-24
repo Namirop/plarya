@@ -10,3 +10,6 @@ export const resendAccessUnlockedSchema = z.object({
   // le bouton "Renvoyer" de la modale email-gate.
   stripeSessionId: z.string().min(1, "stripeSessionId requis"),
 });
+
+export type MagicLinkRequestInput = z.infer<typeof magicLinkRequestSchema>;
+export type ResendAccessUnlockedInput = z.infer<typeof resendAccessUnlockedSchema>;

@@ -20,3 +20,5 @@ export const updateExpertSchema = z.object({
   dayPassPrice: z.number().int().min(100).max(5000).optional(),
   monthlyPrice: z.number().int().min(500).max(50000).optional(),
 });
+
+export type UpdateExpertInput = z.infer<typeof updateExpertSchema>;

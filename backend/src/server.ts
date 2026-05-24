@@ -137,7 +137,12 @@ app.get("/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: "ok", db: "connected" });
-  } catch {
+  } catch (err) {
+    // Log explicite : un health check qui flap est un signal opérationnel
+    // (DB down, pool épuisé, etc.) qu'on ne veut pas perdre. Le `err`
+    // typé `unknown` est passé tel quel à pino qui sérialise via son
+    // err-serializer intégré (stack + name + message).
+    logger.error({ err }, "Health check failed: DB unreachable");
     res.status(500).json({ status: "error", db: "disconnected" });
   }
 });
