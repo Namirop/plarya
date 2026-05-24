@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { X } from "@phosphor-icons/react";
 
@@ -30,6 +30,7 @@ export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheck
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset des states à la fermeture. Pattern aligné sur
   // DeleteAccountModal / LoginModal / ConfirmModal (cf. Sprint Polish
@@ -53,6 +54,15 @@ export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheck
     return () => {
       document.body.style.overflow = prev;
     };
+  }, [open]);
+
+  // Focus input à l'ouverture (remplace autoFocus déprécié a11y). Délai
+  // 50 ms : laisse le mount terminer avant de voler le focus, sinon les
+  // readers d'écran ratent l'annonce du dialog.
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(timer);
   }, [open]);
 
   // Escape pour fermer — bloqué pendant le loading (sinon l'user
@@ -135,13 +145,13 @@ export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheck
             Adresse email
           </label>
           <input
+            ref={inputRef}
             id="checkout-email"
             type="email"
             placeholder="votre@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={fieldCls}
-            autoFocus
             disabled={loading}
           />
           {error && (

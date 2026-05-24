@@ -60,6 +60,7 @@ export function LoginModal({
   const [sent, setSent] = useState(false);
 
   const dialogRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // ── Reset states + onClose parent ──
   // Conserve le comportement V1 : une réouverture future part propre
@@ -83,6 +84,15 @@ export function LoginModal({
       document.body.style.overflow = prev;
     };
   }, [open]);
+
+  // Focus input à l'ouverture (remplace autoFocus déprécié a11y). Délai
+  // 50 ms : laisse le mount + animations terminer avant de voler le
+  // focus, sinon les readers d'écran ratent l'annonce du dialog.
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(timer);
+  }, [open, sent]);
 
   // ── Focus trap + Escape ──
   // Un seul listener `keydown` global, attaché tant que la modale est
@@ -227,6 +237,7 @@ export function LoginModal({
                 Ton email
               </label>
               <input
+                ref={inputRef}
                 id="login-email"
                 type="email"
                 placeholder="ton@email.com"
@@ -234,7 +245,6 @@ export function LoginModal({
                 onChange={(e) => setEmail(e.target.value)}
                 className={fieldCls}
                 autoComplete="email"
-                autoFocus
                 disabled={submitting}
               />
               <Button

@@ -7,8 +7,12 @@ import { API_URL, SITE_NAME } from "@/lib/site";
  * `opengraph-image.tsx` est auto-détecté et exposé en
  * `/experts/[id]/opengraph-image`).
  *
- * Edge runtime : génération à la volée par requête, cache HTTP
- * géré par Next. Quand un crawler social (Twitter, Facebook,
+ * Runtime nodejs (et non edge) : en dev sur Windows, fetch undici
+ * résout `localhost` en IPv6 (::1) alors que le backend Express
+ * écoute en IPv4 (127.0.0.1) → ECONNREFUSED silencieux côté edge.
+ * nodejs runtime utilise la résolution DNS classique et reste
+ * largement assez performant pour un MVP (cache HTTP Next prend
+ * le relais). Quand un crawler social (Twitter, Facebook,
  * LinkedIn, iMessage…) demande l'OG, il reçoit un PNG personnalisé
  * avec le pseudo + bio de l'expert au design DS golden-da.
  *
@@ -17,7 +21,7 @@ import { API_URL, SITE_NAME } from "@/lib/site";
  * la génération.
  */
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 export const alt = "Profil expert Plarya";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -35,9 +39,18 @@ async function fetchExpert(id: string): Promise<ExpertSeo | null> {
       // de toute façon à intervalles raisonnables.
       next: { revalidate: 3600 },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // Log explicite pour distinguer "expert 404" d'un vrai problème
+      // (backend down, mauvaise URL). Apparaît dans les logs Next côté
+      // serveur, pas dans la response HTTP.
+      console.error(`[og-image] fetch ${API_URL}/experts/${id} → HTTP ${res.status}`);
+      return null;
+    }
     return (await res.json()) as ExpertSeo;
-  } catch {
+  } catch (err) {
+    // ECONNREFUSED / DNS / timeout : on log la cause exacte pour
+    // débugger en dev sans casser la génération de l'image.
+    console.error(`[og-image] fetch ${API_URL}/experts/${id} threw:`, err);
     return null;
   }
 }
