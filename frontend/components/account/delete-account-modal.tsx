@@ -121,12 +121,16 @@ export function DeleteAccountModal({
         onClick={submitting ? undefined : onClose}
         aria-hidden
       />
+      {/* Cadre : bordure neutre `surface-elevated` (= autres modales du DS,
+          ConfirmModal, LoginModal). Le rouge alarmant a été retiré du
+          cadre — il ne subsiste que sur le bouton de confirmation, le
+          vrai point focal de l'action. */}
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-account-title"
-        className="relative z-10 mx-4 w-full max-w-[480px] rounded-2xl border border-destructive/40 bg-background p-8"
+        className="relative z-10 mx-4 w-full max-w-[480px] rounded-2xl border border-surface-elevated bg-surface-1 p-6 sm:p-8"
       >
         <button
           type="button"
@@ -138,33 +142,45 @@ export function DeleteAccountModal({
           <X className="size-5" />
         </button>
 
-        <h2 id="delete-account-title" className="font-display text-h4 text-destructive">
+        {/* Titre : Work Sans bold blanc (pas rouge — le rouge se mérite
+            sur l'action, pas sur le titre). */}
+        <h2
+          id="delete-account-title"
+          className="font-body text-[22px] font-bold text-foreground md:text-h4"
+        >
           {mode === "scheduled" ? "Programmer la suppression ?" : "Supprimer ton compte ?"}
         </h2>
         {mode === "scheduled" ? (
-          <p className="mt-3 font-body text-body-16 text-muted-foreground">
+          <p className="mt-3 font-body text-body-16 leading-[1.5] text-muted-foreground">
             Tu as{" "}
-            <strong className="text-foreground">
+            <strong className="font-semibold text-foreground">
               {activeSubscriptions} abonné{activeSubscriptions > 1 ? "s" : ""}
             </strong>{" "}
             actif{activeSubscriptions > 1 ? "s" : ""}. Ton profil sera retiré des listings publics
             et n&apos;acceptera plus de nouveaux abonnés. La suppression deviendra effective le{" "}
-            <strong className="text-foreground">{formatDate(lastSubExpiresAt)}</strong>. Tu peux
-            annuler à tout moment d&apos;ici là. <br />
+            <strong className="font-semibold text-foreground">
+              {formatDate(lastSubExpiresAt)}
+            </strong>
+            . Tu peux annuler à tout moment d&apos;ici là.
             <br />
-            Tape ton email <span className="text-foreground">({userEmail})</span> pour confirmer.
+            <br />
+            Tape ton email (
+            <span className="font-mono font-semibold text-foreground">{userEmail}</span>) pour
+            confirmer.
           </p>
         ) : (
-          <p className="mt-3 font-body text-body-16 text-muted-foreground">
-            Cette action est <strong className="text-foreground">irréversible</strong>. Tape ton
-            email <span className="text-foreground">({userEmail})</span> pour confirmer.
+          <p className="mt-3 font-body text-body-16 leading-[1.5] text-muted-foreground">
+            Cette action est{" "}
+            <strong className="font-semibold text-foreground">irréversible</strong>. Tape ton email
+            (<span className="font-mono font-semibold text-foreground">{userEmail}</span>) pour
+            confirmer.
           </p>
         )}
 
         <div className="mt-6 space-y-2">
           <label
             htmlFor="delete-confirm-email"
-            className="font-body text-body-16 text-muted-foreground"
+            className="block font-body text-body-16 font-medium text-foreground"
           >
             Email
           </label>
@@ -186,24 +202,28 @@ export function DeleteAccountModal({
           </p>
         )}
 
-        <div className="mt-6 flex gap-3">
+        {/* Boutons : size `md` (= compact mais lisible, ≈44px de haut),
+            même hauteur sur les 2 → harmonisation. flex-1 + gap-3 :
+            les 2 boutons partagent la largeur disponible à parts égales
+            sur desktop (rangée), full-width stack sur mobile. */}
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row">
           <Button
             type="button"
             variant="secondary"
-            size="lg"
+            size="md"
             onClick={onClose}
             disabled={submitting}
-            className="flex-1"
+            className="flex-1 border-surface-elevated text-foreground hover:border-surface-elevated hover:bg-white/[0.04]"
           >
             Annuler
           </Button>
           <Button
             type="button"
-            variant="primary"
-            size="lg"
+            variant="destructive"
+            size="md"
             onClick={handleConfirm}
             disabled={!emailMatches || submitting}
-            className="flex-1 !bg-destructive !border-destructive hover:!brightness-110"
+            className="flex-1"
           >
             {submitting
               ? mode === "scheduled"

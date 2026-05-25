@@ -13,8 +13,9 @@ export interface StatCardProps {
   /** Libellé en MAJUSCULES dans la maquette ; pas de transformation
    *  appliquée ici — passer la chaîne déjà capitalisée si voulu. */
   label: string;
-  /** Valeur principale, gros nombre DM Serif 48px. Number ou string
-   *  (laisse "—" passer pour les états vides). */
+  /** Valeur principale, gros nombre Work Sans bold 48px + tabular-nums
+   *  (aligne les colonnes de chiffres dans la grille de 3 stats). Number
+   *  ou string (laisse "—" passer pour les états vides). */
   value: number | string;
   /** Suffixe optionnel à droite du nombre (ex: "%"). Texte muted 18px. */
   suffix?: string;
@@ -29,14 +30,19 @@ export function StatCard({ icon: Icon, label, value, suffix }: StatCardProps) {
       {/* Top row : icône dorée 24×24 + label muted. Gap 8px (cf.
           left=46-(14+24)=8 sur la maquette). */}
       <div className="flex items-center gap-2">
-        <Icon className="size-6 text-accent" />
+        <Icon className="size-6 text-muted-foreground" />
         <span className="font-body text-body-18 text-muted-foreground">{label}</span>
       </div>
 
-      {/* Bottom row : gros nombre DM Serif 48px + suffixe muted 18px.
-          Aligne le baseline du suffixe avec celui du nombre via items-baseline. */}
+      {/* Bottom row : gros nombre Work Sans 48px bold + tabular-nums +
+          suffixe muted 18px. tabular-nums maintient la largeur de chaque
+          chiffre constante → les 3 cards alignent leurs valeurs même
+          quand les nombres diffèrent (ex: 1, 12, 127). Aligne le baseline
+          du suffixe avec celui du nombre via items-baseline. */}
       <div className="mt-4 flex items-baseline gap-1">
-        <span className="font-display text-[48px] leading-[60px] text-foreground">{value}</span>
+        <span className="font-body text-[48px] font-bold leading-[60px] tabular-nums text-foreground">
+          {value}
+        </span>
         {suffix && <span className="font-body text-body-18 text-muted-foreground">{suffix}</span>}
       </div>
     </div>

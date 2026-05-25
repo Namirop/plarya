@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const buttonVariants = cva(
   // Base : transitions douces 200ms, focus-visible accent, disabled opacity-50.
   // rounded-2xl = 16px (DS).
-  "group/button inline-flex shrink-0 items-center justify-center gap-4 rounded-2xl whitespace-nowrap font-body transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none select-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center gap-4 rounded-2xl whitespace-nowrap font-body transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none select-none cursor-pointer focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -18,10 +18,17 @@ const buttonVariants = cva(
         primary:
           "bg-gradient-gold text-black border border-accent-strong shadow-shine hover:brightness-105",
 
-        // CTA secondaire : transparent avec bordure dorée.
-        // Pour les actions secondaires "Voir toutes les analyses", etc.
+        // CTA secondaire : transparent avec bordure NEUTRE
+        // (anciennement bordure dorée — retirée car utilisée partout,
+        // ça multipliait le doré sur tout le site sans raison).
+        // Hover : léger fond blanc + bordure plus claire.
+        //
+        // Si on a besoin du look "bordure dorée" pour un CTA marketing
+        // secondaire spécifique (rare), override sur la consumer via
+        // className="border-accent-strong hover:border-accent" — c'est
+        // l'exception, plus la règle.
         secondary:
-          "bg-transparent text-foreground border border-accent-strong hover:bg-accent/10 hover:border-accent",
+          "bg-transparent text-foreground border border-surface-elevated hover:bg-white/[0.04] hover:border-foreground/30",
 
         // Lien doré : "Voir tous les experts" (top-right des sections).
         // Pas de bordure, pas de fond.
@@ -34,12 +41,17 @@ const buttonVariants = cva(
         white:
           "bg-white text-black hover:bg-white/90 disabled:opacity-100 disabled:bg-surface-elevated disabled:text-muted-foreground disabled:hover:bg-surface-elevated",
 
+        // Action destructive : suppression compte, annulation
+        // abonnement, etc. Solid red plein, texte blanc, hover plus
+        // foncé. PAS de bordure dorée (collision esthétique avec le
+        // rouge). Focus ring rouge (cohérent avec l'intention).
+        destructive:
+          "bg-destructive text-white border border-destructive hover:bg-destructive/90 focus-visible:ring-destructive/40",
+
         // ──────────── Legacy shadcn variants (conservés) ────────────
         default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
         outline:
           "border border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
@@ -51,6 +63,11 @@ const buttonVariants = cva(
         // (= "Découvrir les experts" Hero 304×55, "Devenir créateur" 258×55)
         // font-weight Medium porté par le token text-h5 (cf. globals.css).
         lg: "px-8 py-4 text-h5",
+
+        // Modale : compact mais lisible. h ≈ 44px. Utiliser pour les
+        // CTAs intra-modale (delete-account, confirm-modal, etc.) où
+        // `lg` est trop massif et `sm` un peu trop chétif vu l'enjeu.
+        md: "px-5 py-3 text-body-16",
 
         // Bouton inline plus petit
         sm: "px-4 py-2 text-body-16",

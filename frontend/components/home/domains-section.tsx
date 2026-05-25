@@ -2,9 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { motion, type Variants } from "motion/react";
+
 import { DomainCard } from "@/components/domains/domain-card";
-import { SectionTitle } from "@/components/ui/section-title";
+import { MarketingSectionTitle } from "@/components/ui/section-title";
 import { cn } from "@/lib/utils";
+
+// Variants pop-in (= v1 .scroll-pop) : scale 0.6 → 1 + opacity 0 → 1
+// avec un ease bouncy (back-out). Appliqué à chaque DomainCard avec un
+// stagger de 0.15s pour reproduire le rythme v1 (0.2 / 0.35 / 0.5s).
+const POP_IN_VARIANTS: Variants = {
+  hidden: { opacity: 0, scale: 0.6 },
+  visible: { opacity: 1, scale: 1 },
+};
+const POP_IN_TRANSITION = { duration: 0.6, ease: [0.34, 1.56, 0.64, 1] as const };
 
 // Domaines disponibles pour le filtre in-page (cf. V1 logic retrouvée
 // dans bae3a79 : `activeDomain` state, scroll vers #experts, useMemo
@@ -40,11 +51,12 @@ const DOMAINS = [
 ];
 
 // Width d'une card mobile + gap. Doit matcher les valeurs CSS de
-// DomainCard mobile (w-[256px]) + le gap appliqué sur le scroller.
+// DomainCard mobile (w-[272px]) + le gap appliqué sur le scroller.
 // Gap court (4 px) pour que les cards voisines collent presque à la
 // card centrale (cf. ref Figma — gap quasi nul entre les 3 cards).
 const MOBILE_CARD_GAP = 4;
-const MOBILE_CARD_STEP = 256 + MOBILE_CARD_GAP;
+const MOBILE_CARD_WIDTH = 272;
+const MOBILE_CARD_STEP = MOBILE_CARD_WIDTH + MOBILE_CARD_GAP;
 
 export interface DomainsSectionProps {
   /** Domaine actuellement sélectionné comme filtre (state contrôlé par
@@ -77,38 +89,48 @@ export function DomainsSection({ activeDomain = null, onDomainSelect }: DomainsS
   return (
     <section id="domains" className="pt-16">
       <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
-        <SectionTitle title="Explore les domaines" />
+        <MarketingSectionTitle title="Explore les domaines" />
       </div>
 
-      {/* Mobile/tablette : carrousel snap-center full-bleed — les
+      {/* Mobile/tablette/lg : carrousel snap-center full-bleed — les
           cards voisines doivent être coupées par le bord naturel de
           l'écran (pas par une ligne imaginaire intérieure), donc on
           sort de la grille max-w-content et on centre via 50vw.
-          Desktop (lg) : on rentre dans le conteneur max-w-content. */}
-      <div className="mx-auto w-full lg:max-w-content lg:px-0">
+          Desktop (xl ≥ 1280) : grille 3-en-ligne dans max-w-content.
+          On bascule au xl (et pas lg) car 3 cards × 360 + 2 gaps × 32
+          = 1144px ne tient pas à coup sûr dans les viewports 1024-1175. */}
+      <div className="mx-auto w-full xl:max-w-content xl:px-0">
         <div
           ref={scrollerRef}
           onScroll={updateActive}
           className={cn(
             "mt-6 md:mt-10",
-            "flex gap-1 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4",
-            "px-[calc(50vw-128px)]",
+            // pt-2 : réserve la place du glow doré (shadow-shine-soft)
+            // quand la card est sélectionnée — sinon clipped en haut
+            // par l'overflow-x du scroller.
+            "flex gap-1 overflow-x-auto snap-x snap-mandatory scroll-smooth pt-2 pb-4",
+            "px-[calc(50vw-136px)]",
             "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
-            // Desktop : annule overflow + snap + padding. Gap-1 conservé
-            // pour homogénéiser avec le mobile (cards quasi-collées).
-            "lg:flex-wrap lg:items-center lg:justify-center lg:overflow-visible lg:pb-0 lg:px-0 lg:[scroll-snap-type:none]",
+            // xl : annule overflow + snap + padding. Gap mobile (4px) →
+            // desktop (32px) : les 3 cards respirent en grille horizontale.
+            "xl:gap-8 xl:flex-nowrap xl:items-center xl:justify-center xl:overflow-visible xl:pb-0 xl:px-0 xl:[scroll-snap-type:none]",
           )}
         >
           {DOMAINS.map((d, i) => (
-            <div
+            <motion.div
               key={d.title}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-80px" }}
+              variants={POP_IN_VARIANTS}
+              transition={{ ...POP_IN_TRANSITION, delay: i * 0.15 }}
               className={cn(
-                "shrink-0 snap-center lg:shrink",
+                "shrink-0 snap-center",
                 "transition-all duration-300 ease-out origin-center",
                 // Cards non-actives : réduites + désaturées en mobile,
                 // taille pleine en desktop (3 visibles en parallèle).
                 i !== activeIndex && "opacity-50 scale-[0.82]",
-                "lg:opacity-100 lg:scale-100",
+                "xl:opacity-100 xl:scale-100",
               )}
             >
               <DomainCard
@@ -121,7 +143,7 @@ export function DomainsSection({ activeDomain = null, onDomainSelect }: DomainsS
                 }
                 isSelected={d.id !== null && d.id === activeDomain}
               />
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -142,7 +164,7 @@ export function DomainsSection({ activeDomain = null, onDomainSelect }: DomainsS
               }}
               className={cn(
                 "size-[8px] rounded-full transition-all duration-200 cursor-pointer",
-                i === activeIndex ? "bg-accent" : "bg-muted-foreground opacity-40 hover:opacity-70",
+                i === activeIndex ? "bg-foreground" : "bg-muted-foreground opacity-40 hover:opacity-70",
               )}
             />
           ))}

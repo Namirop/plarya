@@ -9,7 +9,7 @@ import { ArrowRight } from "@phosphor-icons/react";
 import { ExpertCard, type ExpertCardProps } from "@/components/experts/expert-card";
 import type { DomainId } from "@/components/home/domains-section";
 import { Button } from "@/components/ui/button";
-import { SectionTitle } from "@/components/ui/section-title";
+import { MarketingSectionTitle } from "@/components/ui/section-title";
 import { apiGet } from "@/lib/api";
 import { allStarted } from "@/lib/date";
 import { SPORT_DOMAIN, ESPORT_DOMAIN } from "@/lib/sports";
@@ -154,10 +154,10 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
   return (
     // pt-24 = 96 px (gap depuis Domaines, = section-y-lg du Figma).
     <section id="experts" className="pt-16 md:pt-24">
-      <div className="mx-auto w-full max-w-content px-4 sm:px-8 lg:px-0">
+      <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
         {/* CTA top-right masqué en mobile : remplacé par le bouton plein
             largeur sous les cards (spec mobile §5). */}
-        <SectionTitle
+        <MarketingSectionTitle
           title="Nos experts du jour"
           cta={{ text: "Voir tous les experts", href: "/experts" }}
           ctaClassName="hidden md:inline-flex"
@@ -238,9 +238,12 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
               // visuellement au-dessus du fond #131212 — vs
               // bg-surface-elevated qui se confondait avec le bg de la
               // page et donnait une impression de transparence.
-              "border border-accent-strong bg-background text-accent",
+              // Bouton "next" carrousel — neutre (anciennement border
+              // dorée + glow doré hover, retiré en ménage doré 3B :
+              // bouton de navigation utilitaire, pas un CTA).
+              "border border-surface-elevated bg-background text-foreground",
               "transition-all duration-200 ease-out cursor-pointer",
-              "hover:shadow-shine hover:border-accent",
+              "hover:bg-white/[0.04] hover:border-foreground/30",
               "disabled:cursor-not-allowed disabled:opacity-50 disabled:pointer-events-none disabled:hover:shadow-none",
             )}
           >
@@ -261,7 +264,7 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
               aria-label={`Aller à la page ${i + 1}`}
               className={cn(
                 "size-[10px] rounded-full transition-all duration-200 cursor-pointer",
-                i === activePage ? "bg-accent" : "bg-muted-foreground opacity-40 hover:opacity-70",
+                i === activePage ? "bg-foreground" : "bg-muted-foreground opacity-40 hover:opacity-70",
               )}
             />
           ))}

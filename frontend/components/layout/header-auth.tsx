@@ -12,10 +12,15 @@ import { useUser } from "@/hooks/use-user";
 // via `useUser`). Choisit automatiquement le variant `connected` /
 // `guest` selon la présence d'une session utilisateur, et délègue les
 // callbacks login/logout à `useUser` + `LoginModal`.
+// Intent piloté par le bouton cliqué dans le Header : signin ouvre la
+// LoginModal en mode "connexion", signup en mode "création de compte".
+// Le flow backend est identique (magic-link) — seul le copy diffère.
+type LoginIntent = "signin" | "signup" | null;
+
 export function HeaderAuth() {
   const router = useRouter();
   const { user, loading, logout } = useUser();
-  const [loginOpen, setLoginOpen] = useState(false);
+  const [loginIntent, setLoginIntent] = useState<LoginIntent>(null);
 
   // 3 états distincts pour éviter le flash visuel :
   //  - "loading" : session en cours de résolution (premier appel
@@ -48,15 +53,27 @@ export function HeaderAuth() {
     router.push("/");
   }
 
+  const isSignup = loginIntent === "signup";
+
   return (
     <>
       <Header
         variant={variant}
         role={user?.role ?? "USER"}
-        onSignIn={() => setLoginOpen(true)}
+        onSignIn={() => setLoginIntent("signin")}
+        onSignUp={() => setLoginIntent("signup")}
         onLogout={handleLogout}
       />
-      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+      <LoginModal
+        open={loginIntent !== null}
+        onClose={() => setLoginIntent(null)}
+        title={isSignup ? "Créer un compte" : "Se connecter"}
+        description={
+          isSignup
+            ? "Entre ton email — on t'envoie un lien pour créer ton compte. Pas de mot de passe."
+            : "Entre ton email pour recevoir un lien de connexion."
+        }
+      />
     </>
   );
 }

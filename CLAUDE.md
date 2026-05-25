@@ -108,9 +108,49 @@ Rouge erreur : #EF4444
 
 ### Typography
 
-- Police corps : **Inter** (400, 500, 600, 700)
-- Titres principaux : Inter 700/800 avec `tracking-wide` ou `tracking-wider`, souvent en MAJUSCULES pour les sections importantes
-- Titres avec gradient doré : `bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 bg-clip-text text-transparent`
+- Police corps : **Work Sans** (`--font-body`, alias `font-body` / `font-sans`)
+- Police display marketing : **DM Serif Display** (`--font-display`)
+- Titres avec gradient doré : `bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 bg-clip-text text-transparent` (effet réservé hero & accents marketing)
+
+#### Règle d'usage — DM Serif Display vs Work Sans (STRICTE)
+
+DM Serif Display crée un effet éditorial "presse/magazine" précieux. Pour qu'il reste précieux, il doit rester rare. Règle :
+
+**DM Serif Display (`font-display`) — UNIQUEMENT pour :**
+
+- H1 du Hero homepage (`components/home/hero.tsx`)
+- H2 des grandes sections marketing de la homepage (via `<MarketingSectionTitle>` : Domaines, Experts, Pourquoi Plarya, Devenir créateur)
+- Pseudo des experts sur leur profil public `/experts/[id]` (effet "mise en avant éditoriale")
+- Titre principal de `/devenir-expert` (page marketing)
+- Titres H1 des pages légales (`/cgu`, `/confidentialite`, `/mentions-legales`, `/contact`) — effet éditorial classique
+- H2 sous-sections des pages légales (via `<LegalSection>`) — continuité éditoriale
+- OG images dynamiques (générées server-side)
+
+**Work Sans bold/semibold (`font-body font-bold`) — POUR TOUT LE RESTE :**
+
+- Titres de modales (LoginModal, ConfirmModal, EmailCheckoutModal, DeleteAccountModal, upsell modals, etc.)
+- Titres de sections internes (`<SectionTitle>` interne, "Abonnements actifs", "Confidentialité & données", "Panneau Admin", "Mes analyses", etc.)
+- Titres dans `/dashboard`, `/admin`, `/compte`
+- Pseudo expert sur le dashboard privé (vs profil public où il reste en display)
+- Sous-titres de cards, sections internes
+- Stat-cards (gros chiffres) : Work Sans **bold + `tabular-nums`** pour aligner les colonnes
+- Titres h3/h4/h5 par défaut
+- Tout message UI, label, bouton, indicateur
+
+Pour les titres en Work Sans, le pattern recommandé :
+
+- H1 interne : Work Sans 28-32px, font-weight **700 (bold)**
+- H2 interne : Work Sans 22-28px, font-weight **700 (bold)**
+- H3 / titre modale : Work Sans 22-24px, font-weight **700 (bold)**
+- H5 : Work Sans 16-20px, font-weight **600 (semibold)**
+
+Le contraste éditorial vient de la **hiérarchie** (taille + weight + gold-bar prefix), **pas** du changement de famille.
+
+**Composants associés :**
+
+- `<MarketingSectionTitle>` (`components/ui/section-title.tsx`) → font-display, pour la homepage
+- `<SectionTitle>` (même fichier) → font-body bold, pour tout le reste
+- Ne pas faire l'erreur de réintroduire `font-display` dans un titre de modale, de dashboard, de compte, etc. — c'est ce qui dilue l'identité marketing.
 
 ### Effets visuels (autorisés et encouragés)
 

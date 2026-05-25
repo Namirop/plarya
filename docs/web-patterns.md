@@ -18,7 +18,8 @@ références au code sont citées pour traçabilité, pas comme prérequis.
 4. [Observabilité](#4-observabilité)
 5. [Sécurité](#5-sécurité)
 6. [Webhooks et idempotence](#6-webhooks-et-idempotence)
-7. [À compléter au fil des audits](#7-à-compléter-au-fil-des-audits)
+7. [Frontend — UI](#7-frontend--ui)
+8. [À compléter au fil des audits](#8-à-compléter-au-fil-des-audits)
 
 ---
 
@@ -1421,7 +1422,386 @@ message exact.
 
 ---
 
-## 7. À compléter au fil des audits
+## 7. Frontend — UI
+
+### Pattern : police display réservée au marketing
+
+Sur les projets premium qui mélangent landing pages éditoriales et UI
+applicative (dashboards, modales, formulaires de gestion), il est
+tentant d'utiliser une police display "à effet" (serif éditoriale, type
+DM Serif Display, Playfair, Cormorant) **partout** où il y a un titre.
+C'est une erreur : la police perd son effet éditorial dès qu'elle est
+appliquée à des éléments utilitaires.
+
+#### Symptômes du sur-usage
+
+- Titres de modales (LoginModal, ConfirmModal) en serif → la modale
+  ressemble à une carte de visite, pas à un dialogue système.
+- Titres internes de dashboard ("Mes ventes", "Statistiques") en serif
+  → l'app fait "moins pro", on perd la sensation de tableau de bord
+  fonctionnel.
+- Sous-sections multiples → l'œil se fatigue, la hiérarchie s'écrase.
+
+#### Règle
+
+**Police display = MARKETING UNIQUEMENT.** Hors marketing, on utilise
+la police body en **bold (700)** ou **semibold (600)**. Le contraste
+éditorial vient de la hiérarchie (taille + weight + ornements type
+gold-bar prefix), pas du changement de famille.
+
+Catégories typiques :
+
+| Catégorie                          | Police                  |
+| ---------------------------------- | ----------------------- |
+| H1 hero landing page               | Display (regular 400)   |
+| H2 sections marketing landing      | Display (regular 400)   |
+| Nom / pseudo mis en avant éditorial | Display (regular 400)   |
+| H1 pages légales (cgu, contact…)   | Display (regular 400)   |
+| OG images dynamiques               | Display (regular 400)   |
+| **Tout le reste**                  | **Body bold/semibold**  |
+
+Le "tout le reste" inclut : titres de modales, titres internes
+dashboard / admin / compte, pseudo dans le contexte privé (dashboard),
+labels, sous-sections, stat-cards, banners utilitaires (cookie banner,
+upsell, email-gate, etc.).
+
+#### Cas borderline : composant partagé entre marketing et interne
+
+Si un composant (ex: `SectionTitle`) est consommé à la fois par la
+landing page **et** par le dashboard interne, ne pas mettre un prop
+`variant: "marketing" | "internal"` (les call-sites oublieront de le
+passer ou se trompent). **Split en deux composants distincts** :
+
+```tsx
+// components/ui/section-title.tsx
+
+export function MarketingSectionTitle(props) {
+  return <h2 className="font-display text-h2">...</h2>;
+}
+
+export function SectionTitle(props) {
+  // Même pattern visuel (gold-bar prefix, optional CTA), MAIS font-body bold.
+  return <h2 className="font-body text-h2 font-bold">...</h2>;
+}
+```
+
+Le nom devient la source de vérité. Plus de risque d'oubli silencieux.
+
+#### Chiffres et stats : `tabular-nums` obligatoire
+
+Quand on affiche des nombres dans une grille de stat-cards (ex: 3 cards
+"Total | Mois | Aujourd'hui") :
+
+```tsx
+<span className="font-body text-[48px] font-bold tabular-nums">
+  {value}
+</span>
+```
+
+`tabular-nums` force chaque chiffre à occuper la même largeur (figures
+"old-style" → "lining" tabulaires). Sans cette propriété, "127" est
+plus large que "117" parce que le "2" est plus large que le "1" en
+proportional figures. Dans une grille de 3 cards, les valeurs ne sont
+pas alignées entre elles, ce qui fait amateur.
+
+#### Audit : grep le fautif
+
+À chaque revue ou nouveau dev :
+
+```bash
+grep -rn "font-display" frontend/app frontend/components
+```
+
+Chaque occurrence doit appartenir à la liste KEEP marketing. Sinon,
+migrer vers `font-body font-bold` (ou `font-semibold` pour les h5/h6).
+
+**Pourquoi** : une police display est un outil de contraste. Utilisée
+partout, elle devient bruit. Utilisée avec parcimonie sur le marketing
+exclusivement, elle conserve son pouvoir d'évocation tout en laissant
+l'UI interne respirer dans un système typographique cohérent et "pro".
+
+---
+
+### Pattern : modales destructives — le rouge se mérite
+
+Une modale qui confirme une action destructive (suppression de compte,
+annulation d'abonnement, purge de données, etc.) doit transmettre la
+gravité de l'action **sans crier**. Le piège classique : encadrer
+toute la modale d'un bord rouge alarmant + titre rouge + bordure dorée
+sur le bouton de confirm = collision esthétique + sur-dramatisation.
+
+#### Règle : "le rouge se mérite"
+
+Le rouge destructive doit être réservé au **point focal de l'action**,
+c'est-à-dire le bouton de confirmation **et rien d'autre** dans la
+modale. Tout le reste (cadre, titre, description) utilise la palette
+neutre standard du DS.
+
+| Élément modale         | Avant (mauvais)         | Après (bon)              |
+| ---------------------- | ----------------------- | ------------------------ |
+| Cadre / bordure        | `border-destructive`    | `border-surface-elevated` (standard) |
+| Titre "Supprimer ?"    | `text-destructive`      | `text-foreground` (bold) |
+| Description            | Avec accents rouges     | `text-muted-foreground`, accents en `text-foreground` bold |
+| Bouton "Annuler"       | OK secondary            | OK secondary (transparent + border subtil) |
+| **Bouton "Supprimer"** | Border dorée + bg rouge | `bg-destructive` PLEIN + `text-white`, pas de bordure dorée |
+
+Le rouge ainsi concentré sur l'action focalise l'attention sans
+parasiter le reste de la composition. Les bordures dorées (primary
+DS) **n'ont rien à faire** sur un bouton destructif — collision
+esthétique chaud/chaud.
+
+#### Pattern : confirmation par tape-email
+
+Pour les actions vraiment irréversibles (suppression de compte,
+factory reset), on demande à l'utilisateur de **taper son email
+exact** plutôt que de cocher une case "je confirme". L'email est
+pré-affiché dans la description (entre parenthèses, en `font-mono` ou
+bold) et utilisé comme placeholder de l'input.
+
+```tsx
+// Validation : comparaison case-insensitive + trim
+const emailMatches =
+  typedEmail.trim().toLowerCase() === userEmail.toLowerCase();
+
+// Bouton désactivé tant que la valeur ne match pas
+<Button variant="destructive" disabled={!emailMatches || submitting}>
+  Supprimer définitivement
+</Button>
+```
+
+Avantages :
+
+- **Friction proportionnée** à l'enjeu — l'utilisateur doit poser les
+  doigts sur le clavier, pas juste cliquer.
+- **Anti-double-click** naturel : l'input est forcément vide à
+  l'ouverture → bouton désactivé d'office.
+- **Cas test inattendu** : un utilisateur partage son écran et un
+  collègue voit "votre@email.com" pré-affiché → il sait ce qu'il
+  signe (vs un coche-case anonyme).
+
+#### Harmonisation des tailles de boutons
+
+Dans une modale, les boutons CTA (Annuler + Confirmer) doivent avoir
+**la même hauteur**. Si on utilise un système CVA, ça se fait
+naturellement quand les deux boutons ont la même `size`. Le piège :
+prendre `size="lg"` pour l'action destructive "parce que c'est
+important" et `size="sm"` ou `size="default"` pour Annuler → les deux
+boutons sont mismatch en hauteur, le résultat est foireux.
+
+Recommandation : un size `md` intermédiaire (≈44px de haut,
+text-body-16, padding modéré) entre `sm` (compact inline) et `lg`
+(CTA marketing). Utiliser `md` partout en contexte modale.
+
+```tsx
+size: {
+  sm: "px-4 py-2 text-body-16",        // ≈36px - inline / actions secondaires
+  md: "px-5 py-3 text-body-16",        // ≈44px - modales (sweet spot)
+  default: "px-8 py-4 text-body-16",   // ≈52px - CTA standard
+  lg: "px-8 py-4 text-h5",             // ≈55px - CTA marketing
+}
+```
+
+#### Layout boutons : flex-1 stretch ou justify-end
+
+Deux patterns valides pour aligner Annuler + Confirmer :
+
+1. **flex-1 stretch** (chacun prend 50% de la largeur, mobile-friendly) :
+   ```tsx
+   <div className="flex flex-col gap-3 sm:flex-row">
+     <Button className="flex-1">Annuler</Button>
+     <Button className="flex-1" variant="destructive">Supprimer</Button>
+   </div>
+   ```
+2. **justify-end** (boutons compacts alignés à droite, plus desktop-classique) :
+   ```tsx
+   <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+     <Button>Annuler</Button>
+     <Button variant="destructive">Supprimer</Button>
+   </div>
+   ```
+
+Choisir selon la largeur de la modale (max-w-[480px] → préférer
+flex-1 stretch ; modale plus large → justify-end gagne en élégance).
+
+**Pourquoi** : une modale destructive n'est pas une alarme incendie.
+C'est un point de confirmation sérieux. La hiérarchie visuelle doit
+guider l'utilisateur vers l'action (le rouge solid) tout en lui
+laissant la respiration nécessaire pour réfléchir (cadre neutre,
+titre lisible non-coloré).
+
+---
+
+### Anti-patterns : "AI-generated dashboard" — patterns à éviter
+
+Quand un dashboard / page compte / settings produit une impression
+"généré par IA" sans qu'on sache pourquoi, c'est presque toujours un
+empilement des mêmes patterns. Les voici listés pour pouvoir les
+détecter au moment du dev, pas après coup.
+
+#### 1. Compteurs vanity sans contexte
+
+**Symptôme** : 3 stat cards alignées en haut de page avec un gros
+chiffre + un label muted ("12 / Abonnements actifs", "47 / Achats au
+total", "8 / Sports suivis"). Ces chiffres ne servent à rien — ils
+sont DÉJÀ visibles dans les sections qui suivent (la liste des abos
+montre 12 cards, l'historique en montre 47, etc.).
+
+```tsx
+// ❌ AI-like : 3 stat cards isolées qui dupliquent l'info en-dessous
+<div className="flex divide-x">
+  <KpiStat label="Abos actifs" value={12} />
+  <KpiStat label="Day-passes" value={47} />
+  <KpiStat label="Sports suivis" value={8} />
+</div>
+
+// ✅ Humain : une ligne descriptive en prose, naturelle, qui s'efface
+//    quand l'info est absente (item à 0 → masqué)
+<p className="text-muted-foreground">
+  12 abonnements actifs · 47 achats au total · 8 sports suivis
+</p>
+```
+
+**Quand garder les stat cards** : dashboard analytique pur (admin, BI)
+où la donnée n'est PAS répétée ailleurs et où la lecture rapide d'un
+chiffre est l'usage principal. Pour une page "Mon compte" utilisateur,
+les stats vanity sont du bruit.
+
+#### 2. Parenthèses de comptage sur titres de section
+
+**Symptôme** : "Abonnements actifs (3)", "Historique (47)". L'humain
+écrit jamais comme ça. Le nombre est immédiatement visible dans la
+liste qui suit.
+
+```tsx
+// ❌ AI-like
+<h2>Abonnements actifs (3)</h2>
+
+// ✅ Humain
+<h2>Abonnements actifs</h2>
+```
+
+Si le compte est vraiment utile à exposer (ex: historique très long
+avec pagination), mettre une mention discrète en sous-titre, pas
+entre parenthèses du titre :
+
+```tsx
+<h2>Historique</h2>
+<p className="text-muted-foreground">47 achats au total</p>
+```
+
+#### 3. Emojis / icônes décoratifs sans signification
+
+**Symptôme** : "TennisAce ⚡" ou "RugbyPro 🔥" à côté d'un nom — l'éclair
+ou la flamme n'a aucune signification métier, c'est juste pour "faire
+joli". Résultat : du bruit visuel + l'utilisateur cherche un sens qui
+n'existe pas.
+
+**Règle** : un icône à côté d'un texte doit avoir une **signification
+métier** vérifiable :
+
+| Icône               | Signification valide                       |
+| ------------------- | ------------------------------------------ |
+| ⚡ Lightning éclair | "Expert featured / Recommandé"             |
+| 🔥 Fire             | "Sur une série gagnante" (streak métier)   |
+| ✓ Check             | "Statut vérifié / actif"                   |
+| ⏱ Clock             | "En cours / temporaire"                    |
+| (rien)              | Décoration sans sens → ne PAS l'afficher   |
+
+Si on ne peut pas écrire un `title=` / tooltip qui explique le pourquoi
+en une phrase, l'icône doit dégager.
+
+#### 4. Prose narrative > listing chiffré
+
+**Symptôme** : tendance à exprimer en chiffres "Inscrit depuis : 12
+mois", "Niveau : 3/5", "Score : 87%". L'humain préfère la prose pour
+les méta-données qui ne demandent pas d'action.
+
+```tsx
+// ❌ AI-like (chiffres avec labels redondants)
+<dl>
+  <dt>Inscrit depuis</dt><dd>12 mois</dd>
+  <dt>Dernière connexion</dt><dd>2 jours</dd>
+</dl>
+
+// ✅ Humain
+<p className="text-muted-foreground">
+  Membre depuis janvier 2026 · Dernière visite il y a 2 jours
+</p>
+```
+
+Les vraies "stat cards" doivent être réservées aux chiffres
+**actionnables** (revenus à reverser, factures en attente, alertes à
+traiter) — pas aux méta-données décoratives.
+
+#### 5. Empty states avec illustration + emoji + 3 phrases
+
+**Symptôme** :
+
+```tsx
+// ❌ AI-like
+<div className="text-center">
+  <span className="text-6xl">📭</span>
+  <h3>Pas de message</h3>
+  <p>Aucun message reçu pour le moment.</p>
+  <p>Reviens plus tard !</p>
+  <Button>Composer un message</Button>
+</div>
+```
+
+Trois phrases pour dire la même chose + emoji + CTA générique. Faire
+simple :
+
+```tsx
+// ✅ Humain
+<div className="text-center">
+  <p className="text-foreground">Aucun message</p>
+  <p className="text-muted-foreground">Les nouveaux messages apparaîtront ici.</p>
+  <Button>Composer</Button>
+</div>
+```
+
+Une phrase de constat, une de contexte, une action si elle a du sens.
+
+#### 6. Champs / boutons avec icône SYSTÉMATIQUE
+
+**Symptôme** : un icône devant chaque label, chaque bouton, chaque
+champ. La page ressemble à une planche de pictogrammes.
+
+```tsx
+// ❌ AI-like
+<Button><Download /> Télécharger</Button>
+<Button><Settings /> Paramètres</Button>
+<Button><User /> Profil</Button>
+
+// ✅ Humain
+<Button>Télécharger</Button>
+<Button>Paramètres</Button>
+<Button>Profil</Button>
+```
+
+Les icônes ont leur place sur les **actions où le geste est plus
+expressif que le mot** (corbeille pour supprimer, croix pour fermer,
+crayon pour éditer). Pour le reste, le texte seul suffit.
+
+#### Checklist de fin de feature
+
+Avant de marquer une page comme "done", passer cette checklist :
+
+- [ ] Aucun stat card vanity en dupliqué de ce que la liste affiche déjà ?
+- [ ] Pas de "(N)" entre parenthèses dans les titres de section ?
+- [ ] Tous les icônes décoratifs ont une signification métier vérifiable
+      (sinon → retirer) ?
+- [ ] Les méta-données passives sont en prose, pas en `dl/dt/dd` ?
+- [ ] Les empty states font 2 phrases max ?
+- [ ] Les boutons CTA n'ont des icônes que si le geste est explicite
+      (download, delete, edit, close) ?
+
+Si la page coche ces 6 cases, elle est déjà nettement moins "AI-like"
+que la moyenne.
+
+---
+
+## 8. À compléter au fil des audits
 
 Section ouverte pour les patterns à ajouter au fur et à mesure des
 nouveaux fichiers audités. Structure attendue pour chaque ajout :

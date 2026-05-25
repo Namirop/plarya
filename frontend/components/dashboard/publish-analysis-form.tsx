@@ -80,7 +80,7 @@ function Field({ label, htmlFor, required, error, children, className }: FieldPr
     <div className={cn("flex flex-col gap-2", className)}>
       <label htmlFor={htmlFor} className={LABEL_CLASS}>
         {label}
-        {required && <span className="text-accent"> *</span>}
+        {required && <span className="text-muted-foreground"> *</span>}
       </label>
       {children}
       {error && <p className={ERROR_TEXT_CLASS}>{error}</p>}
@@ -361,7 +361,7 @@ export function PublishAnalysisForm({ bookmakers, onPublished }: PublishAnalysis
               </SelectContent>
             </Select>
 
-            <span className="font-display text-h4 text-muted-foreground">:</span>
+            <span className="font-body text-h4 font-bold text-muted-foreground">:</span>
 
             <Select
               value={minuteValue || undefined}

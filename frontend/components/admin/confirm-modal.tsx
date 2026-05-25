@@ -129,7 +129,7 @@ export function ConfirmModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-modal-title"
-        className="relative z-10 mx-4 w-full max-w-md rounded-2xl border border-surface-elevated bg-background p-8"
+        className="relative z-10 mx-4 w-full max-w-md rounded-2xl border border-surface-elevated bg-surface-1 p-6 sm:p-8"
       >
         <button
           type="button"
@@ -141,7 +141,10 @@ export function ConfirmModal({
           <X className="size-5" />
         </button>
 
-        <h2 id="confirm-modal-title" className="font-display text-h4 text-foreground">
+        <h2
+          id="confirm-modal-title"
+          className="font-body text-[22px] font-bold text-foreground md:text-h4"
+        >
           {title}
         </h2>
 

@@ -186,7 +186,7 @@ export function LoginModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="login-modal-title"
-        className="relative z-10 mx-4 w-full max-w-[480px] rounded-2xl border border-surface-elevated bg-background p-8"
+        className="relative z-10 mx-4 w-full max-w-[480px] rounded-2xl border border-surface-elevated bg-surface-1 p-6 sm:p-8"
       >
         {/* Close X — Phosphor, taille 5 (=20 px), pattern Bloc 2. */}
         <button
@@ -200,7 +200,10 @@ export function LoginModal({
 
         {sent ? (
           <>
-            <h2 id="login-modal-title" className="font-display text-h4 text-foreground">
+            <h2
+              id="login-modal-title"
+              className="font-body text-[22px] font-bold text-foreground md:text-h4"
+            >
               Vérifie ta boîte mail
             </h2>
             <p className="mt-3 font-body text-body-16 text-muted-foreground">
@@ -215,14 +218,17 @@ export function LoginModal({
               variant="primary"
               size="lg"
               onClick={handleClose}
-              className="mt-6 w-full"
+              className="mt-6 w-full whitespace-normal px-4 text-body-16 sm:px-8 sm:text-h5"
             >
               Fermer
             </Button>
           </>
         ) : (
           <>
-            <h2 id="login-modal-title" className="font-display text-h4 text-foreground">
+            <h2
+              id="login-modal-title"
+              className="font-body text-[22px] font-bold text-foreground md:text-h4"
+            >
               {title}
             </h2>
             <p className="mt-2 font-body text-body-16 text-muted-foreground">{description}</p>
@@ -252,7 +258,7 @@ export function LoginModal({
                 variant="primary"
                 size="lg"
                 disabled={submitting}
-                className="w-full"
+                className="w-full whitespace-normal px-4 text-body-16 sm:px-8 sm:text-h5"
               >
                 {submitting ? "Envoi…" : "Recevoir mon lien de connexion"}
               </Button>

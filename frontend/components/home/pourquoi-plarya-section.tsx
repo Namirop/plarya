@@ -3,7 +3,7 @@ import { Fragment, type ComponentType } from "react";
 import { Clock, Lightning, CreditCard, type IconProps } from "@phosphor-icons/react";
 
 import { DividerVertical } from "@/components/ui/divider-vertical";
-import { SectionTitle } from "@/components/ui/section-title";
+import { MarketingSectionTitle } from "@/components/ui/section-title";
 
 type Pillar = {
   icon: ComponentType<IconProps>;
@@ -37,14 +37,14 @@ export function PourquoiPlaryaSection() {
   return (
     // pt-16 = 64 px (gap depuis Experts).
     <section className="pt-16">
-      <div className="mx-auto w-full max-w-content px-4 sm:px-8 lg:px-0">
+      <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
         {/* Header HORS de la card encadrée (conforme à la maquette
             Figma — voir pourquoi-plarya-section-spec.md §2). Le "?"
             est en doré accent — pattern unique à cette section. */}
-        <SectionTitle
+        <MarketingSectionTitle
           title={
             <>
-              Pourquoi Plarya <span className="text-accent">?</span>
+              Pourquoi Plarya ?
             </>
           }
         />
@@ -53,7 +53,7 @@ export function PourquoiPlaryaSection() {
             Gap header → card = 24 px (mt-6) pour cohérence avec les autres
             sections. Mobile : padding 32px + stack vertical. Desktop :
             padding 88×40 + row horizontale. */}
-        <div className="mt-6 rounded-2xl bg-black/40 p-8 md:px-[88px] md:py-10">
+        <div className="mt-6 rounded-2xl bg-black/40 p-8 md:px-[60px] md:py-5">
           {/* Mobile : flex-col + dividers horizontaux. Desktop : flex-row
               + dividers verticaux. Le DividerVertical accepte une prop
               orientation pour gérer les deux cas. */}
@@ -73,9 +73,13 @@ export function PourquoiPlaryaSection() {
                   </>
                 )}
                 <div className="flex flex-col items-start">
-                  <pillar.icon size={30} className="text-accent" />
-                  <h3 className="mt-6 font-body text-h4 text-foreground">{pillar.title}</h3>
-                  <p className="mt-4 font-body text-body-16 leading-[1.4] text-muted-foreground">
+                  {/* size 24 mobile / 30 desktop : aligne avec le bump
+                      typo mobile (titre passé en text-h5 vs h4 desktop). */}
+                  <pillar.icon className="size-6 md:size-[30px] text-muted-foreground" />
+                  <h3 className="mt-4 md:mt-6 font-body text-h5 md:text-h4 text-foreground">
+                    {pillar.title}
+                  </h3>
+                  <p className="mt-3 md:mt-4 font-body text-[14px] md:text-body-16 leading-[1.4] text-muted-foreground">
                     {pillar.description}
                   </p>
                 </div>

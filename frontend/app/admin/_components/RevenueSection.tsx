@@ -60,7 +60,7 @@ export function RevenueSection({ revenueDays }: { revenueDays: RevenueDay[] }) {
                 <div
                   className={cn(
                     "w-full rounded-t-sm transition-colors group-hover:bg-foreground/50",
-                    isToday ? "bg-accent" : "bg-foreground/25",
+                    isToday ? "bg-foreground" : "bg-foreground/25",
                   )}
                   style={{
                     height: `${height}%`,

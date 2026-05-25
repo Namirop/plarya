@@ -1,7 +1,12 @@
+"use client";
+
+import { useRef, type ReactNode } from "react";
+
 import Image from "next/image";
 import Link from "next/link";
 
-import { ArrowRight, Star } from "@phosphor-icons/react";
+import { Star } from "@phosphor-icons/react";
+import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 
 import { Button } from "@/components/ui/button";
 import { SportIcon } from "@/lib/sports-icons";
@@ -10,10 +15,14 @@ import { SportIcon } from "@/lib/sports-icons";
 // pour garantir le rendu doré indépendamment de la propagation de
 // currentColor / des classes Tailwind générées. À factoriser si on en
 // ajoute beaucoup d'autres consommateurs.
+// Couleur doré conservée pour l'ÉTOILE pick-of-the-day uniquement
+// (signal sémantique). La flèche puce de liste est passée en blanc.
 const ACCENT_GOLD = "#DFB968";
 
-const DIVIDER_GOLD_GRADIENT =
-  "linear-gradient(to right, transparent 0%, #DFB968 51%, transparent 100%)";
+// Divider neutre — anciennement gradient doré, neutralisé en 3B
+// (multiplié par N cards dans le carrousel = saturation).
+const DIVIDER_NEUTRAL_GRADIENT =
+  "linear-gradient(to right, transparent 0%, rgba(255,255,255,0.15) 51%, transparent 100%)";
 
 export interface ExpertCardAnalysis {
   label: string;
@@ -34,6 +43,52 @@ export interface ExpertCardProps {
   locked?: boolean;
 }
 
+// Wrapper tilt 3D — au survol, la card s'incline doucement vers le
+// curseur (rotateX/Y bornés à ±6°, lissés par un spring physics).
+// `transform-gpu` + `preserve-3d` activent le contexte 3D ; le contenu
+// inner peut utiliser translateZ pour donner de la profondeur.
+// Désactivé naturellement sur touch (pas de mouseMove).
+function CardTilt({ children }: { children: ReactNode }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const rotateX = useTransform(mouseY, [-150, 150], [6, -6]);
+  const rotateY = useTransform(mouseX, [-150, 150], [-6, 6]);
+
+  const springConfig = { stiffness: 300, damping: 20, mass: 0.5 };
+  const springRotateX = useSpring(rotateX, springConfig);
+  const springRotateY = useSpring(rotateY, springConfig);
+
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    if (!cardRef.current) return;
+    const { left, top, width, height } = cardRef.current.getBoundingClientRect();
+    mouseX.set(e.clientX - left - width / 2);
+    mouseY.set(e.clientY - top - height / 2);
+  }
+
+  function handleMouseLeave() {
+    mouseX.set(0);
+    mouseY.set(0);
+  }
+
+  return (
+    <motion.div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        rotateX: springRotateX,
+        rotateY: springRotateY,
+        transformStyle: "preserve-3d",
+      }}
+      className="transform-gpu"
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export function ExpertCard({
   id,
   avatar,
@@ -44,7 +99,7 @@ export function ExpertCard({
   locked = false,
 }: ExpertCardProps) {
   const inner = (
-    <div className="w-[322px] rounded-2xl bg-black/40 px-4 py-8">
+    <div className="w-[322px] rounded-2xl bg-black/40 px-6 py-6">
       {/* Identity row — paddings verticaux par colonne pour positionner
           chaque élément aux coordonnées Figma absolues :
           pseudo @ y=11, EXPERT line @ y=50, cats @ y=12, avatar @ y=0. */}
@@ -58,7 +113,7 @@ export function ExpertCard({
         />
         <div className="min-w-0 flex-1 pt-[11px]">
           <h3 className="font-body text-h5 text-foreground truncate">{pseudo}</h3>
-          <p className="mt-[19px] font-body text-body-16 whitespace-nowrap">
+          <p className="mt-[15px] font-body text-body-16 whitespace-nowrap">
             <span className="text-accent">EXPERT</span>{" "}
             <span className="text-muted-foreground">{viewsCount} vues</span>
           </p>
@@ -80,7 +135,7 @@ export function ExpertCard({
       <div
         aria-hidden
         className="mx-auto mt-[46px] h-px w-[247px] opacity-30"
-        style={{ backgroundImage: DIVIDER_GOLD_GRADIENT }}
+        style={{ backgroundImage: DIVIDER_NEUTRAL_GRADIENT }}
       />
 
       {/* Label section : y=162 → 47px après le divider (y=115). mt-12 = 48px, 1px d'écart négligeable. */}
@@ -97,12 +152,35 @@ export function ExpertCard({
           la vitrine homepage). */}
       <ul className="mt-4 flex min-h-[40px] flex-col gap-2">
         {analyses.slice(0, 2).map((a, i) => (
-          <li key={i} className="flex items-center gap-6 font-body text-body-16">
-            <ArrowRight color={ACCENT_GOLD} strokeWidth={1.5} className="size-[14px] shrink-0" />
+          <li key={i} className="flex items-center gap-4 font-body text-body-16">
+            {/* Flèche longue dorée (custom SVG) — Phosphor ArrowRight
+                est trop carré (ratio 1:1). Ici 28×8 → arrow allongée
+                + tête fine, pattern visuel proche de la maquette. */}
+            <svg
+              aria-hidden
+              width="28"
+              height="8"
+              viewBox="0 0 28 8"
+              fill="none"
+              className="shrink-0"
+            >
+              <path
+                d="M0 4 H26 M22 1 L26 4 L22 7"
+                stroke="rgba(255,255,255,0.7)"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <span className="truncate text-foreground">{a.label}</span>
               {a.isPickOfTheDay && (
-                <Star color={ACCENT_GOLD} fill={ACCENT_GOLD} className="size-[14px] shrink-0" />
+                <Star
+                  color={ACCENT_GOLD}
+                  fill={ACCENT_GOLD}
+                  weight="fill"
+                  className="size-[14px] shrink-0"
+                />
               )}
             </div>
           </li>
@@ -135,7 +213,7 @@ export function ExpertCard({
   );
 
   // Si pas d'id (vitrine / tests), on rend la card "nue", sans navigation.
-  if (!id) return inner;
+  if (!id) return <CardTilt>{inner}</CardTilt>;
 
   // Wrapper Link sur toute la card — UX décidée brief Bloc 1 §2 : la
   // card entière mène au profil expert, y compris en état `locked`
@@ -146,7 +224,7 @@ export function ExpertCard({
       aria-label={`Voir le profil de ${pseudo}`}
       className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-2xl"
     >
-      {inner}
+      <CardTilt>{inner}</CardTilt>
     </Link>
   );
 }

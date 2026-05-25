@@ -147,10 +147,12 @@ function AnalysisCard({ prono, showActionButtons, onEdit, onResult }: AnalysisCa
           )}
         </div>
 
-        {/* Pick + cote (cote en doré). */}
+        {/* Pick + cote — cote neutre (anciennement dorée, retirée au
+            ménage : chaque ligne d'analyse dans la liste avait une
+            cote dorée → série dorée verticale sans intérêt). */}
         <p className="font-body text-body-16 text-foreground">
           {prono.pick} <span className="text-muted-foreground">— </span>
-          <span className="text-accent">@{prono.odds}</span>
+          <span className="text-foreground">@{prono.odds}</span>
         </p>
 
         {/* Ligue + heure de début du match, en muted. */}

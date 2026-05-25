@@ -44,7 +44,7 @@ function VerifyContent() {
     return (
       <div className="flex min-h-[50vh] items-center justify-center px-4">
         <div className="w-full max-w-sm text-center">
-          <h1 className="font-display text-h4 text-foreground">Ce compte a été supprimé.</h1>
+          <h1 className="font-body text-[22px] font-bold text-foreground md:text-h4">Ce compte a été supprimé.</h1>
           <p className="mt-4 font-body text-body-16 text-muted-foreground">
             La connexion avec cet email est temporairement indisponible. Réessaie dans quelques
             jours, ou utilise un autre email pour créer un nouveau compte.
@@ -92,7 +92,7 @@ function ErrorState({ message }: { message: string }) {
   return (
     <div className="flex min-h-[50vh] items-center justify-center px-4">
       <div className="w-full max-w-sm text-center">
-        <h1 className="font-display text-h4 text-foreground">{message}</h1>
+        <h1 className="font-body text-[22px] font-bold text-foreground md:text-h4">{message}</h1>
 
         {sent ? (
           <p className="mt-4 font-body text-body-16 text-muted-foreground">

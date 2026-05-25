@@ -19,7 +19,7 @@ export default function ContactPage() {
 
         <a
           href={`mailto:${CONTACT_EMAIL}`}
-          className="mt-6 inline-block font-display text-h4 text-accent transition-opacity hover:opacity-80 hover:underline"
+          className="mt-6 inline-block font-body text-body-18 font-semibold text-accent transition-opacity hover:opacity-80 hover:underline"
         >
           {CONTACT_EMAIL}
         </a>

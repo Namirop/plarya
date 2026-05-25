@@ -119,7 +119,7 @@ export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheck
         role="dialog"
         aria-modal="true"
         aria-labelledby="email-checkout-title"
-        className="relative z-10 mx-4 w-full max-w-[480px] rounded-2xl border border-surface-elevated bg-background p-8"
+        className="relative z-10 mx-4 w-full max-w-[480px] rounded-2xl border border-surface-elevated bg-surface-1 p-6 sm:p-8"
       >
         {/* Close X — Phosphor, taille 5 (=20 px), muted → foreground
             au hover, transitions douces DS. */}
@@ -133,7 +133,10 @@ export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheck
           <X className="size-5" />
         </button>
 
-        <h2 id="email-checkout-title" className="font-display text-h4 text-foreground">
+        <h2
+          id="email-checkout-title"
+          className="font-body text-[22px] font-bold text-foreground md:text-h4"
+        >
           Accédez aux analyses
         </h2>
         <p className="mt-2 font-body text-body-16 text-muted-foreground">
@@ -159,7 +162,13 @@ export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheck
               {error}
             </p>
           )}
-          <Button type="submit" variant="primary" size="lg" disabled={loading} className="w-full">
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            disabled={loading}
+            className="w-full whitespace-normal px-4 text-body-16 sm:px-8 sm:text-h5"
+          >
             {loading ? (
               <span className="inline-flex items-center gap-3">
                 {/* Spinner doré DS — même token que le loading state

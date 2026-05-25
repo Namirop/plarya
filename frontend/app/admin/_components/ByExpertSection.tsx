@@ -43,7 +43,10 @@ export function ByExpertSection({ expertRevenue }: { expertRevenue: ExpertRevenu
                   <td className={cn(tdNumericCls, "font-medium")}>
                     {formatPrice(t.totalRevenue)}€
                   </td>
-                  <td className={cn(tdNumericCls, "font-medium text-accent")}>
+                  {/* Part expert : valeur en blanc, le doré sur chaque
+                      ligne d'une table = série dorée verticale qui
+                      sature. Le label de colonne suffit à identifier. */}
+                  <td className={cn(tdNumericCls, "font-medium text-foreground")}>
                     {formatPrice(t.expertShare)}€
                   </td>
                   <td className={tdMutedCls + " text-right"}>
@@ -72,7 +75,7 @@ export function ByExpertSection({ expertRevenue }: { expertRevenue: ExpertRevenu
                 <span>
                   {t.salesCount} vente{t.salesCount > 1 ? "s" : ""}
                 </span>
-                <span className="font-medium text-accent">
+                <span className="font-medium text-foreground">
                   Expert : {formatPrice(t.expertShare)}€
                 </span>
                 <span>Plateforme : {formatPrice(t.totalRevenue - t.expertShare)}€</span>

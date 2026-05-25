@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { List, X, CaretRight } from "@phosphor-icons/react";
+import { motion } from "motion/react";
 
 import { GoldenBorderOverlay } from "@/components/ui/golden-border-overlay";
 import { cn } from "@/lib/utils";
@@ -31,8 +32,11 @@ export interface HeaderProps {
   onLogout?: () => void;
   /** Callback déclenché par "Se connecter" (variant guest). Typiquement ouvre une modale. */
   onSignIn?: () => void;
-  /** Href de "Créer un compte" (variant guest). */
-  signUpHref?: string;
+  /** Callback déclenché par "Créer un compte" (variant guest). Ouvre la
+   *  même LoginModal magic-link avec un copy contextualisé : créer un
+   *  compte = recevoir un lien par email (le User est créé à la 1ʳᵉ
+   *  vérification du token via auth-service.verifyMagicLink). */
+  onSignUp?: () => void;
 }
 
 interface NavLink {
@@ -64,7 +68,7 @@ const navItemClass = "font-body text-body-16 text-foreground transition-opacity 
 // hover pour signaler l'interactivité tout en restant subtil sous la
 // bordure dorée.
 const navPillItemCls =
-  "inline-flex items-center justify-center rounded-full px-5 py-2 font-body text-body-16 text-foreground transition-colors hover:bg-white/5 cursor-pointer";
+  "inline-flex items-center justify-center rounded-full px-6 py-2.5 font-body text-body-18 text-foreground transition-colors hover:bg-white/5 cursor-pointer";
 
 export function Header({
   variant = "guest",
@@ -72,7 +76,7 @@ export function Header({
   sticky = true,
   onLogout,
   onSignIn,
-  signUpHref = "/devenir-expert",
+  onSignUp,
 }: HeaderProps) {
   const navLinks = variant === "connected" ? navLinksForRole(role) : [];
   // Burger menu mobile : panel dropdown sous le header. Ferme au scroll
@@ -112,7 +116,10 @@ export function Header({
   }, []);
 
   return (
-    <header
+    <motion.header
+      initial={{ y: "-100%", opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
         // Le header pleine largeur (BG full-bleed pour cover le viewport).
         // Le CONTENU à l'intérieur est contraint à max-w-content + padding
@@ -128,7 +135,7 @@ export function Header({
         // pour que le header s'aligne avec le panel dropdown (sinon
         // contraste laid : header transparent + panel dark).
         // Desktop (md+) : toujours bg-background/90 + backdrop-blur-md.
-        "relative h-[70px] w-full overflow-visible",
+        "relative h-[85px] w-full overflow-visible",
         "transition-colors duration-200 ease-out",
         "md:bg-background/90 md:backdrop-blur-md",
         scrolled || menuOpen ? "bg-background/90 backdrop-blur-md" : "bg-transparent",
@@ -144,15 +151,15 @@ export function Header({
           hauteur et est positionné légèrement au-dessus du centre vertical
           du canvas — d'où le `translate-y-[6px]` qui re-aligne le glyphe
           avec les boutons d'auth à droite, vertical-centrés sur la barre).
-          Mobile : h-[140px] (vs 110 précédent — retour Romain logo trop
-          petit en mobile). Desktop : h-[160px] inchangé. */}
+          Mobile : h-[150px], desktop h-[180px] (proportionnés à la
+          nouvelle topbar h=85). */}
         <Link href="/" className="flex shrink-0 items-center">
           <Image
             src="/full-logo-remove.png"
             alt="Plarya"
             width={240}
-            height={160}
-            className="h-[140px] md:h-[160px] w-auto translate-y-[6px] md:translate-y-[10px]"
+            height={180}
+            className="h-[150px] md:h-[180px] w-auto translate-y-[6px] md:translate-y-[10px]"
             priority
           />
         </Link>
@@ -166,7 +173,7 @@ export function Header({
           <div className="hidden md:block" aria-hidden />
         ) : variant === "connected" ? (
           <nav className="relative hidden items-center gap-1 rounded-full p-1.5 md:inline-flex">
-            <GoldenBorderOverlay className="rounded-full opacity-100" />
+            <GoldenBorderOverlay variant="pill" className="rounded-full opacity-100" />
             {navLinks.map((l) => (
               <Link key={l.href} href={l.href} className={navPillItemCls}>
                 {l.label}
@@ -182,16 +189,17 @@ export function Header({
           </nav>
         ) : (
           <div className="relative hidden items-center gap-1 rounded-full p-1.5 md:inline-flex">
-            <GoldenBorderOverlay className="rounded-full opacity-100" />
+            <GoldenBorderOverlay variant="pill" className="rounded-full opacity-100" />
             <button type="button" onClick={onSignIn} className={navPillItemCls}>
               Se connecter
             </button>
-            <Link
-              href={signUpHref}
-              className="inline-flex items-center justify-center rounded-full border border-accent-strong bg-gradient-gold px-5 py-2 font-body text-body-16 text-black shadow-shine transition-all hover:brightness-105"
+            <button
+              type="button"
+              onClick={onSignUp}
+              className="inline-flex cursor-pointer items-center justify-center rounded-full border border-accent-strong bg-gradient-gold px-6 py-2.5 font-body text-body-18 text-black shadow-shine transition-all hover:brightness-105"
             >
               Créer un compte
-            </Link>
+            </button>
           </div>
         )}
 
@@ -215,11 +223,12 @@ export function Header({
           className={cn(
             // Panel dropdown sous le header. bg-background/95 + blur
             // pour rester lisible sur le gradient doré derrière. Bord
-            // gauche transparent → border-t doré subtil pour marquer
-            // la séparation avec le header.
+            // gauche transparent → border-t neutre pour marquer la
+            // séparation avec le header (anciennement doré /15,
+            // retiré dans le ménage doré — décoratif).
             "md:hidden absolute left-0 right-0 top-full",
             "bg-background/95 backdrop-blur-md",
-            "border-t border-accent/15",
+            "border-t border-surface-elevated",
             "px-6 py-6 flex flex-col",
           )}
         >
@@ -240,7 +249,7 @@ export function Header({
               </div>
 
               {/* Séparateur subtil avant l'action de sortie. */}
-              <div className="my-5 h-px w-full bg-accent/15" />
+              <div className="my-5 h-px w-full bg-surface-elevated" />
 
               <button
                 type="button"
@@ -269,18 +278,21 @@ export function Header({
               >
                 Se connecter
               </button>
-              <Link
-                href={signUpHref}
-                onClick={() => setMenuOpen(false)}
-                className="inline-flex items-center gap-2 font-body text-body-16 text-accent transition-opacity hover:opacity-80"
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onSignUp?.();
+                }}
+                className="inline-flex cursor-pointer items-center gap-2 font-body text-body-16 text-foreground transition-opacity hover:opacity-80"
               >
                 Créer un compte
                 <CaretRight size={18} aria-hidden />
-              </Link>
+              </button>
             </div>
           )}
         </div>
       )}
-    </header>
+    </motion.header>
   );
 }

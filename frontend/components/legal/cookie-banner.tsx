@@ -74,11 +74,11 @@ export function CookieBanner() {
       role="dialog"
       aria-labelledby="cookie-banner-title"
       aria-describedby="cookie-banner-desc"
-      className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-3xl rounded-2xl border border-surface-elevated bg-background p-5 shadow-shine md:p-6"
+      className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-3xl rounded-2xl border border-surface-elevated bg-background p-5 md:p-6"
     >
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:gap-6">
         <div className="flex-1">
-          <h2 id="cookie-banner-title" className="font-display text-h5 text-foreground">
+          <h2 id="cookie-banner-title" className="font-body text-h5 font-bold text-foreground">
             Cookies
           </h2>
           <p id="cookie-banner-desc" className="mt-2 font-body text-body-16 text-muted-foreground">

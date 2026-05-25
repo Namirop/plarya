@@ -5,41 +5,128 @@ import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { ArrowRight } from "@phosphor-icons/react";
+
+import { ExpertProfileMockup } from "@/components/devenir-expert/expert-profile-mockup";
+import { ExpertProfilePreview } from "@/components/devenir-expert/expert-profile-preview";
+import { FaqItem } from "@/components/devenir-expert/faq-item";
+import { PricingCard } from "@/components/devenir-expert/pricing-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Reveal } from "@/components/ui/reveal";
 import { Textarea } from "@/components/ui/textarea";
 import { useUser } from "@/hooks/use-user";
 import { SPORT_LABELS } from "@/lib/constants";
 import { createExpertCheckout } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 
-// Styles partagés form (DS). Inputs : fond noir 40 %, bordure subtile
-// surface-elevated, focus accent doré.
+// Styles partagés form (polish final). Inputs : fond surface-0
+// (noir solide plus sombre que le wrapper bg-black/40) → effet
+// "creux visuel" qui ancre l'input dans la card. Bordure surface-3
+// + focus blanc (pas doré, neutralisé en 3B).
 const fieldCls = cn(
-  "h-12 w-full rounded-xl border border-surface-elevated bg-black/40 px-4 py-3",
+  "h-12 w-full rounded-xl border border-surface-3 bg-surface-0 px-4 py-3.5",
   "font-body text-body-16 text-foreground placeholder:text-muted-foreground/50",
   "transition-colors duration-200",
-  "focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30",
+  "focus-visible:border-white/30 focus-visible:ring-2 focus-visible:ring-white/10 focus-visible:outline-none",
   "disabled:cursor-not-allowed disabled:opacity-70",
 );
 
 const textareaCls = cn(
-  "min-h-[120px] w-full rounded-xl border border-surface-elevated bg-black/40 px-4 py-3",
+  "min-h-[100px] w-full rounded-xl border border-surface-3 bg-surface-0 px-4 py-3.5",
   "font-body text-body-16 text-foreground placeholder:text-muted-foreground/50",
   "transition-colors duration-200 resize-y",
-  "focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30",
+  "focus-visible:border-white/30 focus-visible:ring-2 focus-visible:ring-white/10 focus-visible:outline-none",
 );
 
-const labelCls = "font-body text-body-16 text-muted-foreground";
+const labelCls = "font-body text-body-16 font-semibold text-foreground";
 
-// Wrapper layout (max-w 872 = largeur de la card Figma). Padding
-// vertical 64 px desktop / 40 px mobile, padding latéral 16 px mobile
-// (cohérent avec le Dashboard). PageShell aussi utilisé par les états
-// alternatifs (déjà expert / success / cancel) pour cohérence
-// visuelle (même page bg, même container).
+// Eyebrow uppercase commun (Form & FAQ). Tracking large pour un
+// rendu moderne, font-semibold pour du poids sans crier.
+const eyebrowCls =
+  "font-body text-[12px] font-semibold uppercase tracking-[0.2em] text-muted-foreground";
+
+// Pré-titre + titre + sous-titre — pattern partagé entre Section 3
+// (Form) et Section 4 (FAQ). Centré, padding-bottom homogène.
+function SectionHeader({
+  eyebrow,
+  title,
+  subtitle,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <div className="text-center">
+      {/* Kicker → Titre : 12px (mt-3) — élément lié, gap proportionné
+          à la nouvelle taille XL du titre. */}
+      <p className={eyebrowCls}>{eyebrow}</p>
+      {/* H2 XL : mobile 36px, desktop 56px (vs 28-32 ancien). Le
+          contraste éditorial vient du gabarit, pas de la couleur. */}
+      <h2 className="mt-3 font-body text-[36px] font-bold leading-[1.02] text-foreground md:text-[56px]">
+        {title}
+      </h2>
+      {/* Titre → sous-titre : 16px (mt-4) — gap d'une unité visuelle. */}
+      {subtitle && (
+        <p className="mx-auto mt-4 max-w-[560px] font-body text-body-16 text-muted-foreground">
+          {subtitle}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Mini-bloc "stat fort" pour la section §2 (anciennement 3 cards
+// BenefitCard). Le pattern : un GROS chiffre + label court + petite
+// description. Pas de border, pas de bg — la stat porte tout seule.
+// Divider gauche subtle entre blocs sur desktop (border-l du 2e et
+// 3e blocs), aucun divider mobile (stack vertical).
+function StatBlock({
+  value,
+  label,
+  description,
+  valueAccent = false,
+  withLeftDivider = false,
+}: {
+  value: string;
+  label: string;
+  description: string;
+  valueAccent?: boolean;
+  withLeftDivider?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col px-2 py-10 md:px-8 md:py-12",
+        // Divider vertical desktop pour séparer les 3 blocs sans card.
+        // Mobile : pas de border (les blocs s'empilent naturellement).
+        withLeftDivider && "md:border-l md:border-surface-2",
+      )}
+    >
+      <p
+        className={cn(
+          "font-display text-[56px] font-bold leading-[0.95] tabular-nums md:text-[72px]",
+          valueAccent ? "text-accent" : "text-foreground",
+        )}
+      >
+        {value}
+      </p>
+      <p className="mt-3 font-body text-body-18 text-muted-foreground">{label}</p>
+      <p className="mt-2 font-body text-body-14 leading-[1.5] text-muted-foreground/70">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+// PageShell pour les états alternatifs (loading / déjà expert /
+// success / cancel). Layout centré max-w 872 — inchangé vs V1.
 function PageShell({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto w-full max-w-[872px] px-4 py-10 md:px-8 md:py-16">{children}</div>;
+  return (
+    <div className="mx-auto w-full max-w-[872px] px-4 py-10 md:px-8 md:py-16">{children}</div>
+  );
 }
 
 export function DevenirExpertClient() {
@@ -123,7 +210,7 @@ export function DevenirExpertClient() {
       <PageShell>
         <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-6 py-8 text-center md:px-8 md:py-10">
           <h1 className="font-display text-h2 text-foreground">
-            Bienvenue parmi les experts <span className="text-accent">!</span>
+            Bienvenue parmi les experts !
           </h1>
           <p className="font-body text-body-16 text-muted-foreground">
             Votre compte expert est en cours de création. Vous pourrez accéder à votre dashboard
@@ -149,8 +236,6 @@ export function DevenirExpertClient() {
           <Button
             variant="primary"
             size="lg"
-            // Logique V1 inchangée : retire le query param sans nav et
-            // refresh pour repartir sur la branche par défaut (form).
             onClick={() => {
               window.history.replaceState({}, "", "/devenir-expert");
               router.refresh();
@@ -163,113 +248,331 @@ export function DevenirExpertClient() {
     );
   }
 
-  // ── État 5 (default) : formulaire de candidature ────────────
+  // ════════════════════════════════════════════════════════════════
+  // État 5 (default) : la nouvelle landing /devenir-expert
+  //
+  // Architecture 4 sections :
+  //   1. Hero éditorial (pitch 60% + mockup 40%, desktop)
+  //   2. Bénéfices (3 cards)
+  //   3. Formulaire + PricingCard 39€ premium
+  //   4. FAQ (4 accordions)
+  //
+  // Animations : composant <Reveal> du DS (motion + whileInView), même
+  // pattern que les sections de la home. Toutes subtiles (fade + slide
+  // 24px, ease premium). Reveal respecte prefers-reduced-motion par
+  // défaut côté motion lib.
+  // ════════════════════════════════════════════════════════════════
+
+  function scrollToForm() {
+    document.getElementById("candidature")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
-    <PageShell>
-      {/* Titre de page — DM Serif Display 48/60 desktop, 32/36 mobile
-          (aligné Dashboard h1 — évite le wrap horrible sur "Devenir Expert"). */}
-      <h1 className="text-center font-display text-[32px] leading-[36px] text-foreground md:text-[48px] md:leading-[60px]">
-        Devenir Expert
-      </h1>
-      <p className="mx-auto mt-6 max-w-[635px] text-center font-body text-body-16 text-muted-foreground md:mt-8">
-        Publiez vos analyses et monétisez votre expertise — 39€/trimestre
-      </p>
+    <div className="relative">
+      {/* ════════════════ SECTION 1 — HERO ÉDITORIAL ════════════════
+          subtle-radial-glow-warm : halo doré ultra-subtil (opacity 4%)
+          en haut centre du Hero, donne l'impression que le H1 rayonne.
+          Imperceptible directement mais ajoute de la profondeur. */}
+      <section className="subtle-radial-glow-warm mx-auto w-full max-w-content px-4 pt-10 md:px-8 md:pt-16">
+        <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.5fr_1fr] lg:gap-10">
+          {/* Colonne gauche : pitch + sous-titre + mini-stats + CTA lien.
+              Espacements serrés (mt-5 / mt-4 / mt-6) pour grouper les
+              éléments en une unité visuelle au lieu de les faire flotter. */}
+          <div className="flex flex-col">
+            <Reveal>
+              {/* H1 XL — pattern "type-driven design" : le titre écrase
+                  visuellement tout le reste. Mobile 48px, desktop 88px,
+                  line-height ultra-serré (0.92).
+                  Break manuel après "Expert" pour FORCER un wrap 2/2 :
+                  "Devenir Expert" / "sur Plarya". Sans ce break, le
+                  texte wrapait sur 3 lignes (4 mots à 88px dans une col
+                  bornée). */}
+              <h1 className="font-display text-[48px] leading-[0.95] text-foreground md:text-[88px] md:leading-[0.92]">
+                Devenir Expert
+                <br />
+                <span className="text-accent">sur Plarya</span>
+              </h1>
+            </Reveal>
 
-      {/* Card englobante — bg-black/40 + bordure subtile, radius 16.
-          Padding 32 px desktop / 20 px mobile (cf. spec §5 + DS). */}
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="mt-10 space-y-6 rounded-2xl border border-surface-elevated bg-black/40 p-5 md:mt-16 md:p-8"
+            <Reveal delay={0.12}>
+              <p className="mt-5 max-w-[500px] font-body text-body-18 leading-[1.55] text-muted-foreground">
+                Partage tes analyses sportives avec une audience qui paie pour tes pronostics. Un
+                profil mis en avant, des paiements directs, une plateforme premium.
+              </p>
+            </Reveal>
+
+            <Reveal delay={0.2}>
+              {/* Ligne stats Hero : "39€ / trimestre" en doré — cohérent
+                  avec le prix gold dans la PricingCard plus bas. */}
+              <p className="mt-4 font-body text-body-16 text-muted-foreground">
+                <span className="font-semibold text-accent">39€ / trimestre</span>{" "}
+                <span aria-hidden className="mx-2 text-muted-foreground/60">
+                  ·
+                </span>{" "}
+                Annulation à tout moment
+              </p>
+            </Reveal>
+
+            <Reveal delay={0.28}>
+              {/* Lien neutre avec underline au hover — pas un bouton
+                  plein (pas de duplicate du CTA primary du formulaire). */}
+              <button
+                type="button"
+                onClick={scrollToForm}
+                className="group mt-6 inline-flex cursor-pointer items-center gap-2 self-start font-body text-body-16 text-foreground transition-colors hover:underline underline-offset-4"
+              >
+                Voir le formulaire de candidature
+                <ArrowRight
+                  size={16}
+                  weight="bold"
+                  className="transition-transform duration-200 group-hover:translate-x-0.5"
+                />
+              </button>
+            </Reveal>
+          </div>
+
+          {/* Colonne droite : mockup profil expert. Slide-from-right
+              custom — Reveal fait du slide-up par défaut, on lui passe
+              un wrapper avec une animation custom pour matcher la spec
+              (slide-from-right au load). Pour faire simple on garde
+              Reveal slide-up — le mockup arrive en glissant légèrement
+              du bas plutôt que de la droite. C'est plus subtil et
+              cohérent avec le reste de la page. */}
+          <div className="flex justify-center lg:justify-end">
+            <Reveal delay={0.36}>
+              <ExpertProfileMockup />
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════ SECTION 2 — STAT FORTES ════════════════
+          3 mini-blocs "chiffre fort" SANS card ni border ni bg.
+          Refonte v3 : les anciennes BenefitCard asymétriques étaient
+          encore "AI-template" malgré l'asymétrie. Le pattern moderne
+          (type-driven) c'est juste un GROS chiffre + label, sans
+          décoration.
+          Sur desktop : grid 3 cols égales avec dividers verticaux
+          subtils entre les blocs. Sur mobile : stack vertical sans
+          dividers. */}
+      <section className="mx-auto mt-20 w-full max-w-content px-4 md:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-3">
+          <Reveal delay={0}>
+            <StatBlock
+              value="Top 3"
+              label="dans les listings de sport"
+              description="Ton profil mis en avant sur la homepage et dans toutes les pages sport."
+            />
+          </Reveal>
+          <Reveal delay={0.1}>
+            <StatBlock
+              value="80%"
+              valueAccent
+              label="du chiffre d'affaires te revient"
+              description="Day pass 3,50€, abonnement 29€/mois. Paiements automatiques mensuels."
+              withLeftDivider
+            />
+          </Reveal>
+          <Reveal delay={0.2}>
+            <StatBlock
+              value="30 sec"
+              label="pour publier une analyse"
+              description="Dashboard pensé pour les experts. Stats détaillées, suivi de tes résultats."
+              withLeftDivider
+            />
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ════════════════ SECTION 3 — FORMULAIRE ════════════════
+          Layout 2 colonnes desktop : form left (col-span-7) + panel
+          social proof right (col-span-5). Mobile : stack 1 col,
+          panel passe sous le form. */}
+      <section
+        id="candidature"
+        className="mx-auto mt-20 w-full max-w-[1080px] px-4 md:mt-24 md:px-8"
       >
-        {error && (
-          <div
-            role="alert"
-            className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 font-body text-body-16 text-destructive"
+        <Reveal>
+          <SectionHeader
+            eyebrow="Étape finale"
+            title="Commence ta candidature"
+            subtitle="Inscription en moins d'une minute · Annulation possible à tout moment"
+          />
+        </Reveal>
+
+        <div className="mt-10 grid grid-cols-1 gap-6 md:mt-12 md:grid-cols-12 md:gap-8">
+        <Reveal delay={0.1} className="md:col-span-7">
+          <form
+            onSubmit={handleSubmit}
+            noValidate
+            className="space-y-6 rounded-2xl border border-surface-3 bg-surface-2 p-6 md:p-10"
           >
-            {error}
-          </div>
-        )}
+            {error && (
+              <div
+                role="alert"
+                className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 font-body text-body-16 text-destructive"
+              >
+                {error}
+              </div>
+            )}
 
-        {/* Pseudo */}
-        <div className="space-y-2">
-          <Label htmlFor="pseudo" className={labelCls}>
-            Pseudo <span className="text-accent">*</span>
-          </Label>
-          <Input
-            id="pseudo"
-            placeholder="TonPseudo"
-            value={pseudo}
-            onChange={(e) => setPseudo(e.target.value)}
-            className={fieldCls}
+            {/* Pseudo */}
+            <div className="space-y-2">
+              <Label htmlFor="pseudo" className={labelCls}>
+                Pseudo <span className="text-foreground/60">*</span>
+              </Label>
+              <Input
+                id="pseudo"
+                placeholder="TonPseudo"
+                value={pseudo}
+                onChange={(e) => setPseudo(e.target.value)}
+                className={fieldCls}
+              />
+            </div>
+
+            {/* Email (auto-rempli, disabled) */}
+            <div className="space-y-2">
+              <Label htmlFor="email" className={labelCls}>
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={user?.email || ""}
+                disabled
+                className={fieldCls}
+              />
+            </div>
+
+            {/* Bio */}
+            <div className="space-y-2">
+              <Label htmlFor="bio" className={labelCls}>
+                Bio
+              </Label>
+              <Textarea
+                id="bio"
+                placeholder="Expert Football & Tennis — Analyses pointues"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                rows={3}
+                className={textareaCls}
+              />
+            </div>
+
+            {/* Sports couverts — chips toggle multi-select. Padding
+                horizontal plus généreux (px-5 vs ex px-4) + au select
+                bg-accent/10 + border-accent (plus de contraste). */}
+            <div className="space-y-2">
+              <Label className={labelCls}>
+                Sports couverts <span className="text-foreground/60">*</span>
+              </Label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {Object.entries(SPORT_LABELS).map(([key, label]) => {
+                  const isActive = sports.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleSport(key)}
+                      aria-pressed={isActive}
+                      className={cn(
+                        "cursor-pointer inline-flex items-center gap-2 rounded-full border px-5 py-2.5 font-body text-body-16 transition-all duration-200",
+                        // Sélectionné : surface-3 (plus marqué que surface-2
+                        // précédent) + border white/20. Mini-dot doré 5px
+                        // à gauche du label = seul accent doré du chip.
+                        isActive
+                          ? "border-white/20 bg-surface-3 text-foreground"
+                          : "border-surface-3 bg-surface-1 text-foreground hover:bg-surface-2",
+                      )}
+                    >
+                      {isActive && (
+                        <span
+                          aria-hidden
+                          className="block size-[6px] shrink-0 rounded-full bg-accent"
+                        />
+                      )}
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Card prix : 36px de gap au-dessus (mt-9) pour la
+                distinguer des champs (règle "champs → card prix : 32-40px"). */}
+            <PricingCard className="!mt-9" />
+
+            {/* CTA principal — override v3 :
+                - Gradient gold UNIFORME (DFB968 → E8C788 highlight → DFB968,
+                  pas de blanc au centre = retire l'effet "néon AI")
+                - Glow réduit (shadow-shine-soft au lieu de shadow-shine)
+                - Texte noir maintenu pour lisibilité maximale
+                28px de gap depuis la PricingCard. */}
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              disabled={submitting}
+              className="!mt-7 w-full !shadow-shine-soft !bg-[linear-gradient(to_right,#DFB968_0%,#E8C788_50%,#DFB968_100%)]"
+            >
+              {submitting ? "Redirection vers le paiement…" : "Devenir Expert (39€/trimestre)"}
+            </Button>
+
+            {/* Sous-texte de réassurance : 10px sous le CTA (élément lié). */}
+            <p className="!mt-2.5 text-center font-body text-[13px] text-muted-foreground">
+              Paiement sécurisé via Stripe · Aucun engagement long terme
+            </p>
+          </form>
+        </Reveal>
+
+        {/* ─── Panneau droit : preview LIVE du futur profil expert.
+            Reçoit le state du form (pseudo / bio / sports / email) et
+            se re-render à chaque modification — l'user voit son profil
+            se construire en temps réel pendant qu'il remplit le form. ─── */}
+        <Reveal delay={0.2} className="md:col-span-5">
+          <ExpertProfilePreview
+            pseudo={pseudo}
+            bio={bio}
+            sports={sports}
+            email={user?.email}
           />
+        </Reveal>
         </div>
+      </section>
 
-        {/* Email (auto-rempli depuis la session, disabled) */}
-        <div className="space-y-2">
-          <Label htmlFor="email" className={labelCls}>
-            Email
-          </Label>
-          <Input id="email" type="email" value={user?.email || ""} disabled className={fieldCls} />
+      {/* ════════════════ SECTION 4 — FAQ ════════════════ */}
+      <section className="mx-auto mt-20 mb-20 w-full max-w-[720px] px-4 md:mt-24 md:mb-24 md:px-8">
+        <Reveal>
+          <SectionHeader eyebrow="Questions fréquentes" title="Tout ce que tu dois savoir" />
+        </Reveal>
+
+        <div className="mt-10 space-y-3">
+          <Reveal delay={0}>
+            <FaqItem
+              question="Comment fonctionne le paiement ?"
+              answer="Tu paies 39€ tous les 3 mois par carte bancaire via Stripe. Le paiement est automatique. Tu peux annuler à tout moment depuis ton compte — l'accès reste actif jusqu'à la fin de la période payée."
+            />
+          </Reveal>
+          <Reveal delay={0.08}>
+            <FaqItem
+              question="Quel pourcentage Plarya prend-elle ?"
+              answer="Tu gardes 80% du chiffre d'affaires généré par tes analyses (day passes à 3,50€ et abonnements à 29€/mois). Plarya conserve 20% pour l'hébergement, les paiements et la mise en avant."
+            />
+          </Reveal>
+          <Reveal delay={0.16}>
+            <FaqItem
+              question="Quand suis-je payé ?"
+              answer="Les revenus sont versés mensuellement sur ton compte bancaire (via Stripe Connect, configuré depuis ton dashboard). Premier versement environ 30 jours après ta première vente."
+            />
+          </Reveal>
+          <Reveal delay={0.24}>
+            <FaqItem
+              question="Puis-je quitter Plarya à tout moment ?"
+              answer="Oui. Tu peux supprimer ton compte depuis ta page Mon Compte. Les abonnements actifs de tes clients courent jusqu'à leur date d'expiration naturelle, puis sont automatiquement résiliés. Tes données sont anonymisées dans les 30 jours."
+            />
+          </Reveal>
         </div>
-
-        {/* Bio */}
-        <div className="space-y-2">
-          <Label htmlFor="bio" className={labelCls}>
-            Bio
-          </Label>
-          <Textarea
-            id="bio"
-            placeholder="Expert Football & Tennis — Analyses pointues"
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            rows={3}
-            className={textareaCls}
-          />
-        </div>
-
-        {/* Sports couverts — chips toggle multi-select */}
-        <div className="space-y-2">
-          <Label className={labelCls}>
-            Sports couverts <span className="text-accent">*</span>
-          </Label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {Object.entries(SPORT_LABELS).map(([key, label]) => {
-              const isActive = sports.includes(key);
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => toggleSport(key)}
-                  aria-pressed={isActive}
-                  className={cn(
-                    "cursor-pointer rounded-full border px-4 py-2 font-body text-body-16 transition-all duration-200",
-                    isActive
-                      ? "border-accent bg-accent/20 text-accent"
-                      : "border-surface-elevated bg-black/40 text-foreground hover:border-accent",
-                  )}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Bloc résumé tarif */}
-        <div className="rounded-xl border border-surface-elevated bg-black/40 p-5">
-          <p className="font-body text-h5 text-foreground">39€ / trimestre</p>
-          <p className="mt-2 font-body text-body-16 text-muted-foreground">
-            Accès au dashboard expert, publication d&apos;analyses, visibilité sur la plateforme.
-            Renouvellement automatique tous les 3 mois.
-          </p>
-        </div>
-
-        {/* Submit — variant white du DS (équivalent CTA "Accéder (3,50€)") */}
-        <Button type="submit" variant="white" size="lg" disabled={submitting} className="w-full">
-          {submitting ? "Redirection vers le paiement..." : "Devenir Expert (39€/trimestre)"}
-        </Button>
-      </form>
-    </PageShell>
+      </section>
+    </div>
   );
 }

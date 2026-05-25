@@ -30,7 +30,7 @@ export function DevenirCreateurSection() {
   return (
     // pt-16 = 64 px (gap depuis Pourquoi Plarya).
     <section className="pt-16">
-      <div className="mx-auto w-full max-w-content px-4 sm:px-8 lg:px-0">
+      <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
         {/* Card "outline" : bordure conic-gradient dorée (haut-gauche +
             bas-droite très visibles, sombre ailleurs), même pattern
             visuel que le cadre du Hero (cf. GoldenBorderOverlay). PAS
@@ -58,7 +58,7 @@ export function DevenirCreateurSection() {
               variant="primary"
               size="lg"
               render={<Link href={DEVENIR_CREATEUR_HREF} />}
-              className="w-full md:w-auto"
+              className="w-full md:w-auto animate-shine-pulse"
             >
               Devenir créateur
               <ArrowRight className="size-4 hidden md:inline-block" />
@@ -68,7 +68,7 @@ export function DevenirCreateurSection() {
               variant="primary"
               size="lg"
               onClick={() => setLoginOpen(true)}
-              className="w-full md:w-auto"
+              className="w-full md:w-auto animate-shine-pulse"
             >
               Devenir créateur
               <ArrowRight className="size-4 hidden md:inline-block" />

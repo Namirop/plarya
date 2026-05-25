@@ -43,7 +43,10 @@ export const BADGE_TONES: Record<BadgeTone, string> = {
   success: "bg-green-500/20 text-green-500",
   danger: "bg-red-500/20 text-red-500",
   muted: "bg-muted-foreground/20 text-muted-foreground",
-  premium: "bg-accent/20 text-accent",
+  // Anciennement bg-accent/20 text-accent (doré) — neutralisé en 3B :
+  // utilisé pour les rows MONTHLY de SalesSection (admin) qui se
+  // multipliaient à chaque ligne. Admin = utilitaire, pas marketing.
+  premium: "bg-foreground/10 text-foreground",
 };
 
 // Card mobile (utilisée dans le double-rendering sm:hidden / hidden sm:block).

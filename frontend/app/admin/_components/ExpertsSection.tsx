@@ -137,7 +137,9 @@ export function ExpertsSection({
                           Enregistrer
                         </Button>
                         {orderSaved === t.id && (
-                          <span className="font-body text-body-16 text-accent">Mis à jour</span>
+                          <span className="font-body text-body-16 text-foreground">
+                            Mis à jour
+                          </span>
                         )}
                       </div>
                     </td>

@@ -45,56 +45,81 @@ export function DomainCard({
   const displayedSubtitle = isComingSoon ? "Arrive bientôt" : subtitle;
 
   const card = (
-    // Mobile : 256 × 319 (= taille focus de la spec mobile, permet de
-    // laisser apparaître les voisines partielles dans le carrousel).
-    // Desktop : 381 × 335 (inchangé). Tous les éléments enfants
-    // (positions absolute du titre/sous-titre/bouton) sont calibrés sur
-    // la version desktop ; en mobile on les repositionne proportionnellement.
-    <div
-      className={cn(
-        "relative h-[319px] w-[256px] md:h-[335px] md:w-[381px] rounded-2xl",
-        // Indication visuelle quand la card est sélectionnée comme
-        // filtre actif : léger glow doré (matche le shadow-shine-soft
-        // du DS, utilisé sur d'autres CTA dorés).
-        isSelected && "shadow-shine-soft",
+    // Wrapper extérieur `group` : source du hover propagé (lift, zoom
+    // image, shadow noire sous la card). Pas de transform direct ici —
+    // tout est porté par les enfants pour que la shadow noire (qui sort
+    // du rounded de la card) ne soit pas clipped par overflow-hidden.
+    <div className={cn("group relative", !isComingSoon && "transition-all duration-500 ease-out")}>
+      {/* Shadow noire sous la card au hover (= v1 page.tsx) — ellipse
+          large floutée qui apparaît derrière la card et lui donne du
+          poids. Hidden au repos (bg-black/0), visible au hover desktop. */}
+      {!isComingSoon && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-3 left-[20%] right-[20%] h-8 rounded-[50%] bg-black/0 blur-2xl transition-all duration-500 md:group-hover:bg-black/70"
+        />
       )}
-    >
+      <div
+        className={cn(
+          "relative h-[340px] w-[272px] xl:h-[335px] xl:w-[360px] rounded-2xl overflow-hidden",
+          // Hover lift desktop : la card se soulève + glow doré. Mobile :
+          // pas de hover (touch), `md:` gate naturellement les classes.
+          // overflow-hidden : indispensable pour clipper le zoom de
+          // l'image au hover (sinon scale-110 déborderait du rounded).
+          !isComingSoon &&
+            // shadow-shine-soft trop intense → version diffuse à
+            // opacity 50 % (= ménage doré, le hover lift suffit comme
+            // signal principal, le glow reste un appui discret).
+            "transition-all duration-500 ease-out md:group-hover:-translate-y-3 md:group-hover:shadow-[0_0_12px_0_rgba(223,185,104,0.4)]",
+          // Indication visuelle quand la card est sélectionnée comme
+          // filtre actif : ring doré subtle + halo diffus avec offset
+          // vertical léger (= "lit from below" plus naturel que le
+          // shadow-shine-soft frontal, jugé trop kitsch).
+          isSelected &&
+            "ring-1 ring-accent/60 shadow-[0_6px_32px_-8px_rgba(223,185,104,0.35)]",
+        )}
+      >
       {/* Image de fond — couvre toute la card, mais s'estompe en alpha
           sur la moitié basse via mask-image. Pas d'overlay coloré : le
           fond de page (ou ce qu'il y a derrière la card) transparaît
           directement, ce qui donne un fondu nettement plus subtil que
-          le gradient peint par-dessus l'image. */}
+          le gradient peint par-dessus l'image. Au hover desktop : zoom
+          subtil (scale-110) pour donner vie à la card. */}
       <Image
         src={image}
         alt={title}
         fill
-        sizes="(max-width: 768px) 256px, 381px"
-        className={cn("object-cover rounded-2xl", isComingSoon && "grayscale brightness-50")}
+        sizes="(max-width: 1280px) 272px, 360px"
+        className={cn(
+          "object-cover transition-transform duration-700 ease-out",
+          !isComingSoon && "md:group-hover:scale-110",
+          isComingSoon && "grayscale brightness-50",
+        )}
         style={{
           maskImage: IMAGE_FADE_MASK,
           WebkitMaskImage: IMAGE_FADE_MASK,
         }}
       />
 
-      {/* Titre — mobile : top-[140px] (proportionnel sur card 319px).
+      {/* Titre — mobile : top-[152px] (proportionnel sur card 340px).
           Desktop : top-[155px] (inchangé, calibré sur 335px). */}
-      <h3 className="absolute left-[19px] top-[140px] md:left-[34px] md:top-[155px] font-body text-[24px] md:text-h3 uppercase text-foreground">
+      <h3 className="absolute left-[21px] top-[152px] xl:left-[34px] xl:top-[155px] font-body text-[26px] xl:text-h3 uppercase text-foreground">
         {title}
       </h3>
 
-      {/* Sous-titre — mobile : top-[184px]. Desktop : top-[209px]. */}
-      <p className="absolute left-[21px] top-[184px] md:left-[36px] md:top-[209px] whitespace-pre-line font-body text-body-16 leading-[1.2] text-muted-foreground">
+      {/* Sous-titre — mobile : top-[196px]. Desktop : top-[209px]. */}
+      <p className="absolute left-[23px] top-[196px] xl:left-[36px] xl:top-[209px] whitespace-pre-line font-body text-body-16 leading-[1.2] text-muted-foreground">
         {displayedSubtitle}
       </p>
 
-      {/* Bouton CTA — mobile : top-[247px] (= valeur Figma spec mobile).
+      {/* Bouton CTA — mobile : top-[264px] (proportionnel sur 340px).
           Desktop : top-[271px] (inchangé). */}
       {/* Bouton CTA — purement visuel quand la card est wrappée dans un
           interactive container (mode onClick = filtre in-page). Le
           handler de clic est porté par le wrapper, donc on rend l'inner
           Button non-tabbable et non-interactif pour éviter le double
           tab-stop et l'invalidité HTML <button> dans <button>. */}
-      <div className="absolute left-[19px] top-[247px] md:left-[34px] md:top-[271px]">
+      <div className="absolute left-[21px] top-[264px] xl:left-[34px] xl:top-[271px]">
         {isComingSoon ? (
           <Button variant="white" disabled tabIndex={-1}>
             Voir les analyses
@@ -109,6 +134,7 @@ export function DomainCard({
             <ArrowRight className="size-4" />
           </Button>
         )}
+      </div>
       </div>
     </div>
   );

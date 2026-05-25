@@ -10,8 +10,24 @@
      Source : design-system.md (Figma DFTjdH42nddqFyAtHQ6eac)
      ════════════════════════════════════════════════════════════════ */
 
-  /* ── Backgrounds ── */
-  --color-background: #000000; /* page bg (DS: bg-primary) */
+  /* ── Backgrounds ──
+     Système d'élévation noir/gris à 5 niveaux pour créer de la
+     profondeur sans réintroduire de couleur (cf. Linear / Stripe /
+     Vercel). Plus l'élément est haut visuellement, plus son fond
+     est clair (effet "papier superposé").
+     Niveaux 3 et 4 portent une LÉGÈRE teinte chaude (R > G = B)
+     pour dialoguer avec la palette dorée — différence imperceptible
+     à l'œil nu mais cohérence globale. */
+  --color-background: #000000; /* niveau 0 — page bg (DS: bg-primary) */
+  --color-surface-0: #0a0a0a; /* niveau 1 — légère élévation, fonds card subtils */
+  --color-surface-1: #131212; /* niveau 2 — cards principales (alias de --color-surface) */
+  --color-surface-2: #1a1818; /* niveau 3 — cards nestées (teinte chaude légère) */
+  --color-surface-3: #211f1f; /* niveau 4 — éléments actifs / hover (teinte chaude) */
+  --color-surface-4: #2a2828; /* niveau 5 — éléments très en avant (rare) */
+
+  /* Anciens tokens conservés pour compatibilité (aucun consumer cassé).
+     Équivalences : --color-surface ≈ --color-surface-1,
+     --color-surface-elevated ≈ ancien #181818 (entre surface-1 et surface-2). */
   --color-surface: #131212; /* surfaces sombres (DS: bg-secondary) */
   --color-surface-elevated: #181818; /* boutons/icônes (DS: bg-tertiary) */
 
@@ -29,10 +45,15 @@
   /* ── Bordures ── */
   --color-border-gold: #e1aa36;
 
-  /* ── Fonts ── */
-  --font-display: var(--font-dm-serif), "DM Serif Display", ui-serif, Georgia, serif;
-  --font-body: var(--font-work-sans), "Work Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-work-sans), "Work Sans", ui-sans-serif, system-ui, sans-serif;
+  /* ── Fonts ──
+     V3 (mai 2026) : Mona Sans (body) + Hubot Sans (display) — GitHub OFL,
+     fichiers locaux dans public/fonts/ via next/font/local.
+     Historique : V1 = Work Sans + DM Serif Display ; V2 = Geist + Instrument
+     Serif (rejetée). Configs rollback dans `layout.tsx` (bloc en tête). */
+  --font-display:
+    var(--font-hubot-sans), "Hubot Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-mona-sans), "Mona Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-mona-sans), "Mona Sans", ui-sans-serif, system-ui, sans-serif;
 
   /* ── Font sizes desktop (token, line-height, font-weight) ── */
   --text-h1: 64px;
@@ -226,6 +247,71 @@ body::after {
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #1f1f1f;
   --sidebar-ring: rgba(212, 175, 55, 0.5);
+}
+
+/* ── Animations ── */
+
+/* Glow pulse — boucle lente le shadow-shine du DS entre intensité
+   normale (déjà visible au repos sur les CTA primaires) et un peu plus
+   prononcé. Donne un effet "premium" sans déranger l'œil. */
+@keyframes shine-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 15px 0 rgba(255, 174, 0, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 24px 0 rgba(255, 174, 0, 0.9);
+  }
+}
+.animate-shine-pulse {
+  animation: shine-pulse 2.8s ease-in-out infinite;
+}
+
+/* ── Halos radiaux subtils ──
+   Halos ultra-discrets pour créer de la profondeur ambient sans
+   réintroduire de couleur. Test : si visible à l'œil nu sans
+   chercher, c'est trop fort. Utilisés sur /devenir-expert (Hero),
+   /experts/[id] (header expert) — pages à forte densité éditoriale.
+   Le halo "warm" intègre une teinte ambre micro (cohérence avec
+   le doré rare conservé), invisible mais subliminal. */
+.subtle-radial-glow {
+  position: relative;
+}
+.subtle-radial-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 800px 400px at center top,
+    rgba(255, 255, 255, 0.035) 0%,
+    transparent 70%
+  );
+  z-index: 0;
+}
+.subtle-radial-glow > * {
+  position: relative;
+  z-index: 1;
+}
+
+.subtle-radial-glow-warm {
+  position: relative;
+}
+.subtle-radial-glow-warm::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 600px 300px at center 30%,
+    rgba(223, 185, 104, 0.04) 0%,
+    transparent 70%
+  );
+  z-index: 0;
+}
+.subtle-radial-glow-warm > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Utility classes ── */

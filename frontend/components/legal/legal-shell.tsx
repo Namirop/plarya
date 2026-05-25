@@ -3,11 +3,14 @@ import { cn } from "@/lib/utils";
 // Encart d'avertissement utilisé en haut des pages juridiques pour
 // signaler que le contenu doit être validé par un juriste. Pas
 // rendu sur la page Contact.
+// Banner neutralisé en 3B (anciennement border + bg + texte dorés).
+// Le mot "Note :" en bold + le fond surface-elevated suffisent à
+// signaler le statut d'avertissement.
 export function LegalWarning() {
   return (
-    <div className="mt-6 rounded-xl border border-accent/30 bg-accent/10 p-4">
+    <div className="mt-6 rounded-xl border border-surface-elevated bg-white/[0.03] p-4">
       <p className="font-body text-body-16 text-foreground">
-        <strong className="text-accent">Note :</strong> ces conditions sont génériques. Elles
+        <strong className="font-semibold">Note :</strong> ces conditions sont génériques. Elles
         doivent être validées par un juriste qualifié avant la mise en production finale de la
         plateforme.
       </p>

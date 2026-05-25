@@ -60,7 +60,7 @@ export default function DashboardClient({
   return (
     <div className="mx-auto max-w-[872px] px-4 py-6 md:px-6 md:py-8">
       <div className="mb-8 md:mb-16">
-        <h1 className="font-display text-[32px] leading-[36px] text-foreground md:text-[48px] md:leading-[60px]">
+        <h1 className="font-body text-[28px] font-bold leading-tight text-foreground md:text-[36px]">
           {profile.pseudo}
         </h1>
 

@@ -346,10 +346,13 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
             pb-32 pour libérer la zone du sticky CTA et éviter qu'il
             recouvre la fin de la liste d'analyses. */}
         <div className="mx-auto w-full max-w-[872px] flex-1 px-4 pt-10 pb-32 md:px-6 md:pt-16">
-          {/* Bandeau d'avertissement admin — tokens accent doré
-              (remplace #00D47E vert V1). */}
+          {/* Bandeau d'avertissement admin — neutre (anciennement
+              doré, neutralisé en 3B : la règle /experts/[id] réserve
+              le doré au badge EXPERT, badge featured, cote featured
+              et CTA primary). Le warning reste visible via la bordure
+              + le fond surface-elevated subtil. */}
           {expert.warningMessage && (
-            <div className="mb-6 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 font-body text-body-16 text-accent">
+            <div className="mb-6 rounded-xl border border-surface-elevated bg-white/[0.03] px-4 py-3 font-body text-body-16 text-foreground">
               {expert.warningMessage}
             </div>
           )}
@@ -367,8 +370,10 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
 
           {/* ═══ BLOC IDENTITÉ ═══
               Card englobante DS : bg-black/40, bordure subtile, radius 16,
-              padding 24/32. Layout horizontal desktop, stack vertical mobile. */}
-          <section className="rounded-2xl border border-surface-elevated bg-black/40 p-6 md:p-8">
+              padding 24/32. Layout horizontal desktop, stack vertical mobile.
+              subtle-radial-glow : halo blanc ultra-subtil derrière la
+              card pour la "poser" sur le fond sans réintroduire de doré. */}
+          <section className="subtle-radial-glow rounded-2xl border border-surface-elevated bg-black/40 p-6 md:p-8">
             <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
               {/* Avatar 96×96, ring doré subtil. */}
               <div className="shrink-0">
@@ -378,10 +383,10 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
                     alt={expert.pseudo}
                     width={96}
                     height={96}
-                    className="size-24 rounded-full object-cover ring-1 ring-accent/40"
+                    className="size-24 rounded-full object-cover ring-1 ring-surface-elevated"
                   />
                 ) : (
-                  <div className="flex size-24 items-center justify-center rounded-full bg-surface-elevated font-display text-h2 text-accent ring-1 ring-accent/40">
+                  <div className="flex size-24 items-center justify-center rounded-full bg-surface-elevated font-display text-h2 text-foreground ring-1 ring-surface-elevated">
                     {expert.pseudo.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -418,7 +423,7 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
                         key={sport}
                         className="inline-flex items-center gap-2 rounded-full border border-surface-elevated bg-black/40 px-3 py-1 font-body text-body-16 text-foreground"
                       >
-                        <SportIcon sport={sport} className="size-4 text-accent" />
+                        <SportIcon sport={sport} className="size-4 text-muted-foreground" />
                         {getSportLabel(sport)}
                       </span>
                     ))}
@@ -431,7 +436,7 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
           {/* ═══ SECTION ANALYSES ═══ */}
           {pendingPronos.length > 0 && (
             <section className="mt-12">
-              <h2 className="font-display text-h3 text-foreground">
+              <h2 className="font-body text-[22px] font-bold text-foreground md:text-[24px]">
                 {pendingPronos.length === 1
                   ? "Analyse du jour"
                   : `${pendingPronos.length} analyses du jour`}
@@ -528,7 +533,7 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
                 </div>
                 <h2
                   id="email-gate-title"
-                  className="mt-4 text-center font-display text-h4 text-foreground"
+                  className="mt-4 text-center font-body text-[22px] font-bold text-foreground md:text-h4"
                 >
                   Vérification du paiement…
                 </h2>
@@ -541,11 +546,11 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
             {emailGateState === "ready" && (
               <>
                 <div className="flex justify-center">
-                  <CheckCircle className="size-12 text-accent" aria-hidden />
+                  <CheckCircle className="size-12 text-foreground" aria-hidden />
                 </div>
                 <h2
                   id="email-gate-title"
-                  className="mt-4 text-center font-display text-h4 text-foreground"
+                  className="mt-4 text-center font-body text-[22px] font-bold text-foreground md:text-h4"
                 >
                   Paiement confirmé
                 </h2>
@@ -592,7 +597,7 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
               <>
                 <h2
                   id="email-gate-title"
-                  className="text-center font-display text-h4 text-destructive"
+                  className="text-center font-body text-[22px] font-bold text-destructive md:text-h4"
                 >
                   Paiement non confirmé
                 </h2>
@@ -668,7 +673,10 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
 
             {checkoutState === "failed" ? (
               <>
-                <h2 id="upsell-title" className="text-center font-display text-h4 text-destructive">
+                <h2
+                  id="upsell-title"
+                  className="text-center font-body text-[22px] font-bold text-destructive md:text-h4"
+                >
                   Paiement non confirmé
                 </h2>
                 <p className="mt-3 text-center font-body text-body-16 text-muted-foreground">
@@ -728,7 +736,10 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
               </>
             ) : (
               <>
-                <h2 id="upsell-title" className="text-center font-display text-h4 text-foreground">
+                <h2
+                  id="upsell-title"
+                  className="text-center font-body text-[22px] font-bold text-foreground md:text-h4"
+                >
                   {checkoutState === "success" || hasAccess
                     ? "Accès débloqué !"
                     : "Paiement en cours de traitement…"}
@@ -855,7 +866,16 @@ function PronoLine({ prono, hasAccess }: { prono: PronoData; hasAccess: boolean 
             </div>
             <div className="shrink-0 text-right">
               <p className="font-body text-body-16 text-muted-foreground">Cote</p>
-              <p className="mt-1 font-body text-h5 text-accent">
+              {/* Cote dorée UNIQUEMENT sur le prono featured (max 1
+                  par profil expert) — règle 3B. Les autres pronos
+                  affichent leur cote en blanc, ce qui maintient la
+                  hiérarchie sans saturer la page. */}
+              <p
+                className={cn(
+                  "mt-1 font-body text-h5",
+                  prono.isFeatured ? "text-accent" : "text-foreground",
+                )}
+              >
                 {prono.odds.toFixed(2).replace(".", ",")}
               </p>
             </div>
@@ -879,7 +899,9 @@ function PronoLine({ prono, hasAccess }: { prono: PronoData; hasAccess: boolean 
               </div>
               <div className="shrink-0 text-right">
                 <p className="font-body text-body-16 text-muted-foreground">Cote</p>
-                <p className="mt-1 font-body text-h5 text-accent">●,●●</p>
+                {/* Placeholder blurred cote — neutre (le contenu est
+                    flouté, le doré n'avait aucun sens visuel). */}
+                <p className="mt-1 font-body text-h5 text-foreground">●,●●</p>
               </div>
             </div>
             <p className="font-body text-body-16 text-foreground leading-relaxed">
@@ -888,7 +910,7 @@ function PronoLine({ prono, hasAccess }: { prono: PronoData; hasAccess: boolean 
             </p>
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <Lock className="size-8 text-accent" aria-label="Contenu verrouillé" />
+            <Lock className="size-8 text-foreground" aria-label="Contenu verrouillé" />
           </div>
         </div>
       )}
@@ -927,7 +949,7 @@ function BookmakerComparator({ bookmakerOdds }: { bookmakerOdds: BookmakerOddsDa
                 <span className="font-body text-body-16 text-foreground">{bo.bookmaker.name}</span>
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                <span className="font-body text-body-16 text-accent">@{bo.odds.toFixed(2)}</span>
+                <span className="font-body text-body-16 text-foreground">@{bo.odds.toFixed(2)}</span>
                 {affiliateLink && (
                   <a
                     href={affiliateLink.url}

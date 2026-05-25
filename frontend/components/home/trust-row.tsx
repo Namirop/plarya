@@ -40,14 +40,14 @@ type TrustRowProps = {
 export function TrustRow({ variant = "inline", className }: TrustRowProps) {
   if (variant === "standalone") {
     return (
-      <section className={cn("px-6 pt-12", className)}>
-        <ul className="mx-auto flex max-w-content flex-col gap-10">
+      <section className={cn("px-8 pt-12", className)}>
+        <ul className="mx-auto flex max-w-content flex-col gap-8">
           {TRUST_ITEMS.map((item) => (
-            <li key={item.title} className="flex items-start gap-[9px]">
-              <item.icon size={30} className="shrink-0 text-accent" />
-              <div className="flex flex-col gap-2">
-                <p className="font-body text-h5 text-foreground">{item.title}</p>
-                <p className="font-body text-body-16 leading-[1.4] text-muted-foreground">
+            <li key={item.title} className="flex items-start gap-3">
+              <item.icon size={24} className="shrink-0 text-muted-foreground" />
+              <div className="flex flex-col gap-1.5">
+                <p className="font-body text-body-18 font-medium text-foreground">{item.title}</p>
+                <p className="font-body text-[14px] leading-[1.4] text-muted-foreground">
                   {item.body}
                 </p>
               </div>
@@ -64,7 +64,7 @@ export function TrustRow({ variant = "inline", className }: TrustRowProps) {
         <Fragment key={item.title}>
           {index > 0 && <DividerVertical height={96} className="hidden sm:block" />}
           <li className="flex flex-1 items-start gap-[9px] sm:px-8">
-            <item.icon size={30} className="shrink-0 text-accent" />
+            <item.icon size={30} className="shrink-0 text-muted-foreground" />
             <div className="flex flex-col gap-2">
               <p className="font-body text-h5 text-foreground">{item.title}</p>
               <p className="font-body text-body-16 leading-[1.4] text-muted-foreground">

@@ -171,7 +171,9 @@ export default function AdminClient({ initialData }: { initialData: AdminInitial
     <>
       <div className="mx-auto max-w-6xl px-4 pt-10 pb-8 sm:px-6 md:pt-16 lg:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="font-display text-h2 text-foreground">Panneau Admin</h1>
+          <h1 className="font-body text-[28px] font-bold text-foreground md:text-[32px]">
+            Panneau Admin
+          </h1>
           <Button
             type="button"
             variant="primary"
@@ -213,7 +215,7 @@ export default function AdminClient({ initialData }: { initialData: AdminInitial
                 "-mb-px shrink-0 cursor-pointer border-b-2 px-4 py-3",
                 "font-body text-body-16 transition-colors duration-200",
                 tab === t.key
-                  ? "border-accent text-accent"
+                  ? "border-foreground text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >

@@ -9,7 +9,7 @@
 export function Disclaimer() {
   return (
     <section className="pb-8">
-      <div className="mx-auto w-full max-w-content px-4 sm:px-8 lg:px-0">
+      <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
         {/* Mobile : largeur ~315 px (max-w-[315px]) pour rester aligné
             avec le divider décoratif au-dessus. Desktop : 748 px (≈
             largeur du contenu hero). */}

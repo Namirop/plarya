@@ -9,6 +9,7 @@ import { ExpertsSection } from "@/components/home/experts-section";
 import { Hero } from "@/components/home/hero";
 import { PourquoiPlaryaSection } from "@/components/home/pourquoi-plarya-section";
 import { TrustRow } from "@/components/home/trust-row";
+import { Reveal } from "@/components/ui/reveal";
 import { SectionSeparator } from "@/components/ui/section-separator";
 
 // HomePage côté client. Wrapper de la coordination scroll/filtre
@@ -33,14 +34,26 @@ export function HomePageClient() {
 
   return (
     <div className="relative overflow-hidden">
+      {/* Hero pas dans <Reveal> : doit être visible au load sans
+          animation d'entrée (au-dessus du fold). */}
       <Hero />
       {/* TrustRow standalone — mobile-only (3 cards stackées). En desktop
           la même TrustRow est rendue à l'intérieur du Hero. */}
-      <TrustRow variant="standalone" className="md:hidden" />
+      <Reveal>
+        <TrustRow variant="standalone" className="md:hidden" />
+      </Reveal>
+      {/* Pas de Reveal autour de DomainsSection : le composant gère son
+          propre stagger pop-in sur chaque DomainCard (cf. v1 .scroll-pop). */}
       <DomainsSection activeDomain={activeDomain} onDomainSelect={handleDomainSelect} />
-      <ExpertsSection filterDomain={activeDomain} />
-      <PourquoiPlaryaSection />
-      <DevenirCreateurSection />
+      <Reveal>
+        <ExpertsSection filterDomain={activeDomain} />
+      </Reveal>
+      <Reveal>
+        <PourquoiPlaryaSection />
+      </Reveal>
+      <Reveal>
+        <DevenirCreateurSection />
+      </Reveal>
       {/* Seul séparateur conservé : entre Devenir créateur et la zone
           légale (disclaimer). Marque visuellement la fin de la LP
           "commerciale" et l'entrée dans la zone légale. */}
