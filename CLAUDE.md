@@ -91,18 +91,21 @@ Dark mode premium avec accents dorés. Inspiration : plateformes de trading haut
 
 **PAS** de design minimaliste blanc type SaaS. **PAS** d'apparence "app générique".
 
-Fond principal (noir profond) : #0A0A0A
-Fond cards (noir nuancé) : #141414
-Fond cards hover : #1A1A1A
-Bordures subtiles : #1F1F1F
-Bordures dorées subtiles : rgba(212, 175, 55, 0.2)
-Bordures dorées actives : rgba(212, 175, 55, 0.5)
+> Valeurs **source de vérité** : `design-system.md` (extrait Figma) + tokens `@theme` dans `frontend/app/globals.css`. Le récap ci-dessous est une vue synthétique — en cas de conflit, c'est le DS Figma + le CSS qui font foi.
+
+Fond principal (noir pur) : #000000
+Fond surfaces sombres : #131212
+Fond bouton "Terminé" / surfaces secondaires : #181818
+Container background (cards) : `rgba(0, 0, 0, 0.4)` (`bg-black/40`)
+Bordures dorées (CTA, domain cards) : #E1AA36 — token `accent-strong`
+Bordures dorées subtiles : `rgba(223, 185, 104, 0.2)` (accent @ 20%)
+Bordures dorées actives : `rgba(223, 185, 104, 0.5)` (accent @ 50%)
 Texte principal : #FFFFFF
-Texte secondaire : #A1A1AA
-Texte tertiaire : #71717A
-Or principal : #D4AF37
-Or clair (highlights) : #F4D03F
-Or sombre (bordures) : #8B7500
+Texte secondaire / muted : #898181
+Or principal (badge EXPERT, accents) : #DFB968 — token `accent`
+Or fort (golden stroke) : #E1AA36 — token `accent-strong`
+Glow doré CTA (`shadow-shine`) : `rgba(255, 174, 0, 0.7)` — drop-shadow blur 15
+Glow doux Domain cards (`shadow-shine-soft`) : #DFB968
 Vert succès : #10B981
 Rouge erreur : #EF4444
 
