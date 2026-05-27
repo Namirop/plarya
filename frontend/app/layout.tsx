@@ -24,6 +24,7 @@ import localFont from "next/font/local";
 
 import type { Metadata } from "next";
 
+import { FlagEmojiPolyfill } from "@/components/layout/flag-emoji-polyfill";
 import { HeaderAuth } from "@/components/layout/header-auth";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { CookieBanner } from "@/components/legal/cookie-banner";
@@ -180,6 +181,7 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd) }}
         />
+        <FlagEmojiPolyfill />
         <UserProvider>
           <HeaderAuth />
           <main className="flex-1">{children}</main>

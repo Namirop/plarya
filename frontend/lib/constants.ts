@@ -22,6 +22,14 @@ export function formatPrice(cents: number): string {
   return euros % 1 === 0 ? euros.toFixed(0) : euros.toFixed(2).replace(".", ",");
 }
 
+// Retire l'emoji de tête d'un label SPORT_LABELS ("⚽ Football" → "Football").
+// Utilisé pour le rendu "tags inline éditoriaux" de /devenir-expert où les
+// emojis renforceraient le côté "chips d'app" et qu'on veut éviter.
+export function stripSportEmoji(label: string): string {
+  const idx = label.indexOf(" ");
+  return idx === -1 ? label : label.slice(idx + 1);
+}
+
 export const SPORT_LABELS: Record<string, string> = {
   FOOTBALL: "⚽ Football",
   TENNIS: "🎾 Tennis",

@@ -36,7 +36,7 @@ const fieldCls = cn(
   "h-12 w-full rounded-xl border border-surface-elevated bg-black/40 px-4 py-3",
   "font-body text-body-16 text-foreground placeholder:text-muted-foreground/50",
   "transition-colors duration-200",
-  "focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:outline-none",
+  "focus-visible:border-accent/60 focus-visible:outline-none",
   "disabled:cursor-not-allowed disabled:opacity-70",
 );
 
@@ -202,7 +202,7 @@ export function LoginModal({
           <>
             <h2
               id="login-modal-title"
-              className="font-body text-[22px] font-bold text-foreground md:text-h4"
+              className="font-body text-[22px] font-bold text-foreground md:text-h4 pr-10"
             >
               Vérifie ta boîte mail
             </h2>
@@ -227,7 +227,7 @@ export function LoginModal({
           <>
             <h2
               id="login-modal-title"
-              className="font-body text-[22px] font-bold text-foreground md:text-h4"
+              className="font-body text-[22px] font-bold text-foreground md:text-h4 pr-10"
             >
               {title}
             </h2>

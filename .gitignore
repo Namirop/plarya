@@ -12,3 +12,6 @@ desktop.ini
 # Refs Figma locales (téléchargées via MCP pour audit, non versionnées)
 .figma-*.png
 .figma-*.jpg
+
+# Claude Code — prefs locales (permissions, etc.)
+.claude/settings.local.json

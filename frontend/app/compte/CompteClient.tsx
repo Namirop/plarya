@@ -1,16 +1,21 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 
 import Image from "next/image";
 import Link from "next/link";
 
 import { ConfidentialitySection } from "@/components/account/confidentiality-section";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { useUser } from "@/hooks/use-user";
 import { apiPatch } from "@/lib/api";
-import { SPORT_LABELS } from "@/lib/constants";
+import { SPORT_LABELS, stripSportEmoji } from "@/lib/constants";
+import {
+  formDaCardCls,
+  formDaInputCls,
+  formDaLabelCls,
+  formDaTextareaCls,
+} from "@/lib/form-da";
 import { cn } from "@/lib/utils";
 
 /* ════════════════════════ Types ════════════════════════ */
@@ -48,23 +53,12 @@ interface CompteClientProps {
 
 /* ════════════════════════ Styles partagés ════════════════════════ */
 
-const fieldCls = cn(
-  "h-12 w-full rounded-xl border border-surface-elevated bg-black/40 px-4 py-3",
-  "font-body text-body-16 text-foreground placeholder:text-muted-foreground/50",
-  "transition-colors duration-200",
-  "focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:outline-none",
-  "disabled:cursor-not-allowed disabled:opacity-70",
-);
-
-const textareaCls = cn(
-  "min-h-[120px] w-full rounded-xl border border-surface-elevated bg-black/40 px-4 py-3",
-  "font-body text-body-16 text-foreground placeholder:text-muted-foreground/50",
-  "transition-colors duration-200 resize-y",
-  "focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:outline-none",
-);
-
-const labelCls = "font-body text-body-16 text-muted-foreground";
+// UserView card token (historique) — conservé pour les sections
+// IdentityHeader / ActiveSubscription / History / EmptyState qui
+// continuent d'utiliser ce style. Les sections expert (Note quotidienne
+// + Profil expert) sont sur la DA "form publication" plus bas.
 const cardCls = "rounded-2xl border border-surface-elevated bg-black/40";
+
 
 // Divider neutre — séparateur fin entre lignes de l'historique.
 // Anciennement gradient doré, neutralisé en ménage 3B (aucun doré
@@ -105,31 +99,13 @@ export default function CompteClient({
   return <UserView subscriptions={initialSubscriptions ?? []} />;
 }
 
-/* ════════════════════════ Vue EXPERT (inchangée) ════════════════════════ */
+/* ════════════════════════ Vue EXPERT — refonte DA UserView ════════════════════════ */
 
 const DAILY_NOTE_MAX = 200;
 
-function ExpertPageShell({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="mx-auto w-full max-w-[872px] px-4 py-10 md:px-6 md:py-16">
-      <h1 className="font-body text-[28px] font-bold leading-none text-foreground md:text-[32px]">
-        {title}
-      </h1>
-      {subtitle && <p className="mt-3 font-body text-body-16 text-muted-foreground">{subtitle}</p>}
-      <div className="mt-10">{children}</div>
-    </div>
-  );
-}
-
 function ExpertView({ initial }: { initial: ExpertProfile }) {
+  const { user } = useUser();
+
   const [pseudo, setPseudo] = useState(initial.pseudo);
   const [bio, setBio] = useState(initial.bio ?? "");
   const [sports, setSports] = useState<string[]>(initial.sports);
@@ -186,8 +162,7 @@ function ExpertView({ initial }: { initial: ExpertProfile }) {
 
   const noteCount = dailyNote.length;
   // Compteur de chars : destructive si dépasse, foreground (blanc)
-  // proche de la limite (80 %), muted sinon. Anciennement doré au
-  // seuil 80 % — anti-pattern doré sur un état "warning approche".
+  // proche de la limite (80 %), muted sinon.
   const noteColorCls =
     noteCount > DAILY_NOTE_MAX
       ? "text-destructive"
@@ -196,97 +171,123 @@ function ExpertView({ initial }: { initial: ExpertProfile }) {
         : "text-muted-foreground";
 
   return (
-    <ExpertPageShell
-      title="Mon compte"
-      subtitle="Modifie tes informations de profil et ta note quotidienne."
-    >
-      <div className="space-y-10">
-        <section className={cn(cardCls, "p-6 md:p-8")}>
-          <h2 className="font-body text-h5 font-bold text-foreground md:text-[24px]">
-            Note quotidienne
-          </h2>
-          <p className="mt-2 font-body text-body-16 text-muted-foreground">
-            Visible sur votre profil et la page d&apos;accueil. Teasez vos sélections du jour.
-          </p>
+    <div className="mx-auto w-full max-w-[1080px] px-4 py-8 md:px-6 md:py-14">
+      <ExpertIdentityHeader
+        pseudo={initial.pseudo}
+        email={user?.email ?? ""}
+        sportsCount={initial.sports.length}
+        hasDailyNote={Boolean(initial.dailyNote)}
+      />
 
-          <div className="mt-6 space-y-2">
+      {/* ─── Note quotidienne — DA "form publication" ─── */}
+      <section className="mt-12 md:mt-16">
+        <AccountSectionTitle title="Note quotidienne" />
+        <p className="mt-3 font-body text-body-16 text-muted-foreground">
+          Visible sur ton profil public. Teasez tes sélections du jour, ajoute du contexte.
+        </p>
+
+        <div className={cn(formDaCardCls, "mt-6")}>
+          <label htmlFor="daily-note" className={formDaLabelCls}>
+            Ta note du jour
+          </label>
+          <div className="relative mt-2">
             <textarea
-              className={textareaCls}
+              id="daily-note"
+              className={cn(formDaTextareaCls, "min-h-[140px]")}
               placeholder="Aujourd'hui focus Ligue 1 et Tennis — gros combo en vue"
               value={dailyNote}
               onChange={(e) => setDailyNote(e.target.value)}
               maxLength={DAILY_NOTE_MAX}
               rows={4}
             />
-            <div className="flex items-center justify-between">
-              <span className={cn("font-body text-body-16", noteColorCls)}>
-                {noteCount}/{DAILY_NOTE_MAX}
-              </span>
-              {noteMsg && (
-                <span
-                  role="status"
-                  className={cn(
-                    "font-body text-body-16",
-                    noteIsError ? "text-destructive" : "text-foreground",
-                  )}
-                >
-                  {noteMsg}
-                </span>
+            {/* Compteur de chars — bottom-right du textarea (pattern
+                cohérent avec le compteur de mots du form d'analyse). */}
+            <span
+              aria-live="polite"
+              className={cn(
+                "pointer-events-none absolute bottom-3 right-3 font-body text-[12px]",
+                noteColorCls,
               )}
-            </div>
+            >
+              {noteCount}/{DAILY_NOTE_MAX}
+            </span>
           </div>
 
-          <Button
-            type="button"
-            variant="primary"
-            size="lg"
-            onClick={handleDailyNote}
-            disabled={noteSaving}
-            className="mt-6 w-full sm:w-auto"
-          >
-            {noteSaving ? "Enregistrement…" : "Mettre à jour"}
-          </Button>
-        </section>
+          {noteMsg && (
+            <p
+              role="status"
+              className={cn(
+                "mt-3 font-body text-[14px]",
+                noteIsError ? "text-destructive" : "text-foreground",
+              )}
+            >
+              {noteMsg}
+            </p>
+          )}
 
-        <section className={cn(cardCls, "p-6 md:p-8")}>
-          <h2 className="font-body text-h5 font-bold text-foreground md:text-[24px]">Profil</h2>
-          <p className="mt-2 font-body text-body-16 text-muted-foreground">
-            Ton pseudo, ta bio, les sports que tu couvres.
-          </p>
+          {/* Button primary rectangulaire (DA gold solide partagée avec
+              "Continuer →" et "Publier l'analyse" du form publication). */}
+          <div className="mt-6 flex justify-end">
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={handleDailyNote}
+              disabled={noteSaving}
+            >
+              {noteSaving ? "Enregistrement…" : "Mettre à jour"}
+            </Button>
+          </div>
+        </div>
+      </section>
 
-          <div className="mt-6 space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="pseudo" className={labelCls}>
+      {/* ─── Profil expert — DA "form publication" ─── */}
+      <section className="mt-12 md:mt-16">
+        <AccountSectionTitle title="Profil expert" />
+        <p className="mt-3 font-body text-body-16 text-muted-foreground">
+          Ton pseudo, ta bio, les sports que tu couvres. Visible sur ton profil public.
+        </p>
+
+        <div className={cn(formDaCardCls, "mt-6")}>
+          <div className="space-y-8">
+            <div>
+              <label htmlFor="pseudo" className={formDaLabelCls}>
                 Pseudo <span className="text-muted-foreground">*</span>
-              </Label>
+              </label>
               <input
                 id="pseudo"
                 type="text"
                 value={pseudo}
                 onChange={(e) => setPseudo(e.target.value)}
-                className={fieldCls}
+                className={cn(formDaInputCls, "mt-2")}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="bio" className={labelCls}>
+            <div>
+              <label htmlFor="bio" className={formDaLabelCls}>
                 Bio
-              </Label>
+              </label>
               <textarea
                 id="bio"
                 placeholder="Expert Football & Tennis — Analyses pointues"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 rows={5}
-                className={textareaCls}
+                className={cn(formDaTextareaCls, "mt-2")}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className={labelCls}>
+            <div>
+              {/* Surtitre non-label : les "champs" sont une liste de
+                  toggle buttons (chacun avec son aria-pressed et son
+                  texte accessible). Un <label> ne s'attache à aucun
+                  contrôle unique → on utilise <span>. */}
+              <span className={formDaLabelCls}>
                 Sports couverts <span className="text-muted-foreground">*</span>
-              </Label>
-              <div className="mt-2 flex flex-wrap gap-2">
+              </span>
+              {/* Tags inline éditoriaux — cohérence avec /devenir-expert
+                  (FIX 2 de la session). + muted → ✓ accent + underline. */}
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
                 {Object.entries(SPORT_LABELS).map(([key, label]) => {
                   const isActive = sports.includes(key);
                   return (
@@ -296,51 +297,128 @@ function ExpertView({ initial }: { initial: ExpertProfile }) {
                       onClick={() => toggleSport(key)}
                       aria-pressed={isActive}
                       className={cn(
-                        "cursor-pointer rounded-full border px-4 py-2 font-body text-body-16 transition-all duration-200",
-                        // Sélectionné neutre (border + bg blancs subtils) —
-                        // règle /compte 3B : aucun doré sur les chips
-                        // sport. L'état actif est porté par le bg
-                        // + la bordure plus marquées.
+                        "group cursor-pointer inline-flex items-baseline gap-1.5 px-1 py-1 font-body text-[16px] transition-colors duration-150",
                         isActive
-                          ? "border-foreground bg-white/[0.06] text-foreground"
-                          : "border-surface-elevated bg-black/40 text-foreground hover:border-foreground/30",
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground",
                       )}
                     >
-                      {label}
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "font-body text-[14px] leading-none transition-colors",
+                          isActive
+                            ? "text-accent"
+                            : "text-muted-foreground group-hover:text-foreground",
+                        )}
+                      >
+                        {isActive ? "✓" : "+"}
+                      </span>
+                      <span
+                        className={cn(
+                          "underline-offset-4",
+                          isActive && "underline decoration-accent/40 decoration-1",
+                        )}
+                      >
+                        {stripSportEmoji(label)}
+                      </span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <Button
-              type="button"
-              variant="primary"
-              size="lg"
-              onClick={handleProfile}
-              disabled={profileSaving}
-              className="w-full sm:w-auto"
-            >
-              {profileSaving ? "Enregistrement…" : "Enregistrer"}
-            </Button>
-
             {profileMsg && (
               <p
                 role="status"
                 className={cn(
-                  "font-body text-body-16",
+                  "font-body text-[14px]",
                   profileIsError ? "text-destructive" : "text-foreground",
                 )}
               >
                 {profileMsg}
               </p>
             )}
+
+            {/* Button primary — désormais rectangulaire par défaut
+                (cf. Button base variant) → plus besoin d'override. */}
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                onClick={handleProfile}
+                disabled={profileSaving}
+                className="w-full sm:w-auto"
+              >
+                {profileSaving ? "Enregistrement…" : "Enregistrer"}
+              </Button>
+            </div>
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
 
       <ConfidentialitySection />
-    </ExpertPageShell>
+    </div>
+  );
+}
+
+interface ExpertIdentityHeaderProps {
+  pseudo: string;
+  email: string;
+  sportsCount: number;
+  hasDailyNote: boolean;
+}
+
+function ExpertIdentityHeader({
+  pseudo,
+  email,
+  sportsCount,
+  hasDailyNote,
+}: ExpertIdentityHeaderProps) {
+  // Initiale du pseudo (vs initiale email côté user) — l'expert a une
+  // identité publique, mettre en avant son pseudo plutôt que son email.
+  const initial = pseudo.charAt(0).toUpperCase() || "—";
+
+  // Ligne descriptive en prose — pattern identique à IdentityHeader user.
+  // Items conditionnels : seul ce qui a une valeur > 0 / true apparaît.
+  const summaryParts: string[] = ["Compte expert"];
+  if (sportsCount > 0) {
+    summaryParts.push(`${sportsCount} sport${sportsCount > 1 ? "s" : ""} couvert${sportsCount > 1 ? "s" : ""}`);
+  }
+  summaryParts.push(hasDailyNote ? "Note quotidienne active" : "Aucune note du jour");
+  const summary = summaryParts.join(" · ");
+
+  return (
+    <header className={cn(cardCls, "relative overflow-hidden p-6 md:p-8")}>
+      {/* Glow blanc subtil top-left — même pattern que IdentityHeader user. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-white/[0.03] blur-3xl"
+      />
+
+      {/* Layout : centré horizontalement sur mobile, horizontal aligné
+          gauche à partir de sm. */}
+      <div className="relative flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:text-left md:gap-6">
+        {/* Avatar initiale doré — exception sémantique pour signaler le
+            statut Expert. Le badge "EXPERT" textuel n'est pas nécessaire
+            (l'eyebrow MON COMPTE EXPERT remplit ce rôle). */}
+        <div className="flex size-14 shrink-0 items-center justify-center rounded-full border border-accent/40 bg-accent/10 font-body text-[24px] font-bold text-accent sm:size-16 sm:text-[28px] md:size-20 md:text-[32px]">
+          {initial}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="font-body text-body-16 uppercase tracking-[0.15em] text-muted-foreground">
+            Mon compte expert
+          </p>
+          <p className="mt-1 truncate font-body text-[20px] font-bold text-foreground sm:text-[22px] md:text-[28px]">
+            {pseudo}
+          </p>
+          <p className="mt-2 truncate font-body text-body-16 text-muted-foreground">{email}</p>
+          <p className="mt-2 font-body text-body-16 text-muted-foreground">{summary}</p>
+        </div>
+      </div>
+    </header>
   );
 }
 
@@ -492,22 +570,25 @@ function IdentityHeader({ email, activeCount, dayPassCount, sportsCount }: Ident
         className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-white/[0.03] blur-3xl"
       />
 
-      <div className="relative flex items-center gap-5 md:gap-6">
+      {/* Layout : centré horizontalement sur mobile (avatar au-dessus,
+          textes centrés en dessous), horizontal aligné gauche à
+          partir de sm (640px+). */}
+      <div className="relative flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:text-left md:gap-6">
         {/* Avatar initiale neutre — l'eyebrow "MON COMPTE" + l'email
             suffisent à identifier la page, pas besoin d'un avatar
-            doré décoratif. */}
-        <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-surface-elevated font-body text-[28px] font-bold text-foreground md:size-20 md:text-[32px]">
+            doré décoratif. Taille graduée mobile/desktop. */}
+        <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-surface-elevated font-body text-[24px] font-bold text-foreground sm:size-16 sm:text-[28px] md:size-20 md:text-[32px]">
           {initial}
         </div>
 
         {/* Identité — eyebrow MON COMPTE, email, et ligne descriptive
-            en prose sous l'email (vs ancien layout 3-KPIs vertical à
-            droite qui faisait "dashboard IA"). */}
+            en prose. min-w-0 pour permettre le truncate sur les emails
+            longs. */}
         <div className="min-w-0 flex-1">
           <p className="font-body text-body-16 uppercase tracking-[0.15em] text-muted-foreground">
             Mon compte
           </p>
-          <p className="mt-1 truncate font-body text-[22px] font-bold text-foreground md:text-[28px]">
+          <p className="mt-1 truncate font-body text-[20px] font-bold text-foreground sm:text-[22px] md:text-[28px]">
             {email}
           </p>
           <p className="mt-2 font-body text-body-16 text-muted-foreground">{summary}</p>
@@ -697,7 +778,7 @@ function EmptyState({
       <p className="relative max-w-md font-body text-body-16 text-muted-foreground">{hint}</p>
       <Button
         variant="secondary"
-        size="lg"
+        size="md"
         render={<Link href={cta.href} />}
         className="relative mt-2"
       >

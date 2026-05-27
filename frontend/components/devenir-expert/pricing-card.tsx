@@ -27,11 +27,10 @@ export function PricingCard({ className }: PricingCardProps) {
   return (
     <div
       className={cn(
-        // surface-3 + border-surface-4 visible : décollage marqué
-        // du form (surface-2). v3 : la border passe à surface-4
-        // (plus visible que white/10) pour que la card "détache"
-        // vraiment du fond du form.
-        "rounded-2xl border border-surface-4 bg-surface-3 p-6 md:p-7",
+        // Card nestée dans le formulaire (lui-même en #181818, DA form
+        // publication). bg #1F1F1F : un cran au-dessus → décollage
+        // dans la palette noire neutre. Border white/10 (neutre).
+        "rounded-lg border border-white/10 bg-[#1F1F1F] p-6 md:p-7",
         className,
       )}
     >

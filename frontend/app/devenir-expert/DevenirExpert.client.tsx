@@ -12,35 +12,28 @@ import { ExpertProfilePreview } from "@/components/devenir-expert/expert-profile
 import { FaqItem } from "@/components/devenir-expert/faq-item";
 import { PricingCard } from "@/components/devenir-expert/pricing-card";
 import { Button } from "@/components/ui/button";
+import { InfoScreen } from "@/components/ui/info-screen";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Reveal } from "@/components/ui/reveal";
+import { StatBlock } from "@/components/ui/stat-block";
 import { Textarea } from "@/components/ui/textarea";
 import { useUser } from "@/hooks/use-user";
-import { SPORT_LABELS } from "@/lib/constants";
+import { SPORT_LABELS, stripSportEmoji } from "@/lib/constants";
+import {
+  formDaInputCls,
+  formDaLabelCls,
+  formDaTextareaCls,
+} from "@/lib/form-da";
 import { createExpertCheckout } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 
-// Styles partagés form (polish final). Inputs : fond surface-0
-// (noir solide plus sombre que le wrapper bg-black/40) → effet
-// "creux visuel" qui ancre l'input dans la card. Bordure surface-3
-// + focus blanc (pas doré, neutralisé en 3B).
-const fieldCls = cn(
-  "h-12 w-full rounded-xl border border-surface-3 bg-surface-0 px-4 py-3.5",
-  "font-body text-body-16 text-foreground placeholder:text-muted-foreground/50",
-  "transition-colors duration-200",
-  "focus-visible:border-white/30 focus-visible:ring-2 focus-visible:ring-white/10 focus-visible:outline-none",
-  "disabled:cursor-not-allowed disabled:opacity-70",
-);
-
-const textareaCls = cn(
-  "min-h-[100px] w-full rounded-xl border border-surface-3 bg-surface-0 px-4 py-3.5",
-  "font-body text-body-16 text-foreground placeholder:text-muted-foreground/50",
-  "transition-colors duration-200 resize-y",
-  "focus-visible:border-white/30 focus-visible:ring-2 focus-visible:ring-white/10 focus-visible:outline-none",
-);
-
-const labelCls = "font-body text-body-16 font-semibold text-foreground";
+// Aliases locaux pour minimiser les call-sites à modifier (et préserver
+// l'option de surcharger localement si /devenir-expert a besoin d'une
+// variante ultérieure).
+const fieldCls = formDaInputCls;
+const textareaCls = cn(formDaTextareaCls, "min-h-[100px]");
+const labelCls = formDaLabelCls;
 
 // Eyebrow uppercase commun (Form & FAQ). Tracking large pour un
 // rendu moderne, font-semibold pour du poids sans crier.
@@ -74,49 +67,6 @@ function SectionHeader({
           {subtitle}
         </p>
       )}
-    </div>
-  );
-}
-
-// Mini-bloc "stat fort" pour la section §2 (anciennement 3 cards
-// BenefitCard). Le pattern : un GROS chiffre + label court + petite
-// description. Pas de border, pas de bg — la stat porte tout seule.
-// Divider gauche subtle entre blocs sur desktop (border-l du 2e et
-// 3e blocs), aucun divider mobile (stack vertical).
-function StatBlock({
-  value,
-  label,
-  description,
-  valueAccent = false,
-  withLeftDivider = false,
-}: {
-  value: string;
-  label: string;
-  description: string;
-  valueAccent?: boolean;
-  withLeftDivider?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex flex-col px-2 py-10 md:px-8 md:py-12",
-        // Divider vertical desktop pour séparer les 3 blocs sans card.
-        // Mobile : pas de border (les blocs s'empilent naturellement).
-        withLeftDivider && "md:border-l md:border-surface-2",
-      )}
-    >
-      <p
-        className={cn(
-          "font-display text-[56px] font-bold leading-[0.95] tabular-nums md:text-[72px]",
-          valueAccent ? "text-accent" : "text-foreground",
-        )}
-      >
-        {value}
-      </p>
-      <p className="mt-3 font-body text-body-18 text-muted-foreground">{label}</p>
-      <p className="mt-2 font-body text-body-14 leading-[1.5] text-muted-foreground/70">
-        {description}
-      </p>
     </div>
   );
 }
@@ -187,52 +137,46 @@ export function DevenirExpertClient() {
   }
 
   // ── État 2 : utilisateur déjà expert ────────────────────────
+  // Pattern InfoScreen : grand titre éditorial centré vh/hz, sans card.
   if (user?.role === "EXPERT") {
     return (
-      <PageShell>
-        <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-6 py-8 text-center md:px-8 md:py-10">
-          <h1 className="font-display text-h2 text-foreground">Vous êtes déjà expert</h1>
-          <p className="font-body text-body-16 text-muted-foreground">
-            Votre compte expert est actif. Rendez-vous sur votre tableau de bord pour publier vos
-            analyses.
-          </p>
+      <InfoScreen
+        eyebrow="Compte expert actif"
+        title="Tu es déjà expert."
+        subtitle="Rendez-vous sur ton tableau de bord pour publier tes analyses et suivre tes performances."
+        actions={
           <Button variant="primary" size="lg" render={<Link href="/dashboard" />}>
             Accéder au dashboard
           </Button>
-        </div>
-      </PageShell>
+        }
+      />
     );
   }
 
   // ── État 3 : retour Stripe checkout réussi ───────────────────
   if (checkoutStatus === "success") {
     return (
-      <PageShell>
-        <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-6 py-8 text-center md:px-8 md:py-10">
-          <h1 className="font-display text-h2 text-foreground">
-            Bienvenue parmi les experts !
-          </h1>
-          <p className="font-body text-body-16 text-muted-foreground">
-            Votre compte expert est en cours de création. Vous pourrez accéder à votre dashboard
-            dans quelques instants.
-          </p>
+      <InfoScreen
+        eyebrow="Paiement validé"
+        title="Bienvenue parmi les experts."
+        subtitle="Ton compte expert est en cours de création. Tu pourras accéder à ton dashboard dans quelques instants."
+        actions={
           <Button variant="primary" size="lg" render={<Link href="/dashboard" />}>
             Accéder au dashboard
           </Button>
-        </div>
-      </PageShell>
+        }
+      />
     );
   }
 
   // ── État 4 : retour Stripe checkout annulé ───────────────────
   if (checkoutStatus === "cancel") {
     return (
-      <PageShell>
-        <div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-surface-elevated bg-black/40 px-6 py-8 text-center md:px-8 md:py-10">
-          <h1 className="font-display text-h2 text-foreground">Paiement annulé</h1>
-          <p className="font-body text-body-16 text-muted-foreground">
-            Vous pouvez réessayer quand vous le souhaitez.
-          </p>
+      <InfoScreen
+        eyebrow="Paiement annulé"
+        title="Pas de souci."
+        subtitle="Tu peux relancer ta candidature quand tu veux — rien n'a été débité."
+        actions={
           <Button
             variant="primary"
             size="lg"
@@ -243,8 +187,8 @@ export function DevenirExpertClient() {
           >
             Réessayer
           </Button>
-        </div>
-      </PageShell>
+        }
+      />
     );
   }
 
@@ -405,7 +349,7 @@ export function DevenirExpertClient() {
           <form
             onSubmit={handleSubmit}
             noValidate
-            className="space-y-6 rounded-2xl border border-surface-3 bg-surface-2 p-6 md:p-10"
+            className="space-y-6 rounded-lg bg-[#181818] p-6 md:p-10"
           >
             {error && (
               <div
@@ -459,16 +403,18 @@ export function DevenirExpertClient() {
               />
             </div>
 
-            {/* Sports couverts — chips toggle multi-select. Padding
-                horizontal plus généreux (px-5 vs ex px-4) + au select
-                bg-accent/10 + border-accent (plus de contraste). */}
+            {/* Sports couverts — tags inline éditoriaux (pas de pill, pas
+                d'emoji). Indicateur "+" muted → "✓" doré sur sélection,
+                avec sous-ligne accent/40 pour le côté "tag éditorial".
+                Cohérent avec le rendu des sports dans la preview navigateur. */}
             <div className="space-y-2">
               <Label className={labelCls}>
                 Sports couverts <span className="text-foreground/60">*</span>
               </Label>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
                 {Object.entries(SPORT_LABELS).map(([key, label]) => {
                   const isActive = sports.includes(key);
+                  const cleanLabel = stripSportEmoji(label);
                   return (
                     <button
                       key={key}
@@ -476,22 +422,31 @@ export function DevenirExpertClient() {
                       onClick={() => toggleSport(key)}
                       aria-pressed={isActive}
                       className={cn(
-                        "cursor-pointer inline-flex items-center gap-2 rounded-full border px-5 py-2.5 font-body text-body-16 transition-all duration-200",
-                        // Sélectionné : surface-3 (plus marqué que surface-2
-                        // précédent) + border white/20. Mini-dot doré 5px
-                        // à gauche du label = seul accent doré du chip.
+                        "group cursor-pointer inline-flex items-baseline gap-1.5 px-1 py-1 font-body text-[16px] transition-colors duration-150",
                         isActive
-                          ? "border-white/20 bg-surface-3 text-foreground"
-                          : "border-surface-3 bg-surface-1 text-foreground hover:bg-surface-2",
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground",
                       )}
                     >
-                      {isActive && (
-                        <span
-                          aria-hidden
-                          className="block size-[6px] shrink-0 rounded-full bg-accent"
-                        />
-                      )}
-                      {label}
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "font-body text-[14px] leading-none transition-colors",
+                          isActive
+                            ? "text-accent"
+                            : "text-muted-foreground group-hover:text-foreground",
+                        )}
+                      >
+                        {isActive ? "✓" : "+"}
+                      </span>
+                      <span
+                        className={cn(
+                          "underline-offset-4",
+                          isActive && "underline decoration-accent/40 decoration-1",
+                        )}
+                      >
+                        {cleanLabel}
+                      </span>
                     </button>
                   );
                 })}
@@ -502,18 +457,14 @@ export function DevenirExpertClient() {
                 distinguer des champs (règle "champs → card prix : 32-40px"). */}
             <PricingCard className="!mt-9" />
 
-            {/* CTA principal — override v3 :
-                - Gradient gold UNIFORME (DFB968 → E8C788 highlight → DFB968,
-                  pas de blanc au centre = retire l'effet "néon AI")
-                - Glow réduit (shadow-shine-soft au lieu de shadow-shine)
-                - Texte noir maintenu pour lisibilité maximale
-                28px de gap depuis la PricingCard. */}
+            {/* CTA principal — DA primary standard (gradient gold +
+                shadow-shine-soft + rounded-[3px] depuis le Button base). */}
             <Button
               type="submit"
               variant="primary"
               size="lg"
               disabled={submitting}
-              className="!mt-7 w-full !shadow-shine-soft !bg-[linear-gradient(to_right,#DFB968_0%,#E8C788_50%,#DFB968_100%)]"
+              className="!mt-7 w-full"
             >
               {submitting ? "Redirection vers le paiement…" : "Devenir Expert (39€/trimestre)"}
             </Button>
@@ -530,12 +481,7 @@ export function DevenirExpertClient() {
             se re-render à chaque modification — l'user voit son profil
             se construire en temps réel pendant qu'il remplit le form. ─── */}
         <Reveal delay={0.2} className="md:col-span-5">
-          <ExpertProfilePreview
-            pseudo={pseudo}
-            bio={bio}
-            sports={sports}
-            email={user?.email}
-          />
+          <ExpertProfilePreview pseudo={pseudo} bio={bio} sports={sports} />
         </Reveal>
         </div>
       </section>

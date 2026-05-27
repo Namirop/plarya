@@ -1,14 +1,12 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
-
 import Image from "next/image";
 import Link from "next/link";
 
 import { Star } from "@phosphor-icons/react";
-import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 
 import { Button } from "@/components/ui/button";
+import { CardTilt } from "@/components/ui/card-tilt";
 import { SportIcon } from "@/lib/sports-icons";
 
 // Token DS accent (#dfb968) appliqué en dur via les props SVG de lucide
@@ -41,52 +39,6 @@ export interface ExpertCardProps {
   categories: string[];
   analyses: ExpertCardAnalysis[];
   locked?: boolean;
-}
-
-// Wrapper tilt 3D — au survol, la card s'incline doucement vers le
-// curseur (rotateX/Y bornés à ±6°, lissés par un spring physics).
-// `transform-gpu` + `preserve-3d` activent le contexte 3D ; le contenu
-// inner peut utiliser translateZ pour donner de la profondeur.
-// Désactivé naturellement sur touch (pas de mouseMove).
-function CardTilt({ children }: { children: ReactNode }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  const rotateX = useTransform(mouseY, [-150, 150], [6, -6]);
-  const rotateY = useTransform(mouseX, [-150, 150], [-6, 6]);
-
-  const springConfig = { stiffness: 300, damping: 20, mass: 0.5 };
-  const springRotateX = useSpring(rotateX, springConfig);
-  const springRotateY = useSpring(rotateY, springConfig);
-
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    if (!cardRef.current) return;
-    const { left, top, width, height } = cardRef.current.getBoundingClientRect();
-    mouseX.set(e.clientX - left - width / 2);
-    mouseY.set(e.clientY - top - height / 2);
-  }
-
-  function handleMouseLeave() {
-    mouseX.set(0);
-    mouseY.set(0);
-  }
-
-  return (
-    <motion.div
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        rotateX: springRotateX,
-        rotateY: springRotateY,
-        transformStyle: "preserve-3d",
-      }}
-      className="transform-gpu"
-    >
-      {children}
-    </motion.div>
-  );
 }
 
 export function ExpertCard({

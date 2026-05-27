@@ -25,6 +25,13 @@
   --color-surface-3: #211f1f; /* niveau 4 — éléments actifs / hover (teinte chaude) */
   --color-surface-4: #2a2828; /* niveau 5 — éléments très en avant (rare) */
 
+  /* Surfaces chaudes — nuance brun désaturée pour zones de conversion
+     (Devenir expert : card formulaire). Mid-point entre v1 (#1C1815,
+     imperceptible) et v2 (#241B14, trop brun) : perceptible vs body
+     bg #131212 mais reste discret, dialogue avec le doré sans crier. */
+  --color-surface-warm-1: #1f1814; /* brun foncé désaturé (form bg) */
+  --color-surface-warm-2: #261d17; /* un cran plus clair (PricingCard nested) */
+
   /* Anciens tokens conservés pour compatibilité (aucun consumer cassé).
      Équivalences : --color-surface ≈ --color-surface-1,
      --color-surface-elevated ≈ ancien #181818 (entre surface-1 et surface-2). */
@@ -315,6 +322,16 @@ body::after {
 }
 
 /* ── Utility classes ── */
+
+/* Drapeaux nationaux — applique la font "Twemoji Country Flags"
+   chargée par le polyfill (cf. `FlagEmojiPolyfill` dans layout.tsx).
+   Sans cette classe, les emojis drapeaux s'affichent comme du texte
+   sur Windows (regional indicator pairs non rendus). */
+.flag-emoji {
+  font-family:
+    "Twemoji Country Flags", "Apple Color Emoji", "Segoe UI Emoji",
+    "Noto Color Emoji", sans-serif;
+}
 
 /* Hide number input spinners */
 input[type="number"]::-webkit-inner-spin-button,

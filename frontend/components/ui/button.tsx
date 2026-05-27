@@ -6,17 +6,29 @@ import { cn } from "@/lib/utils";
 const buttonVariants = cva(
   // Base : transitions douces 200ms, focus-visible accent, disabled opacity-50.
   // rounded-2xl = 16px (DS).
-  "group/button inline-flex shrink-0 items-center justify-center gap-4 rounded-2xl whitespace-nowrap font-body transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none select-none cursor-pointer focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  // [&_svg]:translate-y-px : correction optique — les icônes Phosphor en
+  // items-center sont géométriquement centrées mais paraissent "hautes"
+  // par rapport à l'optical center du texte (l'œil place le centre du
+  // texte légèrement sous le centre géométrique du line-box, à cause de
+  // la masse visuelle concentrée dans la zone x-height + cap-height).
+  // Nudge de 1px vers le bas → icône réalignée avec l'optical center.
+  "group/button inline-flex shrink-0 items-center justify-center gap-4 rounded-2xl whitespace-nowrap font-body transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none select-none cursor-pointer focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:translate-y-px [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         // ──────────── Plarya DS variants ────────────
 
         // CTA principal : "Découvrir les experts", "Devenir créateur",
-        // "Voir les analyses" (Domain card). Gradient doré + bordure
-        // Golden Stroke + glow doré constant (visible au repos dans Figma).
+        // "Publier l'analyse", etc. Gradient doré + bordure Golden
+        // Stroke + glow doré.
+        // - rounded-[3px] : forme rectangulaire (override le rounded-2xl
+        //   du base) — pattern carré demandé par Romain pour ancrer
+        //   l'autorité du CTA gold sans round-corners "soft".
+        // - shadow-shine-soft : glow doré atténué (7px blur 100 % accent)
+        //   vs shadow-shine (15px 70 % orange saturé) — moins criard mais
+        //   le doré reste perceptible.
         primary:
-          "bg-gradient-gold text-black border border-accent-strong shadow-shine hover:brightness-105",
+          "rounded-[3px] bg-gradient-gold text-black border border-accent-strong shadow-shine-soft hover:brightness-105",
 
         // CTA secondaire : transparent avec bordure NEUTRE
         // (anciennement bordure dorée — retirée car utilisée partout,

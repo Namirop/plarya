@@ -29,7 +29,7 @@ export function DevenirCreateurSection() {
 
   return (
     // pt-16 = 64 px (gap depuis Pourquoi Plarya).
-    <section className="pt-16">
+    <section className="pt-20">
       <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
         {/* Card "outline" : bordure conic-gradient dorée (haut-gauche +
             bas-droite très visibles, sombre ailleurs), même pattern
@@ -60,7 +60,7 @@ export function DevenirCreateurSection() {
               render={<Link href={DEVENIR_CREATEUR_HREF} />}
               className="w-full md:w-auto animate-shine-pulse"
             >
-              Devenir créateur
+              Devenir expert
               <ArrowRight className="size-4 hidden md:inline-block" />
             </Button>
           ) : (

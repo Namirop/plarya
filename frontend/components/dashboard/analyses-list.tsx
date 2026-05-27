@@ -11,55 +11,76 @@ import type { Prono } from "@/lib/types/dashboard";
 import { cn } from "@/lib/utils";
 
 // ───────────────────────────────────────────────────────────────────
-// Classes "boutons résultat" — inline plutôt qu'ajoutées au DS Button
-// pour ne pas polluer le composant partagé. Vert/rouge tirés des
-// tokens CLAUDE.md §3 (#10B981 / #EF4444), gardés en valeurs littérales
-// car non encore exposés comme utilities Tailwind dans le @theme.
+// Boutons résultat — pattern "appuyé" (raised button) cohérent avec
+// le screenshot de référence (All Envs / 14D). Recette :
+//  - Background gradient subtle (lighter top → darker bottom)
+//  - Inset highlight 1px en haut (effet "lumière du dessus")
+//  - Outer shadow 1px en bas (effet "épaisseur physique")
+//  - À l'active : inversion des shadows + translate-y 1px (effet press)
+// Boutons rendus FULL-BLEED dans la card : rounded-none, touchent les
+// bords du bas et des côtés (la card a overflow-hidden + rounded-2xl,
+// donc les coins inférieurs sont clippés au rayon de la card).
 // ───────────────────────────────────────────────────────────────────
 
-// inline-flex + justify-center : sur desktop les boutons gardent leur
-// largeur intrinsèque (justify-center sans effet) ; en mobile on les
-// rend full-width via `flex-1 w-full` au niveau du wrapper et le
-// justify-center recentre alors le contenu (icône + texte).
-const RESULT_BUTTON_BASE =
-  "inline-flex items-center justify-center gap-2 rounded-xl border bg-transparent px-4 py-2 " +
-  "font-body text-body-16 transition-colors duration-200 cursor-pointer " +
-  "disabled:cursor-not-allowed disabled:opacity-50";
+// h-12 + leading-none : taille explicite + ligne de texte serrée
+// pour neutraliser les différences de métriques entre "Gagné" (qui
+// a deux descendeurs "g" + accent "é") et "Perdu" (capitale P + x-height
+// uniquement) — sans leading-none, le centrage vertical des deux
+// boutons était optiquement décalé d'un pixel.
+const RESULT_BUTTON_BASE = cn(
+  "relative inline-flex h-12 w-full items-center justify-center gap-2",
+  "px-4 font-body text-body-16 font-semibold leading-none cursor-pointer",
+  "transition-all duration-150 ease-out",
+  "active:translate-y-[1px]",
+  "disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-y-0",
+);
 
-const RESULT_BUTTON_WIN = "border-[#22c55e] text-[#22c55e] hover:bg-[#22c55e]/10";
+const RESULT_BUTTON_WIN = cn(
+  "bg-[linear-gradient(180deg,#1f7a3c_0%,#155f2d_100%)]",
+  "text-white",
+  "shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]",
+  "hover:brightness-110",
+  "active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)]",
+);
 
-const RESULT_BUTTON_LOSS = "border-[#ef4444] text-[#ef4444] hover:bg-[#ef4444]/10";
+const RESULT_BUTTON_LOSS = cn(
+  "bg-[linear-gradient(180deg,#9a2828_0%,#7a1d1d_100%)]",
+  "text-white",
+  "shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]",
+  "hover:brightness-110",
+  "active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)]",
+);
 
-const RESULT_BADGE_BASE =
-  "inline-flex items-center gap-1.5 rounded-full px-4 py-2 font-body text-body-16";
+// Indicateur full-bleed quand l'analyse est validée (WON/LOST) — barre
+// horizontale colorée pleine largeur posée au pied de la card, même
+// gabarit que les boutons d'action (cohérence visuelle).
+const RESULT_INDICATOR_BASE = cn(
+  "flex w-full items-center justify-center gap-2 px-4 py-3",
+  "font-body text-body-16 font-semibold",
+);
+const RESULT_INDICATOR_WIN = "bg-[#22c55e]/15 text-[#4ade80]";
+const RESULT_INDICATOR_LOSS = "bg-[#ef4444]/15 text-[#f87171]";
 
-const RESULT_BADGE_WIN = "bg-[#22c55e]/10 text-[#22c55e]";
-const RESULT_BADGE_LOSS = "bg-[#ef4444]/10 text-[#ef4444]";
-
-const EDIT_BUTTON =
-  "inline-flex items-center gap-1.5 font-body text-body-16 text-muted-foreground " +
-  "transition-colors duration-200 hover:text-foreground cursor-pointer";
+// Bouton modifier — icône seule sur mobile en top-right corner, icône
+// + texte sur desktop (responsive). Posé en absolute pour ne pas
+// occuper de place dans le flow du contenu.
+const EDIT_BUTTON = cn(
+  "absolute right-3 top-3 z-10 inline-flex items-center gap-1.5",
+  "rounded-lg border border-white/10 bg-black/40 backdrop-blur",
+  "p-2 md:px-3 md:py-2 font-body text-body-16 text-muted-foreground",
+  "transition-colors duration-200 hover:border-white/20 hover:text-foreground cursor-pointer",
+);
 
 // ───────────────────────────────────────────────────────────────────
 // Composant principal
 // ───────────────────────────────────────────────────────────────────
 
 export interface AnalysesListProps {
-  /** Liste fetchée par le parent depuis `GET /pronos/mine`. Triée par
-   *  createdAt DESC côté backend (cf. routes/pronos.ts:105). */
   pronos: Prono[];
-  /** Callback déclenché au clic sur "Gagné" / "Perdu". Le parent appelle
-   *  `PATCH /pronos/:id/result` et met à jour son state pronos +
-   *  re-fetch profil (cf. handleResult dans dashboard/page.tsx). */
   onResult: (id: string, result: "WON" | "LOST") => Promise<void> | void;
 }
 
 export function AnalysesList({ pronos, onResult }: AnalysesListProps) {
-  // IDs des pronos en mode "édition" : pour les analyses ayant déjà un
-  // résultat (WON/LOST), permet à l'utilisateur de revenir à l'affichage
-  // des 2 boutons Gagné/Perdu pour modifier. État purement frontend ;
-  // l'appel API n'a lieu qu'au re-clic d'un résultat (Cf. brief §"Logique
-  // nouvelle" : pas de bascule PENDING côté DB).
   const [editingIds, setEditingIds] = useState<Set<string>>(new Set());
 
   function enterEditMode(id: string) {
@@ -72,7 +93,6 @@ export function AnalysesList({ pronos, onResult }: AnalysesListProps) {
 
   async function handleResultClick(id: string, result: "WON" | "LOST") {
     await onResult(id, result);
-    // Sort du mode édition une fois le résultat enregistré.
     setEditingIds((prev) => {
       if (!prev.has(id)) return prev;
       const next = new Set(prev);
@@ -89,13 +109,13 @@ export function AnalysesList({ pronos, onResult }: AnalysesListProps) {
     <ul className="flex flex-col gap-4">
       {pronos.map((p) => {
         const isEditing = editingIds.has(p.id);
-        // "PENDING" ou édition forcée → affiche les 2 boutons.
         const showActionButtons = p.result === "PENDING" || isEditing;
         return (
           <AnalysisCard
             key={p.id}
             prono={p}
             showActionButtons={showActionButtons}
+            isEditing={isEditing}
             onEdit={() => enterEditMode(p.id)}
             onResult={(r) => handleResultClick(p.id, r)}
           />
@@ -112,11 +132,18 @@ export function AnalysesList({ pronos, onResult }: AnalysesListProps) {
 interface AnalysisCardProps {
   prono: Prono;
   showActionButtons: boolean;
+  isEditing: boolean;
   onEdit: () => void;
   onResult: (result: "WON" | "LOST") => Promise<void> | void;
 }
 
-function AnalysisCard({ prono, showActionButtons, onEdit, onResult }: AnalysisCardProps) {
+function AnalysisCard({
+  prono,
+  showActionButtons,
+  isEditing,
+  onEdit,
+  onResult,
+}: AnalysisCardProps) {
   const leagueLabel = prono.league ? getLeague(prono.league)?.name || prono.league : null;
   const publishedAt = new Date(prono.createdAt).toLocaleDateString("fr-FR", {
     day: "numeric",
@@ -125,37 +152,60 @@ function AnalysisCard({ prono, showActionButtons, onEdit, onResult }: AnalysisCa
     minute: "2-digit",
   });
 
+  // Le bouton modifier s'affiche uniquement quand l'analyse est validée
+  // (WON ou LOST) ET qu'on n'est pas en train d'éditer. Sur mobile :
+  // icône seule (top-right). Sur desktop : icône + texte.
+  const showEditButton = prono.result !== "PENDING" && !isEditing;
+
   return (
     <li
       className={cn(
-        // Padding interne : 16px mobile, 24px desktop.
-        "flex flex-col gap-6 rounded-2xl border border-[#181818] bg-black/40 p-4 md:p-6",
-        // Desktop : layout horizontal contenu/actions. Mobile : stack.
-        "md:flex-row md:items-start md:justify-between",
+        "group relative overflow-hidden rounded-2xl border border-[#1a1a1a]",
+        // Gradient diagonal subtle (cohérence mockup Hero Devenir Expert).
+        "bg-[linear-gradient(135deg,rgba(20,18,18,0.55)_0%,rgba(10,9,9,0.65)_100%)]",
+        "transition-colors duration-200 hover:border-[#2a2828]",
       )}
     >
-      {/* Contenu — flex-1 pour absorber la place restante en desktop. */}
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
-        {/* Header : match + badge "analyse du jour" éventuel */}
-        <div className="flex flex-wrap items-center gap-3">
+      {/* Bouton modifier — absolute top-right, icône seule en mobile,
+          icône + texte en desktop. z-10 pour passer au-dessus du
+          contenu (rare cas où le titre wrap proche du corner). */}
+      {showEditButton && (
+        <button
+          type="button"
+          onClick={onEdit}
+          className={EDIT_BUTTON}
+          aria-label="Modifier le résultat de cette analyse"
+        >
+          <PencilSimple className="size-4" />
+          <span className="hidden md:inline">Modifier</span>
+        </button>
+      )}
+
+      {/* Contenu padded. pr en desktop pour éviter le chevauchement
+          avec le bouton modifier qui est en top-right. */}
+      <div
+        className={cn(
+          "flex flex-col gap-3 p-4 md:p-6",
+          // pr supplémentaire quand le bouton modifier desktop est
+          // affiché (icone + texte = ~110px de large).
+          showEditButton && "md:pr-[140px]",
+        )}
+      >
+        {/* Header : match + étoile dorée si "analyse du jour" */}
+        <div className="flex flex-wrap items-center gap-2">
           <h3 className="font-body text-h5 text-foreground">{prono.matchName}</h3>
           {prono.isFeatured && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-3 py-1 font-body text-[14px] leading-none text-accent">
-              <Star className="size-3" fill="currentColor" strokeWidth={0} />
-              Analyse du jour
-            </span>
+            <Star className="size-5 text-accent" weight="fill" aria-label="Analyse du jour" />
           )}
         </div>
 
-        {/* Pick + cote — cote neutre (anciennement dorée, retirée au
-            ménage : chaque ligne d'analyse dans la liste avait une
-            cote dorée → série dorée verticale sans intérêt). */}
+        {/* Pick + cote. */}
         <p className="font-body text-body-16 text-foreground">
           {prono.pick} <span className="text-muted-foreground">— </span>
           <span className="text-foreground">@{prono.odds}</span>
         </p>
 
-        {/* Ligue + heure de début du match, en muted. */}
+        {/* Ligue + heure de début du match. */}
         {(leagueLabel || prono.startTime) && (
           <p className="font-body text-body-16 text-muted-foreground">
             {leagueLabel}
@@ -164,69 +214,82 @@ function AnalysisCard({ prono, showActionButtons, onEdit, onResult }: AnalysisCa
           </p>
         )}
 
-        {/* Teasing (label humain depuis TEASING_LABELS). */}
+        {/* Teasing. */}
         <p className="font-body text-body-16 text-muted-foreground">
           {TEASING_LABELS[prono.teasing] || prono.teasing}
         </p>
 
-        {/* Argumentaire (paragraphe complet). */}
+        {/* Argumentaire. */}
         {prono.argument && (
           <p className="font-body text-body-16 leading-relaxed text-foreground">{prono.argument}</p>
         )}
 
-        {/* Date de publication en bas, plus petit + muted. */}
+        {/* Date de publication. */}
         <p className="font-body text-[14px] text-muted-foreground/70">Publié le {publishedAt}</p>
       </div>
 
-      {/* Zone actions — alignée en haut sur desktop (top de la card),
-          stack en bas du contenu sur mobile.
-          Mobile : full-width pour que les boutons Gagné/Perdu prennent
-          50/50 (flex-1). Desktop : width naturelle, boutons à droite. */}
-      <div className="flex w-full shrink-0 items-center gap-3 md:w-auto md:pt-1">
-        {showActionButtons ? (
-          <>
-            <button
-              type="button"
-              onClick={() => onResult("WON")}
-              className={cn(RESULT_BUTTON_BASE, RESULT_BUTTON_WIN, "flex-1 md:flex-initial")}
-            >
-              <Check className="size-4" strokeWidth={2.5} />
-              Gagné
-            </button>
-            <button
-              type="button"
-              onClick={() => onResult("LOST")}
-              className={cn(RESULT_BUTTON_BASE, RESULT_BUTTON_LOSS, "flex-1 md:flex-initial")}
-            >
-              <X className="size-4" strokeWidth={2.5} />
-              Perdu
-            </button>
-          </>
-        ) : (
-          <>
+      {/* ─── Zone actions FULL-BLEED ───
+          Les boutons/indicateurs touchent les bords gauche, droit et
+          bas de la card. Pas de padding wrapper, pas de divider — les
+          gradients colorés des boutons sont assez forts pour faire
+          séparation visuelle avec le contenu. */}
+      {showActionButtons ? (
+        <div className="grid grid-cols-2 border-t border-white/[0.06]">
+          <button
+            type="button"
+            onClick={() => onResult("WON")}
+            className={cn(RESULT_BUTTON_BASE, RESULT_BUTTON_WIN, "border-r border-black/30")}
+          >
+            <span className="inline-flex items-center gap-2 leading-none">
+              <Check className="size-4 shrink-0" weight="bold" />
+              <span>Gagné</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onResult("LOST")}
+            className={cn(RESULT_BUTTON_BASE, RESULT_BUTTON_LOSS)}
+          >
+            <span className="inline-flex items-center gap-2 leading-none">
+              {/* X nudgé de +1px : son optical center = geometric center
+                  (icône parfaitement symétrique), contrairement au
+                  Check dont la masse visuelle est dans le bas (la
+                  pointe du V). Sans ce nudge, × paraissait optiquement
+                  plus haut que ✓ malgré un alignement CSS identique. */}
+              <X className="size-4 shrink-0 translate-y-[1px]" weight="bold" />
+              <span>Perdu</span>
+            </span>
+          </button>
+        </div>
+      ) : (
+        <div
+          className={cn(
+            RESULT_INDICATOR_BASE,
+            prono.result === "WON" ? RESULT_INDICATOR_WIN : RESULT_INDICATOR_LOSS,
+            "border-t",
+            prono.result === "WON" ? "border-[#22c55e]/20" : "border-[#ef4444]/20",
+          )}
+        >
+          <span className="inline-flex items-center gap-2 leading-none">
             {prono.result === "WON" ? (
-              <span className={cn(RESULT_BADGE_BASE, RESULT_BADGE_WIN)}>
-                <Check className="size-4" strokeWidth={2.5} />
-                Gagné
-              </span>
+              <>
+                <Check className="size-4 shrink-0" weight="bold" />
+                <span>Gagné</span>
+              </>
             ) : (
-              <span className={cn(RESULT_BADGE_BASE, RESULT_BADGE_LOSS)}>
-                <X className="size-4" strokeWidth={2.5} />
-                Perdu
-              </span>
+              <>
+                {/* X nudgé de +1px : son optical center = geometric center
+                  (icône parfaitement symétrique), contrairement au
+                  Check dont la masse visuelle est dans le bas (la
+                  pointe du V). Sans ce nudge, × paraissait optiquement
+                  plus haut que ✓ malgré un alignement CSS identique. */}
+                <X className="size-4 shrink-0 translate-y-[1px]" weight="bold" />
+                <span>Perdu</span>
+              </>
             )}
-            <button
-              type="button"
-              onClick={onEdit}
-              className={EDIT_BUTTON}
-              aria-label="Modifier le résultat de cette analyse"
-            >
-              <PencilSimple className="size-3.5" />
-              Modifier
-            </button>
-          </>
-        )}
-      </div>
+          </span>
+        </div>
+      )}
     </li>
   );
 }
@@ -235,10 +298,10 @@ function EmptyState() {
   return (
     <div className="rounded-2xl border border-[#181818] bg-black/40 px-4 py-10 text-center md:px-6 md:py-12">
       <p className="font-body text-body-16 text-foreground">
-        Vous n&apos;avez publié aucune analyse pour l&apos;instant.
+        Tu n&apos;as publié aucune analyse pour l&apos;instant.
       </p>
       <p className="mt-2 font-body text-body-16 text-muted-foreground">
-        Utilisez le formulaire ci-dessus pour publier votre première analyse.
+        Utilise le formulaire ci-dessus pour publier ta première analyse.
       </p>
     </div>
   );
