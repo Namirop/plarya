@@ -31,11 +31,3 @@ export interface Bookmaker {
   logoUrl: string | null;
   affiliateLinks: { id: string; url: string; label: string | null }[];
 }
-
-export interface PublishFormFieldErrors {
-  matchName?: string;
-  pick?: string;
-  odds?: string;
-  teasing?: string;
-  startTime?: string;
-}

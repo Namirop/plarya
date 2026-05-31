@@ -85,7 +85,3 @@ export const LEAGUE_BADGES: Record<string, string | null> = {
   valorant: null,
   cs2: null,
 };
-
-export function getLeagueLogo(leagueId: string): string | null {
-  return LEAGUE_BADGES[leagueId] ?? null;
-}

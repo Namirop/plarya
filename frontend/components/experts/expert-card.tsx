@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CardTilt } from "@/components/ui/card-tilt";
 import { SportIcon } from "@/lib/sports-icons";
 
-// Token DS accent (#dfb968) appliqué en dur via les props SVG de lucide
+// Token DS accent (#dfb968) appliqué en dur via les props SVG Phosphor
 // pour garantir le rendu doré indépendamment de la propagation de
 // currentColor / des classes Tailwind générées. À factoriser si on en
 // ajoute beaucoup d'autres consommateurs.
