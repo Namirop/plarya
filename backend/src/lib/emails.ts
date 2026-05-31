@@ -11,16 +11,16 @@ function emailLayout(content: string): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { margin: 0; padding: 0; background-color: #000000; font-family: 'Inter', Arial, sans-serif; color: #FFFFFF; }
+    body { margin: 0; padding: 0; background-color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #FFFFFF; }
     .container { max-width: 600px; margin: 0 auto; padding: 40px 24px; }
-    .header { text-align: center; padding-bottom: 32px; border-bottom: 1px solid #18181B; margin-bottom: 32px; }
-    .logo { font-size: 24px; font-weight: 700; color: #FFFFFF; text-decoration: none; }
-    .logo span { color: #00FF41; }
+    .header { text-align: center; padding-bottom: 32px; border-bottom: 1px solid #181818; margin-bottom: 32px; }
+    .logo { font-size: 24px; font-weight: 700; letter-spacing: 0.04em; color: #DFB968; text-decoration: none; }
+    .logo span { color: #E1AA36; }
     .content { padding: 0; }
-    .btn { display: inline-block; background-color: #00FF41; color: #000000; padding: 14px 28px; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 6px; }
-    .footer { margin-top: 40px; padding-top: 24px; border-top: 1px solid #18181B; text-align: center; color: #71717A; font-size: 12px; }
+    .btn { display: inline-block; background-color: #DFB968; color: #000000; padding: 14px 28px; text-decoration: none; font-weight: 700; font-size: 16px; border-radius: 8px; }
+    .footer { margin-top: 40px; padding-top: 24px; border-top: 1px solid #181818; text-align: center; color: #898181; font-size: 12px; }
     p { color: #FFFFFF; line-height: 1.6; font-size: 16px; }
-    .muted { color: #71717A; }
+    .muted { color: #898181; }
   </style>
 </head>
 <body>
@@ -101,7 +101,7 @@ export async function sendAccessUnlockedEmail(
         <p class="muted" style="font-size: 14px;">Ce lien expire dans 15 minutes et ne peut &ecirc;tre utilis&eacute; qu'une seule fois.</p>
         <p>Ou d&eacute;couvrez d'autres experts :</p>
         <p style="text-align: center; margin: 24px 0;">
-          <a href="${FRONTEND_URL}" style="color: #00FF41; text-decoration: underline; font-weight: 600;">D&eacute;couvrir d'autres experts</a>
+          <a href="${FRONTEND_URL}" style="color: #DFB968; text-decoration: underline; font-weight: 600;">D&eacute;couvrir d'autres experts</a>
         </p>
         <p class="muted" style="font-size: 14px;">Merci pour votre confiance !</p>
       `),
@@ -136,7 +136,7 @@ export async function sendWinningPronoEmail(
         </p>
         <p>Ou explorez d'autres experts :</p>
         <p style="text-align: center; margin: 24px 0;">
-          <a href="${FRONTEND_URL}" style="color: #00FF41; text-decoration: underline; font-weight: 600;">Découvrir d'autres experts</a>
+          <a href="${FRONTEND_URL}" style="color: #DFB968; text-decoration: underline; font-weight: 600;">Découvrir d'autres experts</a>
         </p>
       `),
     },
