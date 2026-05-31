@@ -5,7 +5,6 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "node dist/server.js",
     "preDeployCommand": "npm run db:deploy",
     "healthcheckPath": "/health",
     "restartPolicyType": "ON_FAILURE",
