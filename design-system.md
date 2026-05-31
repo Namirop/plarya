@@ -64,6 +64,8 @@ Aucune variable de couleur. Les seules entrées dans `get_variable_defs` côté 
 
 ### Font families
 
+> ⚠️ **Migration polices (mai 2026).** Le code est passé de **Work Sans → Mona Sans** (`font-body`) et **DM Serif Display → Hubot Sans** (`font-display`). Les noms ci-dessous reflètent la **source Figma d'origine** ; les tailles, weights et usages restent valides — seules les familles changent. Source de vérité runtime : `frontend/app/globals.css` (`@theme`) + `frontend/app/layout.tsx`. cf. CLAUDE.md §3.
+
 | Token          | Famille          | Usage                                                                          |
 | -------------- | ---------------- | ------------------------------------------------------------------------------ |
 | `font-display` | DM Serif Display | H1, H2 (titres hero / sections)                                                |

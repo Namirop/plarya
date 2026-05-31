@@ -111,15 +111,17 @@ Rouge erreur : #EF4444
 
 ### Typography
 
-- Police corps : **Work Sans** (`--font-body`, alias `font-body` / `font-sans`)
-- Police display marketing : **DM Serif Display** (`--font-display`)
+- Police corps : **Mona Sans** (`--font-body`, alias `font-body` / `font-sans`) — variable, GitHub OFL, fichier local `frontend/public/fonts/Mona-Sans.woff2`
+- Police display marketing : **Hubot Sans** (`--font-display`) — variable, GitHub OFL, fichier local `frontend/public/fonts/Hubot-Sans.ttf`
+
+> Migration polices (mai 2026) : la DA est passée de **Work Sans + DM Serif Display** (V1, source Figma) à **Mona Sans + Hubot Sans**. Les règles d'usage ci-dessous (quelle police pour quel élément) restent identiques — seules les familles changent. `design-system.md` documente encore les noms Figma d'origine.
 - Titres avec gradient doré : `bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 bg-clip-text text-transparent` (effet réservé hero & accents marketing)
 
-#### Règle d'usage — DM Serif Display vs Work Sans (STRICTE)
+#### Règle d'usage — Hubot Sans vs Mona Sans (STRICTE)
 
-DM Serif Display crée un effet éditorial "presse/magazine" précieux. Pour qu'il reste précieux, il doit rester rare. Règle :
+Hubot Sans (police display) crée un contraste marketing fort face au corps en Mona Sans. Pour qu'il reste impactant, il doit rester rare. Règle :
 
-**DM Serif Display (`font-display`) — UNIQUEMENT pour :**
+**Hubot Sans (`font-display`) — UNIQUEMENT pour :**
 
 - H1 du Hero homepage (`components/home/hero.tsx`)
 - H2 des grandes sections marketing de la homepage (via `<MarketingSectionTitle>` : Domaines, Experts, Pourquoi Plarya, Devenir créateur)
@@ -129,23 +131,23 @@ DM Serif Display crée un effet éditorial "presse/magazine" précieux. Pour qu'
 - H2 sous-sections des pages légales (via `<LegalSection>`) — continuité éditoriale
 - OG images dynamiques (générées server-side)
 
-**Work Sans bold/semibold (`font-body font-bold`) — POUR TOUT LE RESTE :**
+**Mona Sans bold/semibold (`font-body font-bold`) — POUR TOUT LE RESTE :**
 
 - Titres de modales (LoginModal, ConfirmModal, EmailCheckoutModal, DeleteAccountModal, upsell modals, etc.)
 - Titres de sections internes (`<SectionTitle>` interne, "Abonnements actifs", "Confidentialité & données", "Panneau Admin", "Mes analyses", etc.)
 - Titres dans `/dashboard`, `/admin`, `/compte`
 - Pseudo expert sur le dashboard privé (vs profil public où il reste en display)
 - Sous-titres de cards, sections internes
-- Stat-cards (gros chiffres) : Work Sans **bold + `tabular-nums`** pour aligner les colonnes
+- Stat-cards (gros chiffres) : Mona Sans **bold + `tabular-nums`** pour aligner les colonnes
 - Titres h3/h4/h5 par défaut
 - Tout message UI, label, bouton, indicateur
 
-Pour les titres en Work Sans, le pattern recommandé :
+Pour les titres en Mona Sans, le pattern recommandé :
 
-- H1 interne : Work Sans 28-32px, font-weight **700 (bold)**
-- H2 interne : Work Sans 22-28px, font-weight **700 (bold)**
-- H3 / titre modale : Work Sans 22-24px, font-weight **700 (bold)**
-- H5 : Work Sans 16-20px, font-weight **600 (semibold)**
+- H1 interne : Mona Sans 28-32px, font-weight **700 (bold)**
+- H2 interne : Mona Sans 22-28px, font-weight **700 (bold)**
+- H3 / titre modale : Mona Sans 22-24px, font-weight **700 (bold)**
+- H5 : Mona Sans 16-20px, font-weight **600 (semibold)**
 
 Le contraste éditorial vient de la **hiérarchie** (taille + weight + gold-bar prefix), **pas** du changement de famille.
 
@@ -650,8 +652,8 @@ Chaque analyse (Prono) a un champ `startTime: DateTime` obligatoire. Le frontend
 - `text-foreground` : blanc
 - `accent` / `bg-accent` : doré #dfb968
 - `accent-strong` : doré profond #e1aa36
-- `font-display` : DM Serif Display (titres H1/H2)
-- `font-body` / `font-sans` : Work Sans (texte courant)
+- `font-display` : Hubot Sans (titres H1/H2)
+- `font-body` / `font-sans` : Mona Sans (texte courant)
 - `rounded` ou `rounded-2xl` : 16px (par défaut)
 - `shadow-shine` : glow CTA principaux
 - `shadow-shine-soft` : glow cards domaines
