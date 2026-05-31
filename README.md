@@ -61,5 +61,5 @@ Voir [`frontend/.env.example`](frontend/.env.example) et [`backend/.env.example`
 
 - [`CLAUDE.md`](CLAUDE.md) — spec produit, design system golden-da, conventions
 - [`design-system.md`](design-system.md) — spec DS détaillée (extrait Figma)
-- [`docs/dore-audit.md`](docs/dore-audit.md) — inventaire des usages de l'accent doré
 - [`docs/web-patterns.md`](docs/web-patterns.md) — patterns Node.js + TypeScript réutilisables
+- [`docs/deploiement.md`](docs/deploiement.md) — guide de déploiement (Vercel + Railway + Neon + Resend)

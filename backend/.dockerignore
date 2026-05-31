@@ -1,0 +1,9 @@
+# Ne JAMAIS copier les secrets ni les artefacts locaux dans l'image.
+.env
+.env.*
+node_modules
+dist
+src/generated/prisma
+npm-debug.log*
+.DS_Store
+*.tsbuildinfo
