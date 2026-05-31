@@ -1,6 +1,7 @@
 import { Router, type Response } from "express";
 import rateLimit from "express-rate-limit";
 
+import { clearCookieOptions, sessionCookieOptions } from "../lib/cookies";
 import { handleError } from "../lib/http-errors";
 import { logger } from "../lib/logger";
 import { authMiddleware, type AuthenticatedRequest } from "../middleware/auth";
@@ -61,7 +62,6 @@ const exportLimiter = rateLimit({
 });
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
-const IS_PROD = process.env.NODE_ENV === "production";
 
 /**
  * Valide qu'un param `redirect` est sûr à concaténer après FRONTEND_URL :
@@ -83,13 +83,7 @@ function isSafeRedirect(target: string): boolean {
 }
 
 function setSessionCookie(res: Response, token: string): void {
-  res.cookie("session_token", token, {
-    httpOnly: true,
-    secure: IS_PROD,
-    sameSite: "lax",
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    path: "/",
-  });
+  res.cookie("session_token", token, sessionCookieOptions());
 }
 
 /**
@@ -164,7 +158,7 @@ router.get("/verify", async (req, res) => {
 router.post("/logout", async (req, res) => {
   try {
     await logoutSession(req.cookies?.session_token);
-    res.clearCookie("session_token", { path: "/" });
+    res.clearCookie("session_token", clearCookieOptions());
     res.json({ message: "Déconnecté" });
   } catch (err) {
     handleError(err, res, "POST /auth/logout");
@@ -212,7 +206,7 @@ router.delete("/me", authMiddleware, async (req, res) => {
 
     // status === "deleted" : on clear le cookie immédiatement (le
     // service a déjà wipé les sessions DB-side).
-    res.clearCookie("session_token", { path: "/" });
+    res.clearCookie("session_token", clearCookieOptions());
     res.json({ message: "Compte supprimé" });
   } catch (err) {
     handleError(err, res, "DELETE /auth/me");

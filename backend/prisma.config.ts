@@ -9,6 +9,12 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Les migrations (`prisma migrate deploy`) utilisent DIRECT_URL si
+    // défini, sinon DATABASE_URL. Sur Neon, DATABASE_URL pointe vers
+    // l'endpoint *poolé* (-pooler, pour le runtime serverless) qui ne
+    // supporte pas les opérations DDL longues ; DIRECT_URL pointe vers
+    // l'endpoint direct, requis pour les migrations. En local (Postgres
+    // simple), laisser DIRECT_URL vide → fallback DATABASE_URL.
+    url: process.env["DIRECT_URL"] || process.env["DATABASE_URL"],
   },
 });

@@ -3,7 +3,12 @@ import { logger, maskEmail } from "./logger";
 
 const resend = new Resend(process.env.RESEND_API_KEY!);
 
-export const EMAIL_FROM = "Plarya <onboarding@resend.dev>";
+// Adresse d'expédition. En prod : domaine vérifié dans Resend (ex
+// "Plarya <noreply@plarya.com>") posé via EMAIL_FROM. En dev/sandbox,
+// fallback sur onboarding@resend.dev (seul "from" autorisé sans domaine
+// vérifié). ⚠️ sans EMAIL_FROM en prod, les emails partent de l'adresse
+// sandbox et ne sont pas délivrables au-delà du compte Resend.
+export const EMAIL_FROM = process.env.EMAIL_FROM || "Plarya <onboarding@resend.dev>";
 
 const RETRY_DELAYS_MS = [1000, 5000, 30000]; // 1s, 5s, 30s
 const MAX_ATTEMPTS = 3;

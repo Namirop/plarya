@@ -1,6 +1,8 @@
 import crypto from "crypto";
 import type { Request, Response, NextFunction } from "express";
 
+import { csrfCookieOptions } from "./cookies";
+
 /**
  * CSRF — double-submit cookie pattern.
  *
@@ -29,8 +31,6 @@ import type { Request, Response, NextFunction } from "express";
 const CSRF_COOKIE = "csrf_token";
 const CSRF_HEADER = "x-csrf-token";
 
-const IS_PROD = process.env.NODE_ENV === "production";
-
 function generate(): string {
   return crypto.randomBytes(32).toString("hex");
 }
@@ -38,13 +38,7 @@ function generate(): string {
 export function csrfTokenIssuer(req: Request, res: Response, next: NextFunction): void {
   if (!req.cookies?.[CSRF_COOKIE]) {
     const token = generate();
-    res.cookie(CSRF_COOKIE, token, {
-      httpOnly: false,
-      secure: IS_PROD,
-      sameSite: "lax",
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30j, aligné sur la session
-      path: "/",
-    });
+    res.cookie(CSRF_COOKIE, token, csrfCookieOptions());
     // Hydrate aussi req.cookies pour que csrfValidator voie le token
     // si jamais il est appliqué dans la même requête (cas d'un POST
     // qui serait le 1er hit — peu probable mais defensive).
