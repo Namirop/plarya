@@ -904,9 +904,12 @@ function PronoLine({ prono, hasAccess }: { prono: PronoData; hasAccess: boolean 
                 <p className="mt-1 font-body text-h5 text-foreground">●,●●</p>
               </div>
             </div>
+            {/* Placeholder neutre (flouté + aria-hidden) — pas de faux
+                texte latin dans le DOM. L'argumentaire réel n'est jamais
+                envoyé au client tant que l'analyse n'est pas débloquée. */}
             <p className="font-body text-body-16 text-foreground leading-relaxed">
-              Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor
-              incididunt ut labore et dolore magna aliqua.
+              ●●●●●●●●●● ●●●●●●●● ●●●●●●●●●●●● ●●●●●● ●●●●●●●●● ●●●● ●●●●●●●●●●
+              ●●●●●●● ●●●●●●●●●● ●●●● ●●●●●●●●●●.
             </p>
           </div>
           <div className="absolute inset-0 flex items-center justify-center">

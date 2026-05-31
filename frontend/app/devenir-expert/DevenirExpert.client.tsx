@@ -240,7 +240,7 @@ export function DevenirExpertClient() {
 
             <Reveal delay={0.12}>
               <p className="mt-5 max-w-[500px] font-body text-body-18 leading-[1.55] text-muted-foreground">
-                Partage tes analyses sportives avec une audience qui paie pour tes pronostics. Un
+                Partage tes analyses sportives avec une audience qui paie pour tes sélections. Un
                 profil mis en avant, des paiements directs, une plateforme premium.
               </p>
             </Reveal>
