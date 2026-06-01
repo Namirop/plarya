@@ -7,7 +7,7 @@ import {
 
 // Transport des emails transactionnels : ce module ne fait QUE l'envoi
 // (from + retry + logging). Le HTML/sujet vit dans `email-templates.ts`
-// (module pur, prévisualisable sans clé Resend via scripts/preview-emails).
+// (module pur, testable sans clé Resend).
 //
 // Tous les `sendEmailWithRetry` ci-dessous sont fire-and-forget côté
 // appelant (le helper swallow l'erreur finale après retries). L'argument

@@ -1,9 +1,9 @@
 // Templates HTML des emails transactionnels Plarya.
 //
 // Module PUR : aucune dépendance au transport Resend. Il ne fait que
-// construire `{ subject, html }`. Ça permet :
-//  - de générer un aperçu (scripts/preview-emails.ts) SANS clé Resend,
-//  - de garder la logique d'envoi (retry, logging) isolée dans emails.ts.
+// construire `{ subject, html }` — ce qui isole la logique d'envoi
+// (retry, logging) dans emails.ts et garde les templates testables sans
+// clé Resend.
 //
 // Contraintes "email-safe" (Gmail / Apple Mail / Outlook) :
 //  - layout en <table> + styles INLINE (pas de fl/grid, pas de <style>
