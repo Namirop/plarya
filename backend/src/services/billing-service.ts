@@ -45,7 +45,8 @@ const DAY = 24 * 60 * 60 * 1000;
 const MONTH = 30 * DAY;
 const QUARTER = 90 * DAY;
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
+// Slash final retiré → pas de `//auth/verify` dans le magic-link.
+const BACKEND_URL = (process.env.BACKEND_URL || "http://localhost:4000").replace(/\/+$/, "");
 
 // Client accepté par markEventProcessed : soit prisma global, soit un
 // client de transaction Prisma — les deux exposent la même API pour

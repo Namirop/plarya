@@ -18,7 +18,8 @@ import { prisma } from "../lib/prisma";
  * Idem pour les redirects — l'URL est retournée, pas exécutée.
  */
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
+// Slash final retiré → pas de `//auth/verify` dans le magic-link.
+const BACKEND_URL = (process.env.BACKEND_URL || "http://localhost:4000").replace(/\/+$/, "");
 
 export type MagicLinkRequestOutcome =
   | { delivered: true }

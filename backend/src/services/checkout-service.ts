@@ -24,7 +24,8 @@ import {
  * en non-ServiceError, le handler les log et renvoie 500.
  */
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+// Slash final retiré → pas de `//experts/...` dans les URLs Stripe.
+const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/+$/, "");
 
 // Prix de l'abonnement Expert : 39€/trimestre. Centralisé ici plutôt
 // qu'inline dans la session Stripe pour faciliter un changement futur

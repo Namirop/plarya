@@ -18,7 +18,9 @@
 
 import { escapeHtml } from "./format";
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+// `.replace` : retire un éventuel slash final pour ne pas générer d'URL
+// en `//...` (logo email, liens) si la var d'env en contient un.
+const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/+$/, "");
 
 const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
