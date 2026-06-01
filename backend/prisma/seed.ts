@@ -200,6 +200,16 @@ async function main() {
   const now = Date.now();
   const testLinks: { email: string; role: string; url: string }[] = [];
 
+  // Construit un Date = aujourd'hui à HH:MM en heure LOCALE du process
+  // (TZ=Europe/Paris sur le cron de prod). Sert à caler les coups
+  // d'envoi des analyses du jour sur des horaires fixes de la journée,
+  // INDÉPENDAMMENT de l'heure à laquelle le seed tourne.
+  const todayAt = (hour: number, minute: number): Date => {
+    const d = new Date(now);
+    d.setHours(hour, minute, 0, 0);
+    return d;
+  };
+
   // Admin user
   await prisma.user.upsert({
     where: { email: "admin@test.com" },
@@ -229,7 +239,7 @@ async function main() {
     url: `${BACKEND_URL}/auth/verify?token=${userToken}`,
   });
 
-  for (const e of EXPERTS) {
+  for (const [expertIdx, e] of EXPERTS.entries()) {
     // Upsert user
     const user = await prisma.user.upsert({
       where: { email: e.email },
@@ -295,21 +305,25 @@ async function main() {
       },
     );
 
-    // Today's pronos — varied startTime
-    // EsportGuru (last expert): all analyses in the past (to test "terminated" state)
-    const allPast = e.email === "esportguru@test.com";
-    // startTime offsets from now : on génère des fenêtres de test
-    // confortables (+6 h, +12 h, +18 h) pour qu'un seed lancé le matin
-    // reste valable toute la journée. Pour les experts qui ont au
-    // moins 2 pronos du jour, on garde le premier dans le passé
-    // (-1 h) pour démontrer le rendu "match commencé" (opacity-50).
-    // TennisAce n'a qu'un seul prono → forcé futur pour rester
-    // testable (sinon "Toutes les analyses sont terminées").
-    const startTimeOffsets = allPast
-      ? e.today.map((_, i) => -(i + 1) * HOUR) // all in the past
-      : e.today.length === 1
-        ? [6 * HOUR]
-        : e.today.map((_, i) => (i === 0 ? -1 * HOUR : i * 6 * HOUR));
+    // Today's pronos — startTime ÉTALÉS sur la journée (heures Paris),
+    // indépendamment de l'heure du seed. Objectif démo : le site reste
+    // "vivant" quelle que soit l'heure de consultation. Invariant : la
+    // dernière analyse de chaque expert part en soirée (dernier slot)
+    // → un expert n'affiche jamais "toutes les analyses terminées"
+    // pendant la journée. Les analyses plus tôt basculent en "match
+    // commencé" au fil des heures (rendu opacity-50) pour le réalisme.
+    const DAY_SLOTS = [13, 15, 18, 20, 21]; // coups d'envoi (Europe/Paris)
+    const n = e.today.length;
+    // Décalage de quelques minutes par expert → évite des horaires
+    // strictement identiques sur toutes les cards.
+    const slotMinute = (expertIdx % 5) * 9;
+    const startTimes = e.today.map((_, i) => {
+      // i de 0..n-1 réparti sur DAY_SLOTS, en terminant TOUJOURS au
+      // dernier créneau (soirée) pour préserver l'invariant.
+      const slotIdx =
+        n <= 1 ? DAY_SLOTS.length - 1 : Math.round((i * (DAY_SLOTS.length - 1)) / (n - 1));
+      return todayAt(DAY_SLOTS[slotIdx], slotMinute);
+    });
 
     // Garde-fou : si on lance le seed entre minuit et X heures du
     // matin, le calcul `now - N heures` ferait glisser le createdAt
@@ -340,7 +354,7 @@ async function main() {
           | "A_NE_PAS_RATER",
         argument: `Argumentaire pour ${matchName}.`,
         result: "PENDING" as const,
-        startTime: new Date(now + startTimeOffsets[i]),
+        startTime: startTimes[i],
         isFeatured: i === 0,
         createdAt,
       };
