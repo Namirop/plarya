@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-import { CheckCircle, Lock, X, Eye } from "@phosphor-icons/react";
+import { CheckCircle, Lock, X, Eye, Star } from "@phosphor-icons/react";
 
 import { EmailCheckoutModal } from "@/components/checkout/email-checkout-modal";
 import { Button } from "@/components/ui/button";
@@ -803,117 +803,129 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
 function PronoLine({ prono, hasAccess }: { prono: PronoData; hasAccess: boolean }) {
   const started = isStarted(prono.startTime);
   const league = prono.league ? getLeague(prono.league) : undefined;
-  // (Étape Polish A.4 — migration logos SportsDB) : l'invert qui
-  // existait sur les SVG locaux dark-on-transparent n'a plus de raison
-  // d'être — les badges SportsDB sont conçus pour être visibles sur
-  // n'importe quel fond. Si une ligue paraît trop sombre, vérifier
-  // d'abord son badge SportsDB plutôt que ré-introduire un invert.
-
-  const teasingLabel = TEASING_LABELS[prono.teasing] || prono.teasing;
+  // Teasing en libellé éditorial : on retire l'emoji de tête ("💣 Value"
+  // → "Value") pour un rendu kicker uppercase, pas un chip "app".
+  const teasing = (TEASING_LABELS[prono.teasing] || prono.teasing).replace(/^\S+\s+/u, "");
+  const oddsText = prono.odds.toFixed(2).replace(".", ",");
 
   return (
     <article
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-surface-elevated bg-black/40 p-6",
+        "rounded-2xl border border-white/[0.08] bg-black/40 px-5 py-5 md:px-7 md:py-6",
         started && !hasAccess && "opacity-50",
       )}
     >
-      {prono.isFeatured && (
-        <span className="absolute right-4 top-4 inline-flex items-center rounded-full bg-accent/20 px-3 py-1 font-body text-body-16 text-accent">
-          Analyse du jour
-        </span>
-      )}
-
-      <header className="flex items-start gap-4 pr-32 md:pr-36">
-        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-surface-elevated">
-          {league?.logo ? (
-            <Image
-              src={league.logo}
-              width={40}
-              height={40}
-              alt={league.name}
-              className="size-10 object-contain"
-            />
-          ) : (
-            <SportIcon sport={league?.sport || ""} className="size-7 text-muted-foreground" />
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate font-body text-h5 text-foreground">{prono.matchName}</h3>
-          <p className="mt-1 font-body text-body-16 text-muted-foreground">
-            {league?.name && (
-              <>
-                <span>{league.name}</span>
-                <span className="opacity-40"> · </span>
-              </>
+      {/* ── En-tête : logo ligue + match · heure, étoile dorée à droite
+          si analyse du jour (cf. étoile pick-du-jour ailleurs sur le
+          site), pas un label. ── */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/[0.04]">
+            {league?.logo ? (
+              <Image
+                src={league.logo}
+                width={40}
+                height={40}
+                alt={league.name}
+                className="size-8 object-contain"
+              />
+            ) : (
+              <SportIcon sport={league?.sport || ""} className="size-6 text-muted-foreground" />
             )}
-            <span className={cn(started && "text-destructive")}>
-              {formatStartTime(prono.startTime)}
-            </span>
-          </p>
+          </span>
+          <div className="min-w-0">
+            <h3 className="font-body text-xl font-bold leading-tight text-foreground md:text-2xl">
+              {prono.matchName}
+            </h3>
+            <p className="mt-1 font-body text-body-16 text-muted-foreground">
+              {league?.name && (
+                <>
+                  <span className="uppercase tracking-wide">{league.name}</span>
+                  <span className="px-1.5 opacity-40">·</span>
+                </>
+              )}
+              <span className={cn(started && "text-destructive")}>
+                {formatStartTime(prono.startTime)}
+              </span>
+            </p>
+          </div>
         </div>
-      </header>
+        {prono.isFeatured && (
+          <Star
+            weight="fill"
+            aria-label="Analyse du jour"
+            className="size-12 shrink-0 text-accent md:size-14"
+          />
+        )}
+      </div>
 
-      <p className="mt-4 font-body text-body-16 text-muted-foreground">{teasingLabel}</p>
+      {/* Kicker teasing — visible dans les deux états (c'est le teaser). */}
+      <p className="mt-7 font-body text-[12px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        {teasing}
+      </p>
 
       {hasAccess ? (
-        <div className="mt-4 space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="font-body text-body-16 text-muted-foreground">Pick</p>
-              <p className="mt-1 font-body text-body-16 text-foreground">{prono.pick || "—"}</p>
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="font-body text-body-16 text-muted-foreground">Cote</p>
-              {/* Cote dorée UNIQUEMENT sur le prono featured (max 1
-                  par profil expert) — règle 3B. Les autres pronos
-                  affichent leur cote en blanc, ce qui maintient la
-                  hiérarchie sans saturer la page. */}
-              <p
+        <>
+          {/* ── Sélection + cote : porté par le TYPE, sans encadré ── */}
+          <div className="mt-2 flex items-end justify-between gap-6">
+            <p className="min-w-0 font-body text-2xl font-bold leading-[1.1] text-foreground md:text-[28px]">
+              {prono.pick || "—"}
+            </p>
+            <div className="shrink-0 text-right leading-none">
+              <span className="block font-body text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Cote
+              </span>
+              {/* Or réservé à la cote de l'analyse du jour (signal de valeur
+                  unique). Les autres cotes restent blanches : l'impact vient
+                  de la TAILLE, pas de la couleur. */}
+              <span
                 className={cn(
-                  "mt-1 font-body text-h5",
+                  "mt-1 block font-body text-5xl font-bold tabular-nums md:text-6xl",
                   prono.isFeatured ? "text-accent" : "text-foreground",
                 )}
               >
-                {prono.odds.toFixed(2).replace(".", ",")}
-              </p>
+                {oddsText}
+              </span>
             </div>
           </div>
+
+          {/* ── Argumentaire ── */}
           {prono.argument && (
-            <p className="font-body text-body-16 text-foreground leading-relaxed">
+            <p className="mt-6 font-body text-body-16 leading-relaxed text-foreground/80">
               {prono.argument}
             </p>
           )}
+
+          {/* ── Bookmakers (section secondaire) ── */}
           {prono.bookmakerOdds && prono.bookmakerOdds.length > 0 && (
             <BookmakerComparator bookmakerOdds={prono.bookmakerOdds} />
           )}
-        </div>
+        </>
       ) : (
-        <div className="relative mt-4">
-          <div aria-hidden className="pointer-events-none space-y-4 select-none blur-[6px]">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <p className="font-body text-body-16 text-muted-foreground">Pick</p>
-                <p className="mt-1 font-body text-body-16 text-foreground">●●●●●●●●●●</p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="font-body text-body-16 text-muted-foreground">Cote</p>
-                {/* Placeholder blurred cote — neutre (le contenu est
-                    flouté, le doré n'avait aucun sens visuel). */}
-                <p className="mt-1 font-body text-h5 text-foreground">●,●●</p>
+        // ── Verrouillé : pick + cote + argumentaire floutés, cadenas ──
+        <div className="relative">
+          <div aria-hidden className="pointer-events-none select-none">
+            <div className="mt-2 flex items-end justify-between gap-6 blur-[7px]">
+              <p className="font-body text-2xl font-bold text-foreground md:text-[28px]">
+                ●●●●●●●●
+              </p>
+              <div className="shrink-0 text-right leading-none">
+                <span className="block font-body text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Cote
+                </span>
+                <span className="mt-1 block font-body text-5xl font-bold text-foreground md:text-6xl">
+                  ●,●●
+                </span>
               </div>
             </div>
-            {/* Placeholder neutre (flouté + aria-hidden) — pas de faux
-                texte latin dans le DOM. L'argumentaire réel n'est jamais
+            {/* Placeholder neutre — l'argumentaire réel n'est jamais
                 envoyé au client tant que l'analyse n'est pas débloquée. */}
-            <p className="font-body text-body-16 text-foreground leading-relaxed">
-              ●●●●●●●●●● ●●●●●●●● ●●●●●●●●●●●● ●●●●●● ●●●●●●●●● ●●●● ●●●●●●●●●●
-              ●●●●●●● ●●●●●●●●●● ●●●● ●●●●●●●●●●.
+            <p className="mt-6 font-body text-body-16 leading-relaxed text-foreground blur-[7px]">
+              ●●●●●●●●●● ●●●●●●●● ●●●●●●●●●●●● ●●●●●● ●●●●●●●●● ●●●● ●●●●●●●●●● ●●●●●●●.
             </p>
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <Lock className="size-8 text-foreground" aria-label="Contenu verrouillé" />
+            <Lock className="size-7 text-foreground" aria-label="Contenu verrouillé" />
           </div>
         </div>
       )}
@@ -925,40 +937,57 @@ function PronoLine({ prono, hasAccess }: { prono: PronoData; hasAccess: boolean 
 
 function BookmakerComparator({ bookmakerOdds }: { bookmakerOdds: BookmakerOddsData[] }) {
   return (
-    <div className="rounded-xl border border-surface-elevated bg-black/40 p-4">
-      <p className="font-body text-body-16 text-muted-foreground">Où consulter cette analyse</p>
-      <div className="mt-3 space-y-2">
-        {bookmakerOdds.map((bo) => {
+    <div className="mt-6 border-t border-white/[0.08] pt-5">
+      <p className="font-body text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        Où consulter cette analyse
+      </p>
+      {/* Liste éditoriale à filets (pas de boîte) : présente et soignée,
+          mais clairement secondaire vs le contenu de l'analyse. Aucun or
+          ici — l'accent reste réservé à la cote. */}
+      <div className="mt-1">
+        {bookmakerOdds.map((bo, i) => {
           const affiliateLink = bo.bookmaker.affiliateLinks[0];
           return (
             <div
               key={bo.id}
-              className="flex items-center justify-between gap-3 rounded-lg bg-black/40 px-3 py-2"
+              className={cn(
+                "flex items-center justify-between gap-3 py-2.5",
+                i > 0 && "border-t border-white/[0.05]",
+              )}
             >
               <div className="flex min-w-0 items-center gap-3">
+                {/* Tuile sombre uniforme : les vrais logos ont des ratios
+                    différents (Winamax carré, PMU/Betclic en bandeau), la
+                    tuile + object-contain les cadre proprement. */}
                 {bo.bookmaker.logoUrl ? (
-                  <Image
-                    src={bo.bookmaker.logoUrl}
-                    alt={bo.bookmaker.name}
-                    width={24}
-                    height={24}
-                    className="size-6 shrink-0 rounded object-contain"
-                  />
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-white/[0.05] p-1.5">
+                    <Image
+                      src={bo.bookmaker.logoUrl}
+                      alt={bo.bookmaker.name}
+                      width={32}
+                      height={32}
+                      className="size-full object-contain"
+                    />
+                  </span>
                 ) : (
-                  <div className="flex size-6 shrink-0 items-center justify-center rounded bg-surface-elevated font-body text-body-16 text-foreground">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-surface-elevated font-body text-body-16 text-foreground">
                     {bo.bookmaker.name.charAt(0)}
-                  </div>
+                  </span>
                 )}
-                <span className="font-body text-body-16 text-foreground">{bo.bookmaker.name}</span>
+                <span className="truncate font-body text-body-16 text-foreground">
+                  {bo.bookmaker.name}
+                </span>
               </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <span className="font-body text-body-16 text-foreground">@{bo.odds.toFixed(2)}</span>
+              <div className="flex shrink-0 items-center gap-4">
+                <span className="font-body text-body-16 tabular-nums text-muted-foreground">
+                  {bo.odds.toFixed(2).replace(".", ",")}
+                </span>
                 {affiliateLink && (
                   <a
                     href={affiliateLink.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-lg bg-white px-3 py-1.5 font-body text-body-16 text-black transition-colors hover:bg-white/90"
+                    className="whitespace-nowrap rounded-md border border-white/15 px-3 py-1.5 font-body text-[13px] font-semibold text-foreground transition-colors hover:border-white/30 hover:bg-white/[0.06]"
                   >
                     {affiliateLink.label || "Accéder"}
                   </a>
