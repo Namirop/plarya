@@ -15,9 +15,7 @@ Plateforme d'analyses sportives par des experts vérifiés.
 ```
 plarya/
 ├── frontend/    Next.js — UI utilisateur
-├── backend/     Express + Prisma — API REST + webhooks Stripe
-├── docs/        Documentation (audit, project state)
-└── CLAUDE.md    Spec produit + design system (source de vérité)
+└── backend/     Express + Prisma — API REST + webhooks Stripe
 ```
 
 ## Setup local
@@ -56,10 +54,3 @@ Voir [`frontend/.env.example`](frontend/.env.example) et [`backend/.env.example`
   ou `npm run format` dans chaque package
 - **Type-checking** : `npx tsc --noEmit` côté frontend et backend
 - **Dependabot** : PRs hebdomadaires groupées (cf. [`.github/dependabot.yml`](.github/dependabot.yml))
-
-## Documentation
-
-- [`CLAUDE.md`](CLAUDE.md) — spec produit, design system golden-da, conventions
-- [`design-system.md`](design-system.md) — spec DS détaillée (extrait Figma)
-- [`docs/web-patterns.md`](docs/web-patterns.md) — patterns Node.js + TypeScript réutilisables
-- [`docs/deploiement.md`](docs/deploiement.md) — guide de déploiement (Vercel + Railway + Neon + Resend)

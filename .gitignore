@@ -13,5 +13,10 @@ desktop.ini
 .figma-*.png
 .figma-*.jpg
 
-# Claude Code — prefs locales (permissions, etc.)
-.claude/settings.local.json
+# Claude Code — config/skills locaux (hors repo de présentation)
+.claude/
+
+# Docs internes / contexte de travail — gardés en local, hors du repo
+CLAUDE.md
+design-system.md
+docs/web-patterns.md

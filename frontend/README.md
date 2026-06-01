@@ -50,5 +50,5 @@ Voir [`.env.example`](.env.example).
 
 ## Convention design (DS golden-da)
 
-Voir [`../CLAUDE.md`](../CLAUDE.md) à la racine pour la spec complète du design system
-(noir profond + accent doré, DM Serif Display titres, Work Sans corps).
+Source de vérité runtime : les tokens `@theme` dans [`app/globals.css`](app/globals.css)
+(noir profond + accent doré ; titres Hubot Sans, corps Mona Sans).
