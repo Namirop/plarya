@@ -5,4 +5,7 @@ dist
 *.log
 coverage/
 
+# Aperçu emails généré par scripts/preview-emails.ts (artefact local)
+email-preview.html
+
 /src/generated/prisma
