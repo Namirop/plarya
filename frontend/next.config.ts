@@ -38,6 +38,10 @@ const nextConfig: NextConfig = {
     return [
       { source: "/devenir-tipster", destination: "/devenir-expert", permanent: true },
       { source: "/tipsters/:id", destination: "/experts/:id", permanent: true },
+      // Pas de page de listing dédiée pour l'instant (la homepage est la
+      // vitrine experts) → /experts redirige vers l'accueil. `source`
+      // exact : ne matche pas /experts/[id] (profils).
+      { source: "/experts", destination: "/", permanent: true },
     ];
   },
 };

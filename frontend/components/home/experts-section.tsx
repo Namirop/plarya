@@ -2,13 +2,10 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import Link from "next/link";
-
 import { ArrowRight } from "@phosphor-icons/react";
 
 import { ExpertCard, type ExpertCardProps } from "@/components/experts/expert-card";
 import type { DomainId } from "@/components/home/domains-section";
-import { Button } from "@/components/ui/button";
 import { MarketingSectionTitle } from "@/components/ui/section-title";
 import { apiGet } from "@/lib/api";
 import { allStarted } from "@/lib/date";
@@ -60,15 +57,17 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
   const mobileScrollerRef = useRef<HTMLDivElement>(null);
   const [mobileIndex, setMobileIndex] = useState(0);
 
-  // ── Fetch experts depuis l'API. /experts renvoie déjà la liste
-  // triée par displayOrder ASC, createdAt DESC (limite 6 par défaut).
+  // ── Fetch experts depuis l'API. `?all=true` → TOUS les experts
+  // inscrits (triés displayOrder ASC, createdAt DESC). Tant qu'ils sont
+  // peu nombreux on les montre tous dans le carrousel ; une page de
+  // listing dédiée viendra s'il y en a beaucoup.
   // `loaded` distingue "en cours de fetch" (on n'affiche pas encore
   // l'état vide, pour éviter un flash) de "fetch terminé, 0 expert"
   // (on affiche alors le message d'état vide).
   const [experts, setExperts] = useState<(ExpertCardProps & { id: string })[]>([]);
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
-    apiGet<ExpertListItem[]>("/experts")
+    apiGet<ExpertListItem[]>("/experts?all=true")
       .then((data) => {
         const mapped = data.map<ExpertCardProps & { id: string }>((t) => ({
           id: t.id,
@@ -180,11 +179,7 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
         {/* CTA top-right masqué en mobile : remplacé par le bouton plein
             largeur sous le carrousel (spec mobile §5). Masqué aussi quand
             la section est vide (le CTA vit alors dans l'état vide). */}
-        <MarketingSectionTitle
-          title="Nos experts du jour"
-          cta={{ text: "Voir tous les experts", href: "/experts" }}
-          ctaClassName={cn("hidden md:inline-flex", isEmpty && "md:hidden")}
-        />
+        <MarketingSectionTitle title="Nos experts du jour" />
 
         {isEmpty ? (
           // ──────── État vide : message + CTA, pas de carrousel/dots ────────
@@ -196,14 +191,6 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
               Nos experts publient leurs sélections au fil de la journée. Reviens un peu plus tard,
               ou explore leurs profils.
             </p>
-            <Button
-              variant="secondary"
-              size="lg"
-              render={<Link href="/experts" />}
-              className="mt-7 border-white hover:border-white"
-            >
-              Voir tous les experts
-            </Button>
           </div>
         ) : hasExperts ? (
           <>
@@ -258,17 +245,6 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
                 </div>
               )}
 
-              {/* CTA plein largeur vers la page experts complète. */}
-              <div className="mt-7 flex justify-center">
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  render={<Link href="/experts" />}
-                  className="w-full max-w-[353px] border-white hover:border-white"
-                >
-                  Voir tous les experts
-                </Button>
-              </div>
             </div>
 
             {/* ──────── Desktop : carrousel ──────── */}
