@@ -6,7 +6,7 @@ import { sendAccessUnlockedEmail } from "../lib/emails";
 import { logger, maskEmail } from "../lib/logger";
 import { createMagicLink } from "../lib/magic-link";
 import { prisma } from "../lib/prisma";
-import { stripe } from "../lib/stripe";
+import { stripe, STRIPE_APP_TAG } from "../lib/stripe";
 
 /**
  * Service Billing — handlers Stripe webhook + idempotence event-level.
@@ -123,7 +123,21 @@ async function handleCheckoutSessionCompleted(event: StripeEvent): Promise<void>
     customer: string | null;
     customer_details: { email: string | null } | null;
   };
-  const metadata = session.metadata as Record<string, string>;
+  const metadata = (session.metadata ?? {}) as Record<string, string>;
+
+  // Filtre multi-projets : compte Stripe partagé avec un autre produit
+  // (cf. STRIPE_APP_TAG). On ne traite QUE les sessions taguées Plarya ;
+  // les autres sont ack 200 (sinon Stripe retry 3 jours) puis ignorées.
+  // Garde-fou aussi contre une session sans metadata (null → {}).
+  if (metadata.app !== STRIPE_APP_TAG) {
+    webhookLogger.info(
+      { eventId: event.id, eventType: event.type, app: metadata.app ?? null },
+      "Checkout session from another app — skipping",
+    );
+    await markEventProcessed(prisma, event);
+    return;
+  }
+
   const { userId, purpose } = metadata;
 
   // Branche "become expert"
@@ -215,6 +229,20 @@ async function processUserSubscriptionSession(
   // les sessions Stripe pending pré-rename.
   const expertId = metadata.expertId || metadata.tipsterId;
   const { type } = metadata;
+
+  // Defense-in-depth : une session sans expertId/type n'est pas un achat
+  // Plarya valide. Normalement déjà filtrée par le tag `app` en amont,
+  // mais on s'arrête AVANT de créer un User (sinon on polluerait la table
+  // users avec l'email d'un acheteur d'un autre produit + retry storm sur
+  // le subscription.create qui échouerait sur expertId/type manquants).
+  if (!expertId || !type) {
+    webhookLogger.error(
+      { eventId: event.id, eventType: event.type },
+      "Checkout session missing expertId/type — skipping",
+    );
+    await markEventProcessed(prisma, event);
+    return;
+  }
 
   // Resolve userId AVANT la transaction. User.email a une contrainte
   // unique → re-trying un user-create par email est idempotent.

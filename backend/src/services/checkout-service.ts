@@ -1,6 +1,6 @@
 import { logger } from "../lib/logger";
 import { prisma } from "../lib/prisma";
-import { stripe } from "../lib/stripe";
+import { stripe, STRIPE_APP_TAG } from "../lib/stripe";
 import type { BecomeExpertInput, CreateCheckoutInput } from "../validators/checkout";
 
 import {
@@ -158,7 +158,8 @@ export async function createCheckoutSession(
   const isSubscription = type === "MONTHLY";
   const amount = isSubscription ? expert.monthlyPrice : expert.dayPassPrice;
 
-  const metadata: Record<string, string> = { expertId, type };
+  // `app` : tag multi-projets (compte Stripe partagé) — cf. STRIPE_APP_TAG.
+  const metadata: Record<string, string> = { app: STRIPE_APP_TAG, expertId, type };
   if (userId) metadata.userId = userId;
   if (customerEmail) metadata.email = customerEmail;
 
@@ -251,6 +252,7 @@ export async function createBecomeExpertSession(
       },
     ],
     metadata: {
+      app: STRIPE_APP_TAG,
       userId,
       pseudo,
       bio: bio || "",

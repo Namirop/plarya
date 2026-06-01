@@ -15,3 +15,20 @@ import Stripe from "stripe";
 export const stripe: Stripe.Stripe = Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-03-25.dahlia",
 });
+
+/**
+ * Tag d'application posé sur le `metadata.app` de chaque Checkout Session
+ * créée par Plarya.
+ *
+ * Le compte Stripe du client est PARTAGÉ avec un autre produit
+ * (DevisRapide). Stripe livre chaque event à TOUS les webhooks du compte
+ * qui écoutent ce type d'event — donc un paiement DevisRapide tape aussi
+ * le webhook Plarya, et inversement. La signature ne discrimine pas (le
+ * même compte signe pour les deux endpoints).
+ *
+ * → checkout-service pose `app: STRIPE_APP_TAG` sur chaque session, et
+ *   billing-service ignore (ack 200) toute checkout.session.completed
+ *   dont le tag ne correspond pas. L'autre produit DOIT faire le miroir
+ *   avec son propre tag.
+ */
+export const STRIPE_APP_TAG = "plarya";
