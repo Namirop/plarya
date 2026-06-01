@@ -6,67 +6,19 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-import { CheckCircle, Lock, X, Eye, Star } from "@phosphor-icons/react";
+import { CheckCircle, X, Eye } from "@phosphor-icons/react";
 
+import { AnalysisCardTicket } from "@/components/analyses/analysis-card-ticket";
 import { EmailCheckoutModal } from "@/components/checkout/email-checkout-modal";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/hooks/use-user";
 import { apiGet, apiPost } from "@/lib/api";
-import { TEASING_LABELS, formatPrice } from "@/lib/constants";
-import { formatStartTime, isStarted, allStarted } from "@/lib/date";
-import { getSportLabel, getLeague } from "@/lib/sports";
-import { SportIcon } from "@/lib/sports-icons";
+import { formatPrice } from "@/lib/constants";
+import { allStarted } from "@/lib/date";
+import type { ExpertProfile, PronoData } from "@/lib/experts";
+import { getSportLabel } from "@/lib/sports";
 import { createCheckoutSession } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
-
-interface BookmakerOddsData {
-  id: string;
-  odds: number;
-  bookmaker: {
-    id: string;
-    name: string;
-    logoUrl: string | null;
-    affiliateLinks: { id: string; url: string; label: string | null }[];
-  };
-}
-
-export interface PronoData {
-  id: string;
-  matchName: string;
-  league: string | null;
-  pick: string | null;
-  argument: string | null;
-  odds: number;
-  teasing: string;
-  result: "PENDING" | "WON" | "LOST";
-  startTime: string;
-  isFeatured: boolean;
-  matchDate: string | null;
-  createdAt: string;
-  bookmakerOdds?: BookmakerOddsData[];
-}
-
-export interface ExpertProfile {
-  id: string;
-  pseudo: string;
-  bio: string | null;
-  dailyNote: string | null;
-  photoUrl: string | null;
-  sports: string[];
-  dayPassPrice: number;
-  monthlyPrice: number;
-  warningMessage: string | null;
-  viewsToday: number;
-  /**
-   * True si l'expert a programmé la suppression de son compte (cf.
-   * Expert.pendingDeletionAt côté backend). Les nouveaux paiements
-   * sont refusés (checkout/create-session 400) et le frontend doit
-   * désactiver les CTAs d'achat + afficher un banner.
-   */
-  pendingDeletion?: boolean;
-  pronosToday: number;
-  pronos: PronoData[];
-}
 
 // Shape minimale de /experts/me utilisée uniquement pour détecter si
 // l'expert connecté est sur SA propre page publique (bypass paywall).
@@ -345,7 +297,7 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
         {/* Container uniformisé 872px (Dashboard / Devenir Expert).
             pb-32 pour libérer la zone du sticky CTA et éviter qu'il
             recouvre la fin de la liste d'analyses. */}
-        <div className="mx-auto w-full max-w-[872px] flex-1 px-4 pt-10 pb-32 md:px-6 md:pt-16">
+        <div className="mx-auto w-full max-w-[960px] flex-1 px-4 pt-10 pb-32 md:px-6 md:pt-16">
           {/* Bandeau d'avertissement admin — neutre (anciennement
               doré, neutralisé en 3B : la règle /experts/[id] réserve
               le doré au badge EXPERT, badge featured, cote featured
@@ -371,9 +323,9 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
           {/* ═══ BLOC IDENTITÉ ═══
               Card englobante DS : bg-black/40, bordure subtile, radius 16,
               padding 24/32. Layout horizontal desktop, stack vertical mobile.
-              subtle-radial-glow : halo blanc ultra-subtil derrière la
-              card pour la "poser" sur le fond sans réintroduire de doré. */}
-          <section className="subtle-radial-glow rounded-2xl border border-surface-elevated bg-black/40 p-6 md:p-8">
+              Pas de glow décoratif (règle anti-AI : aucun halo de fond sur
+              élément non-CTA). */}
+          <section className="rounded-2xl border border-surface-elevated bg-black/40 p-6 md:p-8">
             <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
               {/* Avatar 96×96, ring doré subtil. */}
               <div className="shrink-0">
@@ -412,22 +364,16 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
                   <p className="font-body text-body-16 text-foreground">{expert.bio}</p>
                 )}
 
-                {expert.dailyNote && (
-                  <p className="font-body text-body-16 text-muted-foreground">{expert.dailyNote}</p>
+                {/* Spécialité en mention inline éditoriale (plus de pills
+                    rounded-full + icône — règle anti-AI). */}
+                {expert.sports.length > 0 && (
+                  <p className="font-body text-sm text-muted-foreground">
+                    Spécialiste {expert.sports.map(getSportLabel).join(", ").toLowerCase()}
+                  </p>
                 )}
 
-                {expert.sports.length > 0 && (
-                  <div className="mt-1 flex flex-wrap justify-center gap-2 md:justify-start">
-                    {expert.sports.map((sport) => (
-                      <span
-                        key={sport}
-                        className="inline-flex items-center gap-2 rounded-full border border-surface-elevated bg-black/40 px-3 py-1 font-body text-body-16 text-foreground"
-                      >
-                        <SportIcon sport={sport} className="size-4 text-muted-foreground" />
-                        {getSportLabel(sport)}
-                      </span>
-                    ))}
-                  </div>
+                {expert.dailyNote && (
+                  <p className="font-body text-body-16 text-muted-foreground">{expert.dailyNote}</p>
                 )}
               </div>
             </div>
@@ -436,15 +382,23 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
           {/* ═══ SECTION ANALYSES ═══ */}
           {pendingPronos.length > 0 && (
             <section className="mt-12">
-              <h2 className="font-body text-[22px] font-bold text-foreground md:text-[24px]">
+              {/* Titre fort en display (Hubot Sans) — porte la page, le
+                  reste de la hiérarchie suit la card-ticket. */}
+              <h2 className="mb-8 font-display text-3xl font-normal text-foreground md:text-5xl">
                 {pendingPronos.length === 1
                   ? "Analyse du jour"
                   : `${pendingPronos.length} analyses du jour`}
               </h2>
 
-              <div className="mt-6 flex flex-col gap-4">
+              <div className="flex flex-col gap-8">
                 {pendingPronos.map((prono) => (
-                  <PronoLine key={prono.id} prono={prono} hasAccess={hasAccess} />
+                  <AnalysisCardTicket
+                    key={prono.id}
+                    analysis={prono}
+                    hasAccess={hasAccess}
+                    expertPseudo={expert.pseudo}
+                    viewsToday={expert.viewsToday}
+                  />
                 ))}
               </div>
             </section>
@@ -454,7 +408,7 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
         {/* ═══ CTA STICKY ═══ */}
         {!hasAccess && (
           <div className="sticky bottom-0 z-40 border-t border-surface-elevated bg-black/80 backdrop-blur-md">
-            <div className="mx-auto flex max-w-[872px] flex-col items-center gap-2 px-4 py-4 md:px-6">
+            <div className="mx-auto flex max-w-[960px] flex-col items-center gap-2 px-4 py-4 md:px-6">
               {isPendingDeletion ? (
                 <p className="text-center font-body text-body-16 text-muted-foreground">
                   Cet expert ne prend plus de nouveaux abonnés.
@@ -795,208 +749,5 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
         </div>
       )}
     </>
-  );
-}
-
-/* ════════════════ PRONO LINE — card unique par analyse ════════════════ */
-
-function PronoLine({ prono, hasAccess }: { prono: PronoData; hasAccess: boolean }) {
-  const started = isStarted(prono.startTime);
-  const league = prono.league ? getLeague(prono.league) : undefined;
-  // Teasing en libellé éditorial : on retire l'emoji de tête ("💣 Value"
-  // → "Value") pour un rendu kicker uppercase, pas un chip "app".
-  const teasing = (TEASING_LABELS[prono.teasing] || prono.teasing).replace(/^\S+\s+/u, "");
-  const oddsText = prono.odds.toFixed(2).replace(".", ",");
-
-  return (
-    <article
-      className={cn(
-        "rounded-2xl border border-white/[0.08] bg-black/40 px-5 py-5 md:px-7 md:py-6",
-        started && !hasAccess && "opacity-50",
-      )}
-    >
-      {/* ── En-tête : logo ligue + match · heure, étoile dorée à droite
-          si analyse du jour (cf. étoile pick-du-jour ailleurs sur le
-          site), pas un label. ── */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/[0.04]">
-            {league?.logo ? (
-              <Image
-                src={league.logo}
-                width={40}
-                height={40}
-                alt={league.name}
-                className="size-8 object-contain"
-              />
-            ) : (
-              <SportIcon sport={league?.sport || ""} className="size-6 text-muted-foreground" />
-            )}
-          </span>
-          <div className="min-w-0">
-            <h3 className="font-body text-xl font-bold leading-tight text-foreground md:text-2xl">
-              {prono.matchName}
-            </h3>
-            <p className="mt-1 font-body text-body-16 text-muted-foreground">
-              {league?.name && (
-                <>
-                  <span className="uppercase tracking-wide">{league.name}</span>
-                  <span className="px-1.5 opacity-40">·</span>
-                </>
-              )}
-              <span className={cn(started && "text-destructive")}>
-                {formatStartTime(prono.startTime)}
-              </span>
-            </p>
-          </div>
-        </div>
-        {prono.isFeatured && (
-          <Star
-            weight="fill"
-            aria-label="Analyse du jour"
-            className="size-12 shrink-0 text-accent md:size-14"
-          />
-        )}
-      </div>
-
-      {/* Kicker teasing — visible dans les deux états (c'est le teaser). */}
-      <p className="mt-7 font-body text-[12px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-        {teasing}
-      </p>
-
-      {hasAccess ? (
-        <>
-          {/* ── Sélection + cote : porté par le TYPE, sans encadré ── */}
-          <div className="mt-2 flex items-end justify-between gap-6">
-            <p className="min-w-0 font-body text-2xl font-bold leading-[1.1] text-foreground md:text-[28px]">
-              {prono.pick || "—"}
-            </p>
-            <div className="shrink-0 text-right leading-none">
-              <span className="block font-body text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                Cote
-              </span>
-              {/* Or réservé à la cote de l'analyse du jour (signal de valeur
-                  unique). Les autres cotes restent blanches : l'impact vient
-                  de la TAILLE, pas de la couleur. */}
-              <span
-                className={cn(
-                  "mt-1 block font-body text-5xl font-bold tabular-nums md:text-6xl",
-                  prono.isFeatured ? "text-accent" : "text-foreground",
-                )}
-              >
-                {oddsText}
-              </span>
-            </div>
-          </div>
-
-          {/* ── Argumentaire ── */}
-          {prono.argument && (
-            <p className="mt-6 font-body text-body-16 leading-relaxed text-foreground/80">
-              {prono.argument}
-            </p>
-          )}
-
-          {/* ── Bookmakers (section secondaire) ── */}
-          {prono.bookmakerOdds && prono.bookmakerOdds.length > 0 && (
-            <BookmakerComparator bookmakerOdds={prono.bookmakerOdds} />
-          )}
-        </>
-      ) : (
-        // ── Verrouillé : pick + cote + argumentaire floutés, cadenas ──
-        <div className="relative">
-          <div aria-hidden className="pointer-events-none select-none">
-            <div className="mt-2 flex items-end justify-between gap-6 blur-[7px]">
-              <p className="font-body text-2xl font-bold text-foreground md:text-[28px]">
-                ●●●●●●●●
-              </p>
-              <div className="shrink-0 text-right leading-none">
-                <span className="block font-body text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  Cote
-                </span>
-                <span className="mt-1 block font-body text-5xl font-bold text-foreground md:text-6xl">
-                  ●,●●
-                </span>
-              </div>
-            </div>
-            {/* Placeholder neutre — l'argumentaire réel n'est jamais
-                envoyé au client tant que l'analyse n'est pas débloquée. */}
-            <p className="mt-6 font-body text-body-16 leading-relaxed text-foreground blur-[7px]">
-              ●●●●●●●●●● ●●●●●●●● ●●●●●●●●●●●● ●●●●●● ●●●●●●●●● ●●●● ●●●●●●●●●● ●●●●●●●.
-            </p>
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Lock className="size-7 text-foreground" aria-label="Contenu verrouillé" />
-          </div>
-        </div>
-      )}
-    </article>
-  );
-}
-
-/* ════════════════ BOOKMAKER COMPARATOR ════════════════ */
-
-function BookmakerComparator({ bookmakerOdds }: { bookmakerOdds: BookmakerOddsData[] }) {
-  return (
-    <div className="mt-6 border-t border-white/[0.08] pt-5">
-      <p className="font-body text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-        Où consulter cette analyse
-      </p>
-      {/* Liste éditoriale à filets (pas de boîte) : présente et soignée,
-          mais clairement secondaire vs le contenu de l'analyse. Aucun or
-          ici — l'accent reste réservé à la cote. */}
-      <div className="mt-1">
-        {bookmakerOdds.map((bo, i) => {
-          const affiliateLink = bo.bookmaker.affiliateLinks[0];
-          return (
-            <div
-              key={bo.id}
-              className={cn(
-                "flex items-center justify-between gap-3 py-2.5",
-                i > 0 && "border-t border-white/[0.05]",
-              )}
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                {/* Tuile sombre uniforme : les vrais logos ont des ratios
-                    différents (Winamax carré, PMU/Betclic en bandeau), la
-                    tuile + object-contain les cadre proprement. */}
-                {bo.bookmaker.logoUrl ? (
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-white/[0.05] p-1.5">
-                    <Image
-                      src={bo.bookmaker.logoUrl}
-                      alt={bo.bookmaker.name}
-                      width={32}
-                      height={32}
-                      className="size-full object-contain"
-                    />
-                  </span>
-                ) : (
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-surface-elevated font-body text-body-16 text-foreground">
-                    {bo.bookmaker.name.charAt(0)}
-                  </span>
-                )}
-                <span className="truncate font-body text-body-16 text-foreground">
-                  {bo.bookmaker.name}
-                </span>
-              </div>
-              <div className="flex shrink-0 items-center gap-4">
-                <span className="font-body text-body-16 tabular-nums text-muted-foreground">
-                  {bo.odds.toFixed(2).replace(".", ",")}
-                </span>
-                {affiliateLink && (
-                  <a
-                    href={affiliateLink.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="whitespace-nowrap rounded-md border border-white/15 px-3 py-1.5 font-body text-[13px] font-semibold text-foreground transition-colors hover:border-white/30 hover:bg-white/[0.06]"
-                  >
-                    {affiliateLink.label || "Accéder"}
-                  </a>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
   );
 }
