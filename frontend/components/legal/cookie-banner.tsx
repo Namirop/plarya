@@ -74,14 +74,17 @@ export function CookieBanner() {
       role="dialog"
       aria-labelledby="cookie-banner-title"
       aria-describedby="cookie-banner-desc"
-      className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-3xl rounded-2xl border border-surface-elevated bg-background p-5 md:p-6"
+      className="fixed bottom-5 left-4 right-4 z-50 mx-auto max-w-5xl rounded-2xl border border-surface-elevated bg-background px-6 py-5 md:px-8"
     >
-      <div className="flex flex-col gap-5 md:flex-row md:items-start md:gap-6">
+      {/* Bar large et basse : texte à gauche, actions à droite, le tout
+          vertical-centré (md:items-center) → respire et reste compact en
+          hauteur. Gap horizontal généreux (md:gap-10). */}
+      <div className="flex flex-col gap-5 md:flex-row md:items-center md:gap-10">
         <div className="flex-1">
           <h2 id="cookie-banner-title" className="font-body text-h5 font-bold text-foreground">
             Cookies
           </h2>
-          <p id="cookie-banner-desc" className="mt-2 font-body text-body-16 text-muted-foreground">
+          <p id="cookie-banner-desc" className="mt-1.5 font-body text-body-16 text-muted-foreground">
             Plarya utilise uniquement des cookies essentiels nécessaires au fonctionnement du site
             (authentification, session). Pas d&apos;analytics, pas de tracking tiers. En savoir plus
             dans notre{" "}
@@ -94,13 +97,15 @@ export function CookieBanner() {
             .
           </p>
         </div>
-        <div className="flex shrink-0 gap-3 md:flex-col md:gap-2">
+        {/* Actions côte à côte (row) sur tous les breakpoints → bar
+            courte. shrink-0 pour ne pas compresser les boutons. */}
+        <div className="flex shrink-0 gap-3">
           <Button
             type="button"
             variant="secondary"
             size="sm"
             onClick={handleRefuse}
-            className="flex-1 md:w-32"
+            className="flex-1 md:flex-none md:w-32"
           >
             Refuser
           </Button>
@@ -109,7 +114,7 @@ export function CookieBanner() {
             variant="primary"
             size="sm"
             onClick={handleAccept}
-            className="flex-1 md:w-32"
+            className="flex-1 md:flex-none md:w-32"
           >
             Accepter
           </Button>

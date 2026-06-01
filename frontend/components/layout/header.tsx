@@ -8,7 +8,6 @@ import Link from "next/link";
 import { List, X, CaretRight } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 
-import { GoldenBorderOverlay } from "@/components/ui/golden-border-overlay";
 import { cn } from "@/lib/utils";
 
 export type HeaderRole = "USER" | "EXPERT" | "ADMIN";
@@ -63,12 +62,17 @@ function navLinksForRole(role: HeaderRole): NavLink[] {
 
 const navItemClass = "font-body text-body-16 text-foreground transition-opacity hover:opacity-70";
 
-// Item à l'intérieur du pill bordé doré (desktop). Padding horizontal
-// confortable, fond transparent par défaut + léger fond blanc 5% au
-// hover pour signaler l'interactivité tout en restant subtil sous la
-// bordure dorée.
-const navPillItemCls =
-  "inline-flex items-center justify-center rounded-full px-6 py-2.5 font-body text-body-18 text-foreground transition-colors hover:bg-white/5 cursor-pointer";
+// Topbar desktop — style SOBRE (sans cadre pill doré, retiré car trop
+// présent). Lien de nav (connecté) : pilule transparente, fond blanc 5%
+// au hover pour l'affordance.
+const navLinkCls =
+  "inline-flex items-center justify-center rounded-full px-4 py-2 font-body text-body-16 text-foreground transition-colors hover:bg-white/5 cursor-pointer";
+// "Se connecter" (guest) : bouton ghost à bordure neutre discrète.
+const ghostBtnCls =
+  "inline-flex items-center justify-center rounded-full border border-white/15 px-5 py-2 font-body text-body-16 text-foreground transition-colors hover:bg-white/5 hover:border-white/25 cursor-pointer";
+// "Créer un compte" (guest) : bouton doré plein = action primaire.
+const goldBtnCls =
+  "inline-flex cursor-pointer items-center justify-center rounded-full border border-accent-strong bg-gradient-gold px-5 py-2 font-body text-body-16 text-black shadow-shine transition-all hover:brightness-105";
 
 export function Header({
   variant = "guest",
@@ -135,7 +139,7 @@ export function Header({
         // pour que le header s'aligne avec le panel dropdown (sinon
         // contraste laid : header transparent + panel dark).
         // Desktop (md+) : toujours bg-background/90 + backdrop-blur-md.
-        "relative h-[85px] w-full overflow-visible",
+        "relative h-[76px] w-full overflow-visible",
         "transition-colors duration-200 ease-out",
         "md:bg-background/90 md:backdrop-blur-md",
         scrolled || menuOpen ? "bg-background/90 backdrop-blur-md" : "bg-transparent",
@@ -172,32 +176,26 @@ export function Header({
         {variant === "loading" ? (
           <div className="hidden md:block" aria-hidden />
         ) : variant === "connected" ? (
-          <nav className="relative hidden items-center gap-1 rounded-full p-1.5 md:inline-flex">
-            <GoldenBorderOverlay variant="pill" className="rounded-full opacity-100" />
+          <nav className="hidden items-center gap-1 md:flex">
             {navLinks.map((l) => (
-              <Link key={l.href} href={l.href} className={navPillItemCls}>
+              <Link key={l.href} href={l.href} className={navLinkCls}>
                 {l.label}
               </Link>
             ))}
             <button
               type="button"
               onClick={onLogout}
-              className={cn(navPillItemCls, "text-muted-foreground hover:text-foreground")}
+              className={cn(navLinkCls, "text-muted-foreground hover:text-foreground")}
             >
               Déconnexion
             </button>
           </nav>
         ) : (
-          <div className="relative hidden items-center gap-1 rounded-full p-1.5 md:inline-flex">
-            <GoldenBorderOverlay variant="pill" className="rounded-full opacity-100" />
-            <button type="button" onClick={onSignIn} className={navPillItemCls}>
+          <div className="hidden items-center gap-2.5 md:flex">
+            <button type="button" onClick={onSignIn} className={ghostBtnCls}>
               Se connecter
             </button>
-            <button
-              type="button"
-              onClick={onSignUp}
-              className="inline-flex cursor-pointer items-center justify-center rounded-full border border-accent-strong bg-gradient-gold px-6 py-2.5 font-body text-body-18 text-black shadow-shine transition-all hover:brightness-105"
-            >
+            <button type="button" onClick={onSignUp} className={goldBtnCls}>
               Créer un compte
             </button>
           </div>

@@ -1,53 +1,46 @@
 import { cn } from "@/lib/utils";
 
-// Bordure 1px en dégradé sur 2 zones dorées :
+// Liseré doré ESTOMPÉ mais NET — "coins lumineux qui se fondent dans le
+// fond" (vif en haut-gauche + bas-droite, dissous ailleurs).
 //
-// - variant "corners" (défaut, cards rectangulaires) : conic-gradient
-//   from 30deg → pics dorés en haut-gauche + bas-droite, zones sombres
-//   transparentes pour se fondre dans le fond. Utilisé par le Hero +
-//   "Devenir créateur".
+// Deux ingrédients combinés :
+//  1. La LARGEUR du trait = une vraie bordure CSS (1px). Le navigateur la
+//     cale sur la grille de pixels → nette et continue à tous les zooms.
+//  2. L'ESTOMPAGE = un masque conic appliqué par-dessus, qui ne fait que
+//     moduler l'OPACITÉ du trait LE LONG de son périmètre (transition
+//     douce, grande échelle).
 //
-// - variant "pill" (boutons capsule, topbar) : linear-gradient
-//   horizontal → pics dorés sur les 2 extrémités (gauche/droite),
-//   transparent au centre. Le conic-gradient produit des artefacts
-//   sur une forme arrondie type pill (la transition angulaire ne
-//   s'aligne pas avec les bords).
+// C'est la clé vs l'ancienne version : avant, le masque créait l'anneau
+// 1px LUI-MÊME (mask-composite xor) → ses bords EN TRAVERS de la largeur
+// tombaient sur des sous-pixels → anti-aliasing inégal, trait pâle /
+// discontinu à 100 %. Ici le masque varie seulement LE LONG du trait
+// (pas en travers de sa largeur), donc aucun AA de largeur : les zones
+// vives restent nettes, et le reste se dissout en douceur.
 //
-// Technique : overlay absolu avec padding 1 px + mask-composite pour
-// ne garder que le contour. L'intérieur reste transparent (on voit le
-// contenu sous-jacent au travers).
+// Parent `relative` ; matcher le radius via `className` (rounded-*).
 //
-// À placer dans un parent `relative` qui définit la zone à border. Pour
-// matcher le radius du parent, passer la même classe `rounded-*` via
-// `className`.
+// Le conic est calé pour des cards "paysage" (hero, "Devenir créateur") :
+// pics dorés ~haut-gauche (33 %) et ~bas-droite (75 %), transparent
+// ailleurs — identique au rendu d'origine.
+const FADE_MASK =
+  "conic-gradient(from 30deg, transparent 8%, #000 33%, transparent 47%, transparent 63%, #000 75%, transparent 100%)";
+
 export interface GoldenBorderOverlayProps {
   /** Classes additionnelles — typiquement `rounded-*` pour matcher le parent. */
   className?: string;
-  /** Forme du parent — pilote le gradient utilisé pour les pics dorés. */
-  variant?: "corners" | "pill";
 }
 
-const BACKGROUND_BY_VARIANT: Record<NonNullable<GoldenBorderOverlayProps["variant"]>, string> = {
-  corners:
-    "conic-gradient(from 30deg, transparent 8%, #DFB968 33%, transparent 47%, transparent 63%, #DFB968 75%, transparent 100%)",
-  pill: "linear-gradient(90deg, #DFB968 0%, rgba(223,185,104,0.15) 35%, rgba(223,185,104,0.15) 65%, #DFB968 100%)",
-};
-
-export function GoldenBorderOverlay({
-  className,
-  variant = "corners",
-}: GoldenBorderOverlayProps) {
+export function GoldenBorderOverlay({ className }: GoldenBorderOverlayProps) {
   return (
     <span
       aria-hidden
-      className={cn("pointer-events-none absolute inset-0 rounded-2xl opacity-70", className)}
+      className={cn(
+        "pointer-events-none absolute inset-0 rounded-2xl border border-accent/80",
+        className,
+      )}
       style={{
-        padding: "1px",
-        background: BACKGROUND_BY_VARIANT[variant],
-        WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
-        WebkitMaskComposite: "xor",
-        mask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
-        maskComposite: "exclude",
+        WebkitMaskImage: FADE_MASK,
+        maskImage: FADE_MASK,
       }}
     />
   );

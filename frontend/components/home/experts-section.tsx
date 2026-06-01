@@ -38,9 +38,9 @@ const AVATAR_FALLBACK = "/profile.jpg";
 const CARD_WIDTH = 322;
 const CARD_GAP = 16;
 const CARD_STEP = CARD_WIDTH + CARD_GAP;
-// Cards visibles dans une "page" du carrousel. À 1175 px de container,
-// 3 cards entières tiennent (3*322 + 2*16 = 998). On scroll donc par
-// pages de 3 cards (= avance de 3 * CARD_STEP).
+// Cards visibles dans une "page" du carrousel desktop. À 1175 px de
+// container, 3 cards entières tiennent (3*322 + 2*16 = 998). On scroll
+// donc par pages de 3 cards (= avance de 3 * CARD_STEP).
 const CARDS_PER_PAGE = 3;
 
 export interface ExpertsSectionProps {
@@ -55,14 +55,18 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
   const [activePage, setActivePage] = useState(0);
   const [isAtEnd, setIsAtEnd] = useState(false);
 
+  // Carrousel mobile (swipe 1 card/vue, peek de la suivante) — ref +
+  // index actif distincts du carrousel desktop.
+  const mobileScrollerRef = useRef<HTMLDivElement>(null);
+  const [mobileIndex, setMobileIndex] = useState(0);
+
   // ── Fetch experts depuis l'API. /experts renvoie déjà la liste
   // triée par displayOrder ASC, createdAt DESC (limite 6 par défaut).
-  // Les `id` réels permettent au Link de la card de naviguer vers la
-  // page profil (`/experts/[id]`) sans 404 — c'était l'objet du fix
-  // qui remplace les anciens mocks codés en dur (id "1" → "6"). En cas
-  // d'erreur réseau, on garde la liste vide (la section ne s'affiche
-  // pas en dessous des dots).
+  // `loaded` distingue "en cours de fetch" (on n'affiche pas encore
+  // l'état vide, pour éviter un flash) de "fetch terminé, 0 expert"
+  // (on affiche alors le message d'état vide).
   const [experts, setExperts] = useState<(ExpertCardProps & { id: string })[]>([]);
+  const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     apiGet<ExpertListItem[]>("/experts")
       .then((data) => {
@@ -84,7 +88,8 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
         }));
         setExperts(mapped);
       })
-      .catch(() => setExperts([]));
+      .catch(() => setExperts([]))
+      .finally(() => setLoaded(true));
   }, []);
 
   // Reproduction V1 (bae3a79 page.tsx) : filtre les experts par sports
@@ -97,6 +102,9 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
     const domainSports = filterDomain === "SPORT" ? SPORT_DOMAIN : ESPORT_DOMAIN;
     return experts.filter((e) => e.categories.some((s) => domainSports.includes(s)));
   }, [experts, filterDomain]);
+
+  const hasExperts = filteredExperts.length > 0;
+  const isEmpty = loaded && !hasExperts;
 
   // Nombre de "pages" = ceil(total / per_page). Minimum 1 pour éviter
   // un render à 0 dots quand la liste est encore vide (fetch initial).
@@ -121,15 +129,12 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
   // clientWidth = très négatif au mount initial → flèche désactivée).
   // useLayoutEffect : on mesure le DOM (scrollWidth / clientWidth) puis
   // on set le state avant le paint → évite le flash "flèche disabled"
-  // pendant 1 frame. Le pattern setState-in-layout-effect est
-  // explicitement recommandé par React pour les mesures DOM (cf.
-  // https://react.dev/reference/react/useLayoutEffect#measuring-layout-
-  // before-the-browser-repaints-the-screen) ; la règle ESLint est trop
-  // conservatrice ici.
+  // pendant 1 frame.
   useLayoutEffect(() => {
+    if (!hasExperts) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     updateState();
-  }, [updateState, filteredExperts]);
+  }, [updateState, filteredExperts, hasExperts]);
 
   const scrollToPage = useCallback((page: number) => {
     const el = scrollerRef.current;
@@ -145,130 +150,200 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
     scrollToPage(activePage + 1);
   }, [activePage, isAtEnd, scrollToPage]);
 
-  // 2 premières cards en mobile : stack vertical conformément à la spec
-  // mobile (vs carrousel de 6 en desktop). Le slice s'applique sur la
-  // liste filtrée pour que le filtre domaine ait un effet visible en
-  // mobile aussi.
-  const MOBILE_EXPERTS = filteredExperts.slice(0, 2);
+  // ── Carrousel mobile : step = largeur d'une card (mesurée) + gap.
+  const mobileStep = useCallback(() => {
+    const el = mobileScrollerRef.current;
+    const first = el?.firstElementChild as HTMLElement | null;
+    return first ? first.offsetWidth + CARD_GAP : el?.clientWidth || 1;
+  }, []);
+
+  const updateMobileState = useCallback(() => {
+    const el = mobileScrollerRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / mobileStep());
+    setMobileIndex(Math.max(0, Math.min(idx, filteredExperts.length - 1)));
+  }, [mobileStep, filteredExperts.length]);
+
+  const scrollMobileTo = useCallback(
+    (i: number) => {
+      const el = mobileScrollerRef.current;
+      if (!el) return;
+      el.scrollTo({ left: i * mobileStep(), behavior: "smooth" });
+    },
+    [mobileStep],
+  );
 
   return (
     // pt-24 = 96 px (gap depuis Domaines, = section-y-lg du Figma).
     <section id="experts" className="pt-16 md:pt-24">
       <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
         {/* CTA top-right masqué en mobile : remplacé par le bouton plein
-            largeur sous les cards (spec mobile §5). */}
+            largeur sous le carrousel (spec mobile §5). Masqué aussi quand
+            la section est vide (le CTA vit alors dans l'état vide). */}
         <MarketingSectionTitle
           title="Nos experts du jour"
           cta={{ text: "Voir tous les experts", href: "/experts" }}
-          ctaClassName="hidden md:inline-flex"
+          ctaClassName={cn("hidden md:inline-flex", isEmpty && "md:hidden")}
         />
 
-        {/* ──────── Mobile : stack vertical de 2 cards + bouton ──────── */}
-        <div className="md:hidden mt-6 flex flex-col items-center gap-4">
-          {MOBILE_EXPERTS.map((expert) => (
-            <ExpertCard
-              key={expert.id}
-              id={expert.id}
-              avatar={expert.avatar}
-              pseudo={expert.pseudo}
-              viewsCount={expert.viewsCount}
-              categories={expert.categories}
-              analyses={expert.analyses}
-              locked={expert.locked}
-            />
-          ))}
-
-          {/* Bouton "Voir tous les experts" — outline blanc, plein
-              largeur de la card (353 px ≈ 360-7), conforme à la spec
-              mobile §5 (bouton 353×51 px=72 py=16). */}
-          <Button
-            variant="secondary"
-            size="lg"
-            render={<Link href="/experts" />}
-            className="w-full max-w-[353px] border-white hover:border-white"
-          >
-            Voir tous les experts
-          </Button>
-        </div>
-
-        {/* ──────── Desktop : carrousel original ──────── */}
-        {/* Bloc carrousel — relative pour positionner le Next Btn en
-            overlay top-right. mt-10 = 40 px (gap header → carrousel,
-            rapproché du SectionTitle vs 64 px précédent). */}
-        <div className="hidden md:block relative mt-10">
-          <div
-            ref={scrollerRef}
-            onScroll={updateState}
-            className={cn(
-              "flex gap-4 overflow-x-auto pb-2",
-              // Scroll-snap par card pour un alignement propre quand on
-              // scroll manuellement (drag / wheel / clavier).
-              "snap-x snap-mandatory scroll-smooth",
-              // Cache la scrollbar visuelle, l'interaction reste OK.
-              "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
-            )}
-          >
-            {filteredExperts.map((expert) => (
-              <div key={expert.id} className="shrink-0 snap-start" style={{ width: CARD_WIDTH }}>
-                <ExpertCard
-                  id={expert.id}
-                  avatar={expert.avatar}
-                  pseudo={expert.pseudo}
-                  viewsCount={expert.viewsCount}
-                  categories={expert.categories}
-                  analyses={expert.analyses}
-                  locked={expert.locked}
-                />
-              </div>
-            ))}
+        {isEmpty ? (
+          // ──────── État vide : message + CTA, pas de carrousel/dots ────────
+          <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-surface-elevated bg-black/40 px-6 py-14 text-center">
+            <p className="font-body text-body-18 font-bold text-foreground">
+              Pas encore d&apos;analyse pour aujourd&apos;hui
+            </p>
+            <p className="mt-2 max-w-md font-body text-body-16 text-muted-foreground">
+              Nos experts publient leurs sélections au fil de la journée. Reviens un peu plus tard,
+              ou explore leurs profils.
+            </p>
+            <Button
+              variant="secondary"
+              size="lg"
+              render={<Link href="/experts" />}
+              className="mt-7 border-white hover:border-white"
+            >
+              Voir tous les experts
+            </Button>
           </div>
+        ) : hasExperts ? (
+          <>
+            {/* ──────── Mobile : carrousel swipe ──────── */}
+            <div className="md:hidden mt-6">
+              <div
+                ref={mobileScrollerRef}
+                onScroll={updateMobileState}
+                className={cn(
+                  "flex gap-4 overflow-x-auto pb-1",
+                  "snap-x snap-mandatory scroll-smooth",
+                  "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+                )}
+              >
+                {filteredExperts.map((expert) => (
+                  // w-[86%] : peek de la card suivante → signale le swipe.
+                  // max-w-[322px] : ne dépasse pas la largeur DS de la card.
+                  <div
+                    key={expert.id}
+                    className="shrink-0 snap-start w-[86%] max-w-[322px]"
+                  >
+                    <ExpertCard
+                      id={expert.id}
+                      avatar={expert.avatar}
+                      pseudo={expert.pseudo}
+                      viewsCount={expert.viewsCount}
+                      categories={expert.categories}
+                      analyses={expert.analyses}
+                      locked={expert.locked}
+                    />
+                  </div>
+                ))}
+              </div>
 
-          {/* Next button — overlay top-right, vertical-centré sur les
-              cards (~211 px = 422/2). Positionné légèrement à
-              l'extérieur du conteneur (right -22 px) pour matcher le
-              chevauchement subtil de la maquette sur la 4ᵉ card. */}
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={isAtEnd}
-            aria-label="Voir les experts suivants"
-            className={cn(
-              "absolute top-[188px] right-[-22px] flex size-[45px] items-center justify-center rounded-full",
-              // bg-background (#000 solide) pour que le bouton "tienne"
-              // visuellement au-dessus du fond #131212 — vs
-              // bg-surface-elevated qui se confondait avec le bg de la
-              // page et donnait une impression de transparence.
-              // Bouton "next" carrousel — neutre (anciennement border
-              // dorée + glow doré hover, retiré en ménage doré 3B :
-              // bouton de navigation utilitaire, pas un CTA).
-              "border border-surface-elevated bg-background text-foreground",
-              "transition-all duration-200 ease-out cursor-pointer",
-              "hover:bg-white/[0.04] hover:border-foreground/30",
-              "disabled:cursor-not-allowed disabled:opacity-50 disabled:pointer-events-none disabled:hover:shadow-none",
-            )}
-          >
-            <ArrowRight className="size-5" strokeWidth={1.5} />
-          </button>
-        </div>
-
-        {/* Dots — centrés horizontalement, 35 px sous les cards (cf.
-            experts-section-spec.md §5). pb-2 du scroller donne déjà 8 px,
-            donc mt-[27px] = 35 px effectifs depuis le bas des cards.
-            Desktop-only : alignés avec le carrousel ci-dessus. */}
-        <div className="hidden md:flex mt-[27px] justify-center gap-2">
-          {Array.from({ length: totalPages }).map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => scrollToPage(i)}
-              aria-label={`Aller à la page ${i + 1}`}
-              className={cn(
-                "size-[10px] rounded-full transition-all duration-200 cursor-pointer",
-                i === activePage ? "bg-foreground" : "bg-muted-foreground opacity-40 hover:opacity-70",
+              {/* Dots mobile — un par expert. */}
+              {filteredExperts.length > 1 && (
+                <div className="mt-5 flex justify-center gap-2">
+                  {filteredExperts.map((expert, i) => (
+                    <button
+                      key={expert.id}
+                      type="button"
+                      onClick={() => scrollMobileTo(i)}
+                      aria-label={`Aller à l'expert ${i + 1}`}
+                      className={cn(
+                        "size-[10px] rounded-full transition-all duration-200 cursor-pointer",
+                        i === mobileIndex
+                          ? "bg-foreground"
+                          : "bg-muted-foreground opacity-40 hover:opacity-70",
+                      )}
+                    />
+                  ))}
+                </div>
               )}
-            />
-          ))}
-        </div>
+
+              {/* CTA plein largeur vers la page experts complète. */}
+              <div className="mt-7 flex justify-center">
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  render={<Link href="/experts" />}
+                  className="w-full max-w-[353px] border-white hover:border-white"
+                >
+                  Voir tous les experts
+                </Button>
+              </div>
+            </div>
+
+            {/* ──────── Desktop : carrousel ──────── */}
+            <div className="hidden md:block relative mt-10">
+              <div
+                ref={scrollerRef}
+                onScroll={updateState}
+                className={cn(
+                  "flex gap-4 overflow-x-auto pb-2",
+                  "snap-x snap-mandatory scroll-smooth",
+                  "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+                )}
+              >
+                {filteredExperts.map((expert) => (
+                  <div key={expert.id} className="shrink-0 snap-start" style={{ width: CARD_WIDTH }}>
+                    <ExpertCard
+                      id={expert.id}
+                      avatar={expert.avatar}
+                      pseudo={expert.pseudo}
+                      viewsCount={expert.viewsCount}
+                      categories={expert.categories}
+                      analyses={expert.analyses}
+                      locked={expert.locked}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Next button — overlay top-right, vertical-centré sur les
+                  cards. Masqué quand tout tient déjà (1 page). */}
+              {totalPages > 1 && (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={isAtEnd}
+                  aria-label="Voir les experts suivants"
+                  className={cn(
+                    "absolute top-[188px] right-[-22px] flex size-[45px] items-center justify-center rounded-full",
+                    "border border-surface-elevated bg-background text-foreground",
+                    "transition-all duration-200 ease-out cursor-pointer",
+                    "hover:bg-white/[0.04] hover:border-foreground/30",
+                    "disabled:cursor-not-allowed disabled:opacity-50 disabled:pointer-events-none disabled:hover:shadow-none",
+                  )}
+                >
+                  <ArrowRight className="size-5" strokeWidth={1.5} />
+                </button>
+              )}
+
+              {/* Dots — centrés, 35 px sous les cards. Affichés s'il y a
+                  plus d'une page. */}
+              {totalPages > 1 && (
+                <div className="flex mt-[27px] justify-center gap-2">
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => scrollToPage(i)}
+                      aria-label={`Aller à la page ${i + 1}`}
+                      className={cn(
+                        "size-[10px] rounded-full transition-all duration-200 cursor-pointer",
+                        i === activePage
+                          ? "bg-foreground"
+                          : "bg-muted-foreground opacity-40 hover:opacity-70",
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          // Pendant le fetch initial : placeholder pour limiter le layout
+          // shift (pas de message "vide" tant que loaded === false).
+          <div className="min-h-[260px]" aria-hidden />
+        )}
       </div>
     </section>
   );
