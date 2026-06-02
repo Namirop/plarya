@@ -2,11 +2,13 @@ import { Router, type Response } from "express";
 import rateLimit from "express-rate-limit";
 
 import { clearCookieOptions, sessionCookieOptions } from "../lib/cookies";
+import { isDemoLoginEnabled, isDemoRole, isValidDemoKey } from "../lib/demo-login";
 import { handleError } from "../lib/http-errors";
 import { logger } from "../lib/logger";
 import { authMiddleware, type AuthenticatedRequest } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import {
+  createDemoLoginSession,
   logoutSession,
   requestMagicLink,
   resendAccessUnlocked,
@@ -59,6 +61,14 @@ const exportLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000,
   max: 1,
   message: { error: "Un seul export par 24h. Réessaie demain." },
+});
+
+// /demo-login : hygiène anti-bruteforce du secret. Déjà gated par flag +
+// secret, ce limiteur est une ceinture supplémentaire (20/min/IP).
+const demoLoginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: "Trop de tentatives, réessayez dans une minute" },
 });
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -151,6 +161,47 @@ router.get("/verify", async (req, res) => {
     // depuis un email, on doit l'envoyer quelque part de visible.
     logger.error({ err }, "Magic link verify error");
     res.redirect(`${FRONTEND_URL}/auth/verify?error=invalid`);
+  }
+});
+
+// GET /auth/demo-login?role=expert|user&key=<secret>
+//
+// ⚠️ Connexion démo 1-clic — phase démo client UNIQUEMENT (cf.
+// lib/demo-login.ts). Réservée aux espaces EXPERT et USER ; ne donne
+// JAMAIS l'ADMIN (compte sérieux → magic-link sur contact@plarya.com).
+// À couper avant le launch : ENABLE_DEMO_LOGIN=false sur Railway.
+router.get("/demo-login", demoLoginLimiter, async (req, res) => {
+  try {
+    // Désactivé ou clé invalide → 404 nu : on ne révèle pas l'existence
+    // de la route (elle n'apparaît dans aucune UI).
+    if (!isDemoLoginEnabled() || !isValidDemoKey(req.query.key as string | undefined)) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+
+    const role = req.query.role;
+    if (!isDemoRole(role)) {
+      res.status(400).json({ error: "Paramètre 'role' attendu : 'expert' ou 'user'." });
+      return;
+    }
+
+    const outcome = await createDemoLoginSession(role);
+    if (outcome.status === "account_missing") {
+      res.status(503).json({
+        error: "Compte démo introuvable — lance le seed (npm run db:seed) puis réessaie.",
+      });
+      return;
+    }
+    if (outcome.status === "refused") {
+      res.status(403).json({ error: "Connexion démo refusée pour ce compte." });
+      return;
+    }
+
+    setSessionCookie(res, outcome.sessionToken);
+    logger.info({ role }, "Demo login session created");
+    res.redirect(`${FRONTEND_URL}${outcome.redirectPath}`);
+  } catch (err) {
+    handleError(err, res, "GET /auth/demo-login");
   }
 });
 

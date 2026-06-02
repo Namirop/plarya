@@ -14,6 +14,7 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:reset": "tsx prisma/seed.ts --reset",
+    "db:set-admin": "tsx scripts/set-admin.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

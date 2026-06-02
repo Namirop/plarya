@@ -1,3 +1,4 @@
+import type { DemoRole } from "../lib/demo-login";
 import { sendAccessUnlockedEmail, sendMagicLinkEmail } from "../lib/emails";
 import { logger, maskEmail } from "../lib/logger";
 import { createMagicLink, createSession, deleteSession, verifyMagicLink } from "../lib/magic-link";
@@ -166,4 +167,56 @@ export async function resendAccessUnlocked(stripeSessionId: string): Promise<voi
     { stripeSessionId, subscriptionId: subscription.id },
     "Access unlocked email re-sent",
   );
+}
+
+// ── Connexion démo (phase démo client) ──────────────────────────────
+//
+// Cf. lib/demo-login.ts pour le gating (flag + secret). Ce service ne
+// fait que résoudre le compte démo et poser une session — il NE vérifie
+// PAS le flag/secret (responsabilité de la route HTTP). Mapping figé
+// vers les comptes seedés ; aucun ADMIN possible (garde-fou explicite).
+
+const DEMO_ROLE_EMAILS: Record<DemoRole, string> = {
+  expert: "expert@test.com",
+  user: "user@test.com",
+};
+
+const DEMO_ROLE_REDIRECT: Record<DemoRole, string> = {
+  expert: "/dashboard",
+  user: "/mon-compte",
+};
+
+export type DemoLoginOutcome =
+  | { status: "ok"; sessionToken: string; redirectPath: string }
+  | { status: "account_missing" }
+  | { status: "refused" };
+
+/**
+ * Crée une session pour un compte démo (expert ou user), sans email ni
+ * mot de passe — UNIQUEMENT pour montrer ces espaces au client.
+ *
+ *  - `account_missing` : le compte seedé n'existe pas (ou est supprimé)
+ *    → le seed n'a pas tourné sur cet environnement.
+ *  - `refused` : garde-fou — la connexion démo ne doit JAMAIS ouvrir un
+ *    compte ADMIN, même si le mapping email était modifié par erreur.
+ *    L'admin réel passe exclusivement par le magic-link.
+ */
+export async function createDemoLoginSession(role: DemoRole): Promise<DemoLoginOutcome> {
+  const email = DEMO_ROLE_EMAILS[role];
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, role: true, deletedAt: true },
+  });
+
+  if (!user || user.deletedAt) {
+    return { status: "account_missing" };
+  }
+  if (user.role === "ADMIN") {
+    logger.warn({ role, email: maskEmail(email) }, "Demo login refused: target is ADMIN");
+    return { status: "refused" };
+  }
+
+  const sessionToken = await createSession(user.id);
+  return { status: "ok", sessionToken, redirectPath: DEMO_ROLE_REDIRECT[role] };
 }
