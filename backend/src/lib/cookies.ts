@@ -28,7 +28,8 @@ import type { CookieOptions } from "express";
  * ça, le cookie reste host-only sur `api.plarya.com`, invisible côté
  * `plarya.com` → /auth/me 401 → redirect accueil.
  *
- * Voir docs/deploiement.md §Cookies pour le choix selon l'hébergement.
+ * Variables : `COOKIE_SAMESITE` (lax | none | strict) et `COOKIE_DOMAIN`
+ * (cf. .env.example pour le détail du choix selon la topologie).
  */
 
 const IS_PROD = process.env.NODE_ENV === "production";
