@@ -133,19 +133,22 @@ export function DomainsSection({ activeDomain = null, onDomainSelect }: DomainsS
               transition={{ ...RISE_IN_TRANSITION, delay: i * 0.1 }}
               className="shrink-0 snap-center"
             >
-              {/* Focus mobile : voisines en fondu (opacity SEULE, pas de
-                  scale → pas de re-rastérisation de l'image masquée donc
-                  scroll fluide, pas d'effet "pop"/recentrage au snap, et
-                  le peek des voisines reste pleine taille comme un
-                  carrousel classique). Élément interne distinct du
-                  motion.div pour ne pas entrer en conflit avec le
-                  transform/opacity inline de l'anim d'entrée. Desktop
-                  (xl) : grille 3-en-ligne, tout à pleine opacité. */}
+              {/* Focus mobile : voisines réduites (scale) + atténuées —
+                  le scale recrée l'espacement et la "petite carte de côté"
+                  voulus. Clé anti-freeze : on promeut l'élément sur sa
+                  propre couche GPU (transform-gpu + will-change-transform)
+                  pour que scaler l'image masquée des DomainCard se fasse
+                  par transformation de texture (GPU) au lieu de re-
+                  rastériser le masque à chaque frame (cause du freeze au
+                  scroll). Élément interne distinct du motion.div pour ne
+                  pas entrer en conflit avec le transform/opacity inline de
+                  l'anim d'entrée. Desktop (xl) : grille 3-en-ligne, tout à
+                  pleine taille/opacité. */}
               <div
                 className={cn(
-                  "transition-opacity duration-300 ease-out",
-                  i !== activeIndex && "opacity-50",
-                  "xl:opacity-100",
+                  "origin-center transform-gpu transition-[transform,opacity] duration-300 ease-out will-change-transform",
+                  i !== activeIndex && "scale-[0.82] opacity-50",
+                  "xl:scale-100 xl:opacity-100",
                 )}
               >
                 <DomainCard
