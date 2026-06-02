@@ -21,14 +21,14 @@ const buttonVariants = cva(
         // CTA principal : "Découvrir les experts", "Devenir créateur",
         // "Publier l'analyse", etc. Gradient doré + bordure Golden
         // Stroke + glow doré.
-        // - rounded-[3px] : forme rectangulaire (override le rounded-2xl
-        //   du base) — pattern carré demandé par Romain pour ancrer
-        //   l'autorité du CTA gold sans round-corners "soft".
+        // - rounded-lg : léger arrondi (8px, override le rounded-2xl du
+        //   base) — adoucit l'ancien carré (rounded-[3px]) tout en gardant
+        //   l'autorité du CTA gold (pas de pill soft).
         // - shadow-shine-soft : glow doré atténué (7px blur 100 % accent)
         //   vs shadow-shine (15px 70 % orange saturé) — moins criard mais
         //   le doré reste perceptible.
         primary:
-          "rounded-[3px] bg-gradient-gold text-black border border-accent-strong shadow-shine-soft hover:brightness-105",
+          "rounded-lg bg-gradient-gold text-black border border-accent-strong shadow-shine-soft hover:brightness-105",
 
         // CTA secondaire : transparent avec bordure NEUTRE
         // (anciennement bordure dorée — retirée car utilisée partout,
