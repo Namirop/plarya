@@ -51,22 +51,42 @@ function getCsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+// Cache mémoire du token CSRF — indispensable en topologie CROSS-DOMAIN
+// (front et back sur des domaines différents, ex `plarya.com` +
+// `*.up.railway.app`). Dans ce cas, `document.cookie` côté front NE PEUT
+// PAS lire le cookie `csrf_token` posé sur le domaine du backend (les
+// cookies sont cloisonnés par domaine). On récupère donc le token depuis
+// le BODY de /auth/csrf (le backend le renvoie) et on le garde ici. Le
+// cookie, lui, reste envoyé automatiquement par le navigateur vers le
+// backend (SameSite=None requis en cross-site), donc le double-submit
+// (header X-CSRF-Token == cookie) tient toujours côté serveur.
+// En same-origin / same-site (dev local, ou plus tard `api.plarya.com`),
+// le cookie reste lisible → on privilégie ce chemin.
+let csrfTokenCache: string | null = null;
+
 /**
  * Garantit qu'on a un csrf_token disponible avant une requête mutante.
- * Si absent (1re visite avant tout GET), on fait un fetch préalable à
- * /auth/csrf pour forcer le serveur à poser le cookie.
+ * Ordre : cookie lisible (same-site) → cache mémoire → fetch /auth/csrf
+ * (lit le cookie si same-site, sinon le token renvoyé dans le body).
  */
 async function ensureCsrfToken(): Promise<string | null> {
-  let token = getCsrfToken();
-  if (token) return token;
+  const cookieToken = getCsrfToken();
+  if (cookieToken) return cookieToken;
+  if (csrfTokenCache) return csrfTokenCache;
   try {
-    await fetch(`${API_URL}/auth/csrf`, { credentials: "include" });
-    token = getCsrfToken();
+    const res = await fetch(`${API_URL}/auth/csrf`, { credentials: "include" });
+    // Same-site : le cookie est désormais lisible, on le préfère.
+    const fromCookie = getCsrfToken();
+    if (fromCookie) return fromCookie;
+    // Cross-domain : on lit le token dans le body et on le mémorise.
+    const body = (await res.json().catch(() => null)) as { token?: string | null } | null;
+    csrfTokenCache = body?.token ?? null;
+    return csrfTokenCache;
   } catch {
     /* offline ou backend down — on laisse passer, le call principal
        gérera l'erreur réseau de son côté */
+    return null;
   }
-  return token;
 }
 
 export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
