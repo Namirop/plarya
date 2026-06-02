@@ -163,7 +163,7 @@ export function Header({
             alt="Plarya"
             width={240}
             height={180}
-            className="h-[150px] md:h-[180px] w-auto translate-y-[6px] md:translate-y-[10px]"
+            className="h-[150px] md:h-[180px] w-auto translate-x-[10px] translate-y-[11px] md:translate-x-0 md:translate-y-[10px]"
             priority
           />
         </Link>

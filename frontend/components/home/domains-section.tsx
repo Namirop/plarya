@@ -8,14 +8,21 @@ import { DomainCard } from "@/components/domains/domain-card";
 import { MarketingSectionTitle } from "@/components/ui/section-title";
 import { cn } from "@/lib/utils";
 
-// Variants pop-in (= v1 .scroll-pop) : scale 0.6 → 1 + opacity 0 → 1
-// avec un ease bouncy (back-out). Appliqué à chaque DomainCard avec un
-// stagger de 0.15s pour reproduire le rythme v1 (0.2 / 0.35 / 0.5s).
-const POP_IN_VARIANTS: Variants = {
-  hidden: { opacity: 0, scale: 0.6 },
-  visible: { opacity: 1, scale: 1 },
+// Reveal d'entrée : fondu + légère montée (PAS de scale). Le scale
+// d'entrée (ancien pop-in bouncy) posait deux problèmes en prod :
+//  1. animer le scale d'une DomainCard re-rasterise son image masquée
+//     (mask-image) à chaque frame → freeze au scroll (pire à mesure
+//     que les cards s'accumulent) ;
+//  2. le scale décalait horizontalement les voisines pendant l'anim →
+//     le "peek" de la 2e card disparaissait au tout premier affichage.
+// Une montée verticale ne touche pas la position horizontale → le peek
+// reste correct dès le départ, et l'opacity/translateY sont composités
+// (pas de repaint coûteux).
+const RISE_IN_VARIANTS: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0 },
 };
-const POP_IN_TRANSITION = { duration: 0.6, ease: [0.34, 1.56, 0.64, 1] as const };
+const RISE_IN_TRANSITION = { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const };
 
 // Domaines disponibles pour le filtre in-page (cf. V1 logic retrouvée
 // dans bae3a79 : `activeDomain` state, scroll vers #experts, useMemo
@@ -122,27 +129,36 @@ export function DomainsSection({ activeDomain = null, onDomainSelect }: DomainsS
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, margin: "-80px" }}
-              variants={POP_IN_VARIANTS}
-              transition={{ ...POP_IN_TRANSITION, delay: i * 0.15 }}
-              className={cn(
-                "shrink-0 snap-center",
-                "transition-all duration-300 ease-out origin-center",
-                // Cards non-actives : réduites + désaturées en mobile,
-                // taille pleine en desktop (3 visibles en parallèle).
-                i !== activeIndex && "opacity-50 scale-[0.82]",
-                "xl:opacity-100 xl:scale-100",
-              )}
+              variants={RISE_IN_VARIANTS}
+              transition={{ ...RISE_IN_TRANSITION, delay: i * 0.1 }}
+              className="shrink-0 snap-center"
             >
-              <DomainCard
-                image={d.image}
-                title={d.title}
-                subtitle={d.subtitle}
-                state={d.state}
-                onClick={
-                  d.id && onDomainSelect ? () => onDomainSelect(d.id as DomainId) : undefined
-                }
-                isSelected={d.id !== null && d.id === activeDomain}
-              />
+              {/* Focus mobile : voisines en fondu (opacity SEULE, pas de
+                  scale → pas de re-rastérisation de l'image masquée donc
+                  scroll fluide, pas d'effet "pop"/recentrage au snap, et
+                  le peek des voisines reste pleine taille comme un
+                  carrousel classique). Élément interne distinct du
+                  motion.div pour ne pas entrer en conflit avec le
+                  transform/opacity inline de l'anim d'entrée. Desktop
+                  (xl) : grille 3-en-ligne, tout à pleine opacité. */}
+              <div
+                className={cn(
+                  "transition-opacity duration-300 ease-out",
+                  i !== activeIndex && "opacity-50",
+                  "xl:opacity-100",
+                )}
+              >
+                <DomainCard
+                  image={d.image}
+                  title={d.title}
+                  subtitle={d.subtitle}
+                  state={d.state}
+                  onClick={
+                    d.id && onDomainSelect ? () => onDomainSelect(d.id as DomainId) : undefined
+                  }
+                  isSelected={d.id !== null && d.id === activeDomain}
+                />
+              </div>
             </motion.div>
           ))}
         </div>
