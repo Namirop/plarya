@@ -242,16 +242,16 @@ function PickCote({
 }) {
   if (stacked) {
     return (
-      <div className="flex flex-col gap-7">
+      <div className="flex flex-col gap-11">
         <div>
           <MiniLabel>Le pick</MiniLabel>
           {hasAccess ? (
-            <p className="mt-2 font-display text-3xl font-normal leading-[1.1] text-foreground">
+            <p className="mt-2.5 font-display text-4xl font-normal leading-[1.1] text-foreground">
               {pick || "—"}
             </p>
           ) : (
-            <LockedBlock className="mt-2">
-              <p className="font-display text-3xl font-normal text-foreground blur-[10px]">
+            <LockedBlock className="mt-2.5">
+              <p className="font-display text-4xl font-normal text-foreground blur-[12px]">
                 ●●●●●●
               </p>
             </LockedBlock>
@@ -260,12 +260,12 @@ function PickCote({
         <div>
           <MiniLabel>La cote</MiniLabel>
           {hasAccess ? (
-            <p className="mt-1 font-display text-6xl font-normal leading-none tabular-nums text-accent">
+            <p className="mt-1.5 font-display text-7xl font-normal leading-none tabular-nums text-accent">
               {formatOdds(odds)}
             </p>
           ) : (
-            <LockedBlock className="mt-1">
-              <p className="font-display text-6xl font-normal leading-none text-foreground blur-[14px]">
+            <LockedBlock className="mt-1.5">
+              <p className="font-display text-7xl font-normal leading-none text-foreground blur-[16px]">
                 ●,●●
               </p>
             </LockedBlock>
