@@ -16,7 +16,6 @@ import webhookRoutes from "./routes/webhooks";
 import bookmakerRoutes from "./routes/bookmakers";
 import { initCronJobs } from "./lib/cron";
 import { csrfTokenIssuer, csrfValidator } from "./lib/csrf";
-import { isDemoLoginEnabled } from "./lib/demo-login";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -166,15 +165,5 @@ app.use("/tipsters", (req, res) => {
 
 app.listen(PORT, () => {
   logger.info({ port: PORT }, "Server running");
-  // Log non-sensible de l'état de la connexion démo au boot (aucun
-  // secret en clair : juste le flag + la longueur du secret). Permet de
-  // diagnostiquer le gating sans exposer la valeur.
-  logger.info(
-    {
-      demoLoginEnabled: isDemoLoginEnabled(),
-      demoSecretLen: (process.env.DEMO_LOGIN_SECRET || "").length,
-    },
-    "Demo login config",
-  );
   initCronJobs();
 });
