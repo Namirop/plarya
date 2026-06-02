@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { SPORT_LABELS, stripSportEmoji } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -95,12 +97,11 @@ export function ExpertProfilePreview({ pseudo, bio, sports }: ExpertProfilePrevi
             browser, comme une page réelle. */}
         <div className="p-6 md:p-7">
           {/* Header expert : photo + pseudo + badge EXPERT.
-              Photo pravatar (img plain) — décoratif, aria-hidden,
+              Avatar décoratif (image locale profile2.png via next/image),
               cohérent avec le mockup Hero. */}
           <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://i.pravatar.cc/120?img=12"
+            <Image
+              src="/profile2.png"
               alt=""
               width={48}
               height={48}

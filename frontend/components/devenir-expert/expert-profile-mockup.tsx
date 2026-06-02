@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { CardTilt } from "@/components/ui/card-tilt";
 import { cn } from "@/lib/utils";
 
@@ -9,9 +11,9 @@ import { cn } from "@/lib/utils";
 // trouvait visuellement parasite). Le halo doré ambient suffit pour
 // éviter l'effet "card flottante dans le vide".
 //
-// `<img>` plain (pas next/image) car le mockup est aria-hidden et
-// décoratif — pas de SEO/perf nécessaire, évite d'ajouter
-// i.pravatar.cc au remotePatterns next.config.
+// Avatar : image locale optimisée via next/image (profile2.png).
+// Le wrapper est aria-hidden (décoratif), mais next/image évite de
+// servir le PNG 2 Mo brut pour un rendu 48px (resize + AVIF/WebP).
 
 export interface ExpertProfileMockupProps {
   className?: string;
@@ -53,9 +55,8 @@ export function ExpertProfileMockup({ className }: ExpertProfileMockupProps) {
         {/* ─── Header : photo réelle + indicateur live + pseudo + badge ─── */}
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://i.pravatar.cc/120?img=33"
+            <Image
+              src="/profile2.png"
               alt=""
               width={48}
               height={48}
