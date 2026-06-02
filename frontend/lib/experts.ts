@@ -4,9 +4,9 @@ import { API_URL } from "@/lib/site";
  * Types + loader server-side partagés du domaine "expert public".
  *
  * Extraits de `app/experts/[id]/ExpertProfile.client.tsx` pour que la
- * page officielle ET la page de preview design (`/dev/fiche-preview/[id]`)
- * consomment la même source de vérité — pas de duplication de logique
- * métier (cf. brief redesign card analyse, juin 2026).
+ * page officielle consomme une source de vérité unique — pas de
+ * duplication de logique métier (cf. brief redesign card analyse,
+ * juin 2026).
  */
 
 export interface BookmakerOddsData {

@@ -386,19 +386,13 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
                   reste de la hiérarchie suit la card-ticket. */}
               <h2 className="mb-8 font-display text-3xl font-normal text-foreground md:text-5xl">
                 {pendingPronos.length === 1
-                  ? "Analyse du jour"
+                  ? "Analyses du jour"
                   : `${pendingPronos.length} analyses du jour`}
               </h2>
 
               <div className="flex flex-col gap-8">
                 {pendingPronos.map((prono) => (
-                  <AnalysisCardTicket
-                    key={prono.id}
-                    analysis={prono}
-                    hasAccess={hasAccess}
-                    expertPseudo={expert.pseudo}
-                    viewsToday={expert.viewsToday}
-                  />
+                  <AnalysisCardTicket key={prono.id} analysis={prono} hasAccess={hasAccess} />
                 ))}
               </div>
             </section>

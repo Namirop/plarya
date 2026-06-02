@@ -34,13 +34,6 @@ export function formatDotDate(dateStr: string): string {
   return `${dd}.${mm}.${d.getFullYear()}`;
 }
 
-/** Date "12 MARS 2026" — mois en lettres, uppercase (fiche). */
-export function formatLongDate(dateStr: string): string {
-  return new Date(dateStr)
-    .toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
-    .toUpperCase();
-}
-
 /** Heure seule "21h36" (coup d'envoi). */
 export function formatTime(dateStr: string): string {
   const d = new Date(dateStr);
