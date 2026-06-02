@@ -1,12 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import { DotsSixVertical } from "@phosphor-icons/react";
+import { Reorder } from "motion/react";
 
 import { EmptyRow, EmptyCard } from "@/components/admin/empty-states";
+import { WarningModal } from "@/components/admin/warning-modal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
 import {
-  fieldClsCompact,
   tableWrapperCls,
   tableScrollCls,
   tableCls,
@@ -37,48 +40,65 @@ export function ExpertsSection({
   onUpdate: () => void;
 }) {
   const { showToast } = useToast();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [warningText, setWarningText] = useState("");
-  // Local edits seulement — source de vérité pour la valeur affichée
-  // reste experts[i].displayOrder (props). Évite que fetchAll() reset
-  // implicitement les modifs non-sauvées.
-  const [orderEdits, setOrderEdits] = useState<Record<string, number>>({});
-  const [orderSaved, setOrderSaved] = useState<string | null>(null);
 
-  const orderValues = useMemo(() => {
-    const values: Record<string, number> = {};
-    for (const t of experts) {
-      values[t.id] = orderEdits[t.id] ?? t.displayOrder;
-    }
-    return values;
-  }, [experts, orderEdits]);
+  // Cible de la modale d'avertissement (null = fermée).
+  const [warningTarget, setWarningTarget] = useState<AdminExpert | null>(null);
 
-  async function handleSaveWarning(expertId: string) {
+  // Ordre d'affichage — état local pour le drag, synchronisé sur les
+  // props (resync après refetch), persisté au drop.
+  const [order, setOrder] = useState<AdminExpert[]>(experts);
+  const orderRef = useRef(order);
+  const [savingOrder, setSavingOrder] = useState(false);
+
+  useEffect(() => {
+    setOrder(experts);
+  }, [experts]);
+  useEffect(() => {
+    orderRef.current = order;
+  }, [order]);
+
+  async function handleSaveWarning(message: string) {
+    if (!warningTarget) return;
     try {
-      await apiPatch(`/admin/experts/${expertId}/warning`, {
-        warningMessage: warningText || null,
+      await apiPatch(`/admin/experts/${warningTarget.id}/warning`, {
+        warningMessage: message || null,
       });
-      setEditingId(null);
-      setWarningText("");
+      showToast(message ? "Avertissement enregistré" : "Avertissement retiré", "success");
+      setWarningTarget(null);
       onUpdate();
     } catch (err) {
       showToast(
         err instanceof Error ? err.message : "Impossible d'enregistrer l'avertissement",
         "error",
       );
+      throw err; // garde la modale ouverte
     }
   }
 
-  async function handleSaveOrder(expertId: string) {
+  // Persiste l'ordre courant au drop. Pas de endpoint bulk : on PATCH
+  // chaque expert dont l'index a changé (displayOrder = index). Volume
+  // faible (admin, usage rare) → coût acceptable.
+  async function persistOrder() {
+    if (savingOrder) return;
+    const updates = orderRef.current
+      .map((e, i) => ({ id: e.id, displayOrder: i, prev: e.displayOrder }))
+      .filter((u) => u.prev !== u.displayOrder);
+    if (updates.length === 0) return;
+
+    setSavingOrder(true);
     try {
-      await apiPatch(`/admin/experts/${expertId}/display-order`, {
-        displayOrder: orderValues[expertId] ?? 0,
-      });
-      setOrderSaved(expertId);
-      setTimeout(() => setOrderSaved(null), 2000);
+      await Promise.all(
+        updates.map((u) =>
+          apiPatch(`/admin/experts/${u.id}/display-order`, { displayOrder: u.displayOrder }),
+        ),
+      );
+      showToast("Ordre mis à jour", "success");
       onUpdate();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Impossible d'enregistrer l'ordre", "error");
+      setOrder(experts); // rollback visuel
+    } finally {
+      setSavingOrder(false);
     }
   }
 
@@ -90,68 +110,58 @@ export function ExpertsSection({
 
   return (
     <div className="space-y-8">
-      {/* ── Display order ── */}
+      {/* ── Ordre d'affichage — drag & drop ── */}
       <div>
-        <h3 className="mb-3 font-body text-body-16 text-foreground">
-          Ordre d&apos;affichage sur la homepage
-        </h3>
-        <div className={tableWrapperCls}>
-          <table className={tableCls}>
-            <thead>
-              <tr className={theadRowCls}>
-                <th className={thCls}>Expert</th>
-                <th className={thCls}>Ordre</th>
-                <th className={thCls}>&nbsp;</th>
-              </tr>
-            </thead>
-            <tbody>
-              {experts.length === 0 ? (
-                <EmptyRow cols={3} message="Aucun expert enregistré" />
-              ) : (
-                experts.map((t) => (
-                  <tr key={t.id} className={tbodyRowCls}>
-                    <td className={cn(tdCls, "font-medium")}>{t.pseudo}</td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min={0}
-                        value={orderValues[t.id] ?? 0}
-                        onChange={(e) =>
-                          setOrderEdits((prev) => ({
-                            ...prev,
-                            [t.id]: parseInt(e.target.value) || 0,
-                          }))
-                        }
-                        aria-label={`Position d'affichage de ${t.pseudo} sur la homepage`}
-                        className={cn(fieldClsCompact, "w-24")}
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Button
-                          type="button"
-                          variant="primary"
-                          size="sm"
-                          onClick={() => handleSaveOrder(t.id)}
-                        >
-                          Enregistrer
-                        </Button>
-                        {orderSaved === t.id && (
-                          <span className="font-body text-body-16 text-foreground">
-                            Mis à jour
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="mb-1 flex items-center justify-between gap-3">
+          <h3 className="font-body text-body-16 text-foreground">
+            Ordre d&apos;affichage sur la homepage
+          </h3>
+          {savingOrder && (
+            <span className="font-body text-sm text-muted-foreground">Enregistrement…</span>
+          )}
         </div>
+        <p className="mb-3 font-body text-sm text-muted-foreground">
+          Glissez-déposez les experts pour définir leur ordre (le premier s&apos;affiche en haut de
+          la page d&apos;accueil).
+        </p>
+
+        {order.length === 0 ? (
+          <div className={mobileCardCls}>
+            <p className="font-body text-body-16 text-muted-foreground">Aucun expert enregistré</p>
+          </div>
+        ) : (
+          <Reorder.Group
+            as="ul"
+            axis="y"
+            values={order}
+            onReorder={setOrder}
+            className="space-y-2"
+          >
+            {order.map((t, i) => (
+              <Reorder.Item
+                key={t.id}
+                value={t}
+                onDragEnd={persistOrder}
+                whileDrag={{ scale: 1.02, boxShadow: "0 14px 32px rgba(0,0,0,0.6)" }}
+                className={cn(
+                  "flex touch-none select-none items-center gap-3 rounded-2xl border border-surface-elevated bg-surface-2 px-4 py-3",
+                  "cursor-grab active:cursor-grabbing",
+                )}
+              >
+                <DotsSixVertical className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="w-6 shrink-0 font-body text-body-16 tabular-nums text-muted-foreground">
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-body text-body-16 font-medium text-foreground">
+                  {t.pseudo}
+                </span>
+              </Reorder.Item>
+            ))}
+          </Reorder.Group>
+        )}
       </div>
 
-      {/* ── Experts list ── */}
+      {/* ── Liste des experts ── */}
       <div>
         <h3 className="mb-3 font-body text-body-16 text-foreground">Liste des experts</h3>
 
@@ -183,61 +193,24 @@ export function ExpertsSection({
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      {editingId === t.id ? (
-                        <div className="flex items-start gap-2">
-                          <textarea
-                            value={warningText}
-                            onChange={(e) => setWarningText(e.target.value)}
-                            aria-label={`Message d'avertissement pour ${t.pseudo}`}
-                            className={cn(fieldClsCompact, "min-w-[220px] resize-y")}
-                            rows={2}
-                            placeholder="Message d'avertissement…"
-                          />
-                          <div className="flex flex-col gap-2">
-                            <Button
-                              type="button"
-                              variant="primary"
-                              size="sm"
-                              onClick={() => handleSaveWarning(t.id)}
-                            >
-                              OK
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => {
-                                setEditingId(null);
-                                setWarningText("");
-                              }}
-                            >
-                              Annuler
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          {t.warningMessage && (
-                            <span
-                              className="max-w-[180px] truncate font-body text-body-16 text-destructive"
-                              title={t.warningMessage}
-                            >
-                              {t.warningMessage}
-                            </span>
-                          )}
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              setEditingId(t.id);
-                              setWarningText(t.warningMessage || "");
-                            }}
+                      <div className="flex items-center gap-3">
+                        {t.warningMessage && (
+                          <span
+                            className="max-w-[180px] truncate font-body text-body-16 text-destructive"
+                            title={t.warningMessage}
                           >
-                            {t.warningMessage ? "Modifier" : "Avertir"}
-                          </Button>
-                        </div>
-                      )}
+                            {t.warningMessage}
+                          </span>
+                        )}
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setWarningTarget(t)}
+                        >
+                          {t.warningMessage ? "Modifier" : "Avertir"}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -270,52 +243,25 @@ export function ExpertsSection({
                   type="button"
                   variant="secondary"
                   size="sm"
-                  onClick={() => {
-                    setEditingId(t.id);
-                    setWarningText(t.warningMessage || "");
-                  }}
+                  onClick={() => setWarningTarget(t)}
                   className="mt-3"
                 >
                   {t.warningMessage ? "Modifier l'avertissement" : "Avertir"}
                 </Button>
-                {editingId === t.id && (
-                  <div className="mt-3 space-y-2">
-                    <textarea
-                      value={warningText}
-                      onChange={(e) => setWarningText(e.target.value)}
-                      aria-label={`Message d'avertissement pour ${t.pseudo}`}
-                      className={cn(fieldClsCompact, "resize-y")}
-                      rows={3}
-                      placeholder="Message d'avertissement…"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleSaveWarning(t.id)}
-                      >
-                        Enregistrer
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          setEditingId(null);
-                          setWarningText("");
-                        }}
-                      >
-                        Annuler
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </div>
             ))
           )}
         </div>
       </div>
+
+      {/* ── Modale d'avertissement ── */}
+      <WarningModal
+        open={!!warningTarget}
+        expertPseudo={warningTarget?.pseudo ?? ""}
+        initialValue={warningTarget?.warningMessage ?? ""}
+        onClose={() => setWarningTarget(null)}
+        onSave={handleSaveWarning}
+      />
     </div>
   );
 }

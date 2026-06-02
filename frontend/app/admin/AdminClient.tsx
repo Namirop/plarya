@@ -205,7 +205,7 @@ export default function AdminClient({ initialData }: { initialData: AdminInitial
           />
         </div>
 
-        <div className="mt-10 flex gap-1 overflow-x-auto border-b border-surface-elevated md:mt-12">
+        <div className="mt-10 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-surface-elevated [scrollbar-width:none] md:mt-12 [&::-webkit-scrollbar]:hidden">
           {TABS.map((t) => (
             <button
               key={t.key}

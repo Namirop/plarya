@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+
 import { ResultBadge } from "@/components/admin/badges";
 import { EmptyRow, EmptyCard } from "@/components/admin/empty-states";
 import { Button } from "@/components/ui/button";
@@ -38,8 +40,17 @@ export function PronosSection({
   const hasPrev = offset > 0;
   const hasNext = offset + pronos.length < total;
 
+  // Ancre en tête de liste : un changement de page doit ramener la vue
+  // au début (sinon on reste scrollé en bas, sur les boutons pagination).
+  const topRef = useRef<HTMLDivElement>(null);
+  function goToPage(newOffset: number) {
+    onPageChange(newOffset);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <>
+      <div ref={topRef} aria-hidden className="scroll-mt-24" />
       <div className={cn("hidden sm:block", tableWrapperCls, tableScrollCls)}>
         <table className={tableCls}>
           <thead>
@@ -157,7 +168,7 @@ export function PronosSection({
               type="button"
               variant="secondary"
               size="sm"
-              onClick={() => onPageChange(Math.max(0, offset - pageSize))}
+              onClick={() => goToPage(Math.max(0, offset - pageSize))}
               disabled={!hasPrev}
             >
               Précédent
@@ -166,7 +177,7 @@ export function PronosSection({
               type="button"
               variant="secondary"
               size="sm"
-              onClick={() => onPageChange(offset + pageSize)}
+              onClick={() => goToPage(offset + pageSize)}
               disabled={!hasNext}
             >
               Suivant
