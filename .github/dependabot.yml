@@ -1,8 +1,18 @@
-# Dependabot — surveillance hebdo des deps npm sur frontend + backend.
+# Dependabot — surveillance des deps npm sur frontend + backend.
 #
-# Groupes : pour éviter une foire de 20 PRs par semaine, on regroupe
-# les bumps par famille de lib (Next, Prisma, types, tooling). Chaque
-# groupe = 1 PR par semaine au max.
+# Objectif : garder les deps à jour SANS noyer le repo sous les PR.
+# Deux leviers anti-bruit :
+#   1. Cadence mensuelle. Les updates de SÉCURITÉ restent immédiates :
+#      Dependabot ouvre une PR dès qu'une advisory tombe, hors planning.
+#   2. Groupage agressif : chaque famille de lib = 1 PR, et un groupe
+#      catch-all "misc" (patterns "*") ramasse tout le reste (stripe,
+#      tailwind, zod, pino…) en 1 seule PR par écosystème, au lieu
+#      d'1 PR isolée par lib.
+#
+# Règle Dependabot : une dep tombe dans le PREMIER groupe qui matche,
+# donc "misc: *" DOIT rester EN DERNIER pour ne pas avaler les groupes nommés.
+# "misc" est limité à minor/patch : un bump MAJOR d'une lib non groupée
+# (ex : Stripe 22→23) reste une PR isolée, à reviewer avec soin.
 #
 # Doc : https://docs.github.com/en/code-security/dependabot
 
@@ -13,8 +23,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "monthly"
     open-pull-requests-limit: 5
     groups:
       next:
@@ -36,13 +45,20 @@ updates:
         patterns:
           - "eslint*"
           - "prettier*"
+      # Catch-all : tailwindcss, tailwind-merge, @phosphor-icons, etc.
+      # → une seule PR groupée. DOIT rester en dernier.
+      misc:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # ─────────────── Backend ────────────────
   - package-ecosystem: "npm"
     directory: "/backend"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "monthly"
     open-pull-requests-limit: 5
     groups:
       prisma:
@@ -68,13 +84,19 @@ updates:
           - "tsx"
           - "prettier*"
           - "ts-node"
+      # Catch-all : stripe, zod, pino, resend, node-cron, etc.
+      # → une seule PR groupée. DOIT rester en dernier.
+      misc:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # ─────────────── GitHub Actions ─────────
-  # Bump aussi nos workflows GitHub Actions quand ils existeront.
-  # Vide pour l'instant — sera utile à l'ajout du premier .yml CI.
+  # Bump nos workflows GitHub Actions quand ils existeront.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "monthly"
     open-pull-requests-limit: 3
