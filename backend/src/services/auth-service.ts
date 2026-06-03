@@ -183,7 +183,7 @@ const DEMO_ROLE_EMAILS: Record<DemoRole, string> = {
 
 const DEMO_ROLE_REDIRECT: Record<DemoRole, string> = {
   expert: "/dashboard",
-  user: "/mon-compte",
+  user: "/compte",
 };
 
 export type DemoLoginOutcome =
