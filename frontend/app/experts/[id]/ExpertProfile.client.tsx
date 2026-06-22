@@ -44,7 +44,7 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
   const [expert] = useState<ExpertProfile>(initialExpert);
   const [error, setError] = useState("");
 
-  // ── ACCÈS PAYANT (V1) ──────────────────────────────────────
+  // ── ACCÈS PAYANT ────────────────────────────────────────────
   const [subscriptionAccess, setSubscriptionAccess] = useState(false);
 
   // ── ACCÈS PROPRIÉTAIRE ─────────────────────────────────────

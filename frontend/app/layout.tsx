@@ -97,7 +97,7 @@ const organizationLd = {
 
 // JSON-LD WebSite : marque le site comme entité, permet à Google
 // d'afficher le nom propre dans les SERP (au lieu du domaine brut).
-// Pas de SearchAction : /experts?q= n'existe pas en V1.
+// Pas de SearchAction : la recherche /experts?q= n'existe pas.
 const websiteLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",

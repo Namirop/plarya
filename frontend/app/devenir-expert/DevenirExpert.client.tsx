@@ -72,7 +72,7 @@ function SectionHeader({
 }
 
 // PageShell pour les états alternatifs (loading / déjà expert /
-// success / cancel). Layout centré max-w 872 — inchangé vs V1.
+// success / cancel). Layout centré max-w 872.
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto w-full max-w-[872px] px-4 py-10 md:px-8 md:py-16">{children}</div>
@@ -92,7 +92,7 @@ export function DevenirExpertClient() {
 
   const checkoutStatus = searchParams.get("checkout");
 
-  // Redirige les non-loggés vers la home (logique V1 inchangée).
+  // Redirige les non-loggés vers la home.
   useEffect(() => {
     if (!loading && !user) router.push("/");
   }, [user, loading, router]);

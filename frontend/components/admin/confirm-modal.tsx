@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { X } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
+import { useModalA11y } from "@/hooks/use-modal-a11y";
 import { cn } from "@/lib/utils";
 
 export interface ConfirmModalProps {
@@ -23,11 +24,6 @@ export interface ConfirmModalProps {
   variant?: "default" | "danger";
 }
 
-// Sélecteur des éléments focusables pour le focus trap. Aligné avec
-// LoginModal pour cohérence du pattern modal DS.
-const FOCUSABLE_SELECTOR =
-  'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex]:not([tabindex="-1"]), [contenteditable]';
-
 export function ConfirmModal({
   open,
   onClose,
@@ -39,7 +35,6 @@ export function ConfirmModal({
   variant = "default",
 }: ConfirmModalProps) {
   const [submitting, setSubmitting] = useState(false);
-  const dialogRef = useRef<HTMLDivElement>(null);
 
   function handleClose() {
     // Si une action est en cours, on bloque la fermeture (sinon on
@@ -64,53 +59,10 @@ export function ConfirmModal({
     }
   }
 
-  // ── Scroll lock body (cohérent LoginModal / EmailCheckoutModal) ──
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  // ── Focus trap + Escape ──
-  useEffect(() => {
-    if (!open) return;
-    const root = dialogRef.current;
-    if (!root) return;
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        handleClose();
-        return;
-      }
-      if (e.key !== "Tab" || !root) return;
-
-      const focusables = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-        (el) => el.offsetParent !== null,
-      );
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      const active = document.activeElement as HTMLElement | null;
-
-      if (e.shiftKey) {
-        if (active === first || !root.contains(active)) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else if (active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  // a11y : scroll-lock body, focus initial (premier focusable), focus
+  // trap, Escape, restauration du focus à la fermeture — cf.
+  // useModalA11y. handleClose bloque déjà la fermeture pendant submitting.
+  const { containerRef } = useModalA11y({ open, onClose: handleClose });
 
   if (!open) return null;
 
@@ -125,7 +77,7 @@ export function ConfirmModal({
       />
 
       <div
-        ref={dialogRef}
+        ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-modal-title"

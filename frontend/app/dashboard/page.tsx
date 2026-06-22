@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { serverFetch } from "@/lib/server-fetch";
+import type { AuthUser } from "@/lib/types/auth";
 import type { Bookmaker, Prono, ExpertProfile } from "@/lib/types/dashboard";
 
 import DashboardClient from "./DashboardClient";
@@ -16,16 +17,10 @@ import DashboardClient from "./DashboardClient";
  * row Expert créée — anomalie DB), on tombe sur le redirect /
  * par sécurité.
  */
-interface MeUser {
-  id: string;
-  email: string;
-  role: "USER" | "EXPERT" | "ADMIN";
-}
-
 export default async function DashboardPage() {
   const meRes = await serverFetch("/auth/me");
   if (!meRes.ok) redirect("/");
-  const me = (await meRes.json()) as MeUser;
+  const me = (await meRes.json()) as AuthUser;
 
   if (me.role === "ADMIN") redirect("/admin");
   if (me.role !== "EXPERT") redirect("/");

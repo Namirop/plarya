@@ -24,9 +24,9 @@ const RISE_IN_VARIANTS: Variants = {
 };
 const RISE_IN_TRANSITION = { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const };
 
-// Domaines disponibles pour le filtre in-page (cf. V1 logic retrouvée
-// dans bae3a79 : `activeDomain` state, scroll vers #experts, useMemo
-// filteredExperts sur SPORT_DOMAIN / ESPORT_DOMAIN).
+// Domaines disponibles pour le filtre in-page : `activeDomain` state,
+// scroll vers #experts, useMemo filteredExperts sur
+// SPORT_DOMAIN / ESPORT_DOMAIN.
 export type DomainId = "SPORT" | "ESPORT";
 
 // 3 cards selon la maquette.

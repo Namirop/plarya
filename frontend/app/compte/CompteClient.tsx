@@ -9,6 +9,7 @@ import { ConfidentialitySection } from "@/components/account/confidentiality-sec
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/hooks/use-user";
 import { apiPatch } from "@/lib/api";
+import type { CompteUserRole, ExpertProfile, SubscriptionWithExpert } from "@/lib/types/account";
 import { SPORT_LABELS, stripSportEmoji } from "@/lib/constants";
 import {
   formDaCardCls,
@@ -20,33 +21,8 @@ import { cn } from "@/lib/utils";
 
 /* ════════════════════════ Types ════════════════════════ */
 
-export interface ExpertProfile {
-  id: string;
-  pseudo: string;
-  bio: string | null;
-  dailyNote: string | null;
-  dailyNoteDate: string | null;
-  sports: string[];
-}
-
-export interface SubscriptionWithExpert {
-  id: string;
-  userId: string;
-  expertId: string;
-  type: "DAY_PASS" | "MONTHLY";
-  status: "ACTIVE" | "EXPIRED" | "CANCELLED";
-  expiresAt: string;
-  createdAt: string;
-  expert: {
-    id: string;
-    pseudo: string;
-    photoUrl: string | null;
-    sports: string[];
-  };
-}
-
 interface CompteClientProps {
-  role: "USER" | "EXPERT";
+  role: CompteUserRole;
   initialExpertProfile: ExpertProfile | null;
   initialSubscriptions: SubscriptionWithExpert[] | null;
 }

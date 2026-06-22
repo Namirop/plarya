@@ -24,8 +24,8 @@ export interface DomainCardProps {
    *  Ignoré si `onClick` est fourni ou si state="coming-soon". */
   href?: string;
   /** Handler de clic — prioritaire sur `href`. Utilisé par la homepage
-   *  pour piloter le filtre in-page de la section experts (cf. V1
-   *  retrouvée : page.tsx state `activeDomain`, scroll vers `#experts`). */
+   *  pour piloter le filtre in-page de la section experts (state
+   *  `activeDomain` côté page, scroll vers `#experts`). */
   onClick?: () => void;
   /** Card actuellement sélectionnée (= ce domaine filtre la section
    *  experts). Sert d'indication visuelle quand on a un filtre actif. */

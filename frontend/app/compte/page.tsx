@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 
 import { serverFetch } from "@/lib/server-fetch";
+import type { ExpertProfile, SubscriptionWithExpert } from "@/lib/types/account";
+import type { AuthUser } from "@/lib/types/auth";
 
-import CompteClient, { type ExpertProfile, type SubscriptionWithExpert } from "./CompteClient";
+import CompteClient from "./CompteClient";
 
 /**
  * Server component /compte.
@@ -20,18 +22,12 @@ import CompteClient, { type ExpertProfile, type SubscriptionWithExpert } from ".
  * Pas de fetch dupliqué côté client : CompteClient init ses states
  * depuis les props, useEffect de fetch initial supprimé.
  */
-interface MeUser {
-  id: string;
-  email: string;
-  role: "USER" | "EXPERT" | "ADMIN";
-}
-
 export default async function ComptePage() {
   const meRes = await serverFetch("/auth/me");
   if (!meRes.ok) {
     redirect("/");
   }
-  const me = (await meRes.json()) as MeUser;
+  const me = (await meRes.json()) as AuthUser;
 
   if (me.role === "ADMIN") {
     redirect("/admin");

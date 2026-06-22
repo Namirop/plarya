@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+import { API_URL } from "./site";
 
 const CSRF_COOKIE = "csrf_token";
 const CSRF_HEADER = "X-CSRF-Token";
@@ -119,7 +119,7 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
  * (message FR) et `code` (discriminant). Tombe sur un fallback générique
  * si le body n'est pas du JSON parsable (réseau down, 502 nginx, etc.).
  */
-async function parseApiError(res: Response): Promise<ApiError> {
+export async function parseApiError(res: Response): Promise<ApiError> {
   const body = await res.json().catch(() => null);
   const message = body?.error ?? `Erreur ${res.status}`;
   const code = typeof body?.code === "string" ? body.code : null;
@@ -154,4 +154,25 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
     throw await parseApiError(res);
   }
   return res.json();
+}
+
+/**
+ * Variante d'apiGet pour les téléchargements binaires (CSV, JSON export,
+ * etc.). Renvoie le Blob brut + le filename extrait du Content-Disposition.
+ *
+ * Le filename est utile pour le `<a download={filename}>` côté caller :
+ * le backend pose un Content-Disposition: attachment; filename="..." que
+ * cette helper parse en best-effort. Si l'extraction échoue, le filename
+ * est null et le caller doit en générer un.
+ */
+export async function apiBlob(path: string): Promise<{ blob: Blob; filename: string | null }> {
+  const res = await apiFetch(path);
+  if (!res.ok) {
+    throw await parseApiError(res);
+  }
+  const cd = res.headers.get("Content-Disposition") || "";
+  const match = cd.match(/filename="([^"]+)"/);
+  const filename = match ? match[1] : null;
+  const blob = await res.blob();
+  return { blob, filename };
 }

@@ -5,15 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { X } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-
-const fieldCls = cn(
-  "h-12 w-full rounded-xl border border-surface-elevated bg-black/40 px-4 py-3",
-  "font-body text-body-16 text-foreground placeholder:text-muted-foreground/50",
-  "transition-colors duration-200",
-  "focus-visible:border-accent/60 focus-visible:outline-none",
-  "disabled:cursor-not-allowed disabled:opacity-70",
-);
+import { useModalA11y } from "@/hooks/use-modal-a11y";
+import { formDaModalInputCls } from "@/lib/form-da";
 
 interface DeleteAccountModalProps {
   open: boolean;
@@ -57,7 +50,7 @@ export function DeleteAccountModal({
   const [typedEmail, setTypedEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset des states quand la modale se ferme. Pattern setState dans
   // useEffect en réponse à un changement de prop (open : true → false)
@@ -73,28 +66,15 @@ export function DeleteAccountModal({
   }, [open]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Scroll-lock body pendant que la modale est ouverte.
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  // Escape pour fermer (pattern partagé avec les autres modales DS).
-  useEffect(() => {
-    if (!open) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && !submitting) {
-        e.preventDefault();
-        onClose();
-      }
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, submitting, onClose]);
+  // a11y : scroll-lock body, focus initial (input email), focus trap,
+  // Escape (bloqué pendant submitting), restauration du focus à la
+  // fermeture — cf. useModalA11y.
+  const { containerRef } = useModalA11y({
+    open,
+    onClose,
+    disableEscape: submitting,
+    initialFocusRef: inputRef,
+  });
 
   if (!open) return null;
 
@@ -126,7 +106,7 @@ export function DeleteAccountModal({
           cadre — il ne subsiste que sur le bouton de confirmation, le
           vrai point focal de l'action. */}
       <div
-        ref={dialogRef}
+        ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-account-title"
@@ -185,6 +165,7 @@ export function DeleteAccountModal({
             Email
           </label>
           <input
+            ref={inputRef}
             id="delete-confirm-email"
             type="email"
             placeholder={userEmail}
@@ -192,7 +173,7 @@ export function DeleteAccountModal({
             onChange={(e) => setTypedEmail(e.target.value)}
             autoComplete="off"
             disabled={submitting}
-            className={fieldCls}
+            className={formDaModalInputCls}
           />
         </div>
 

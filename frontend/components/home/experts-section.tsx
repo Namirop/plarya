@@ -41,8 +41,8 @@ const CARD_STEP = CARD_WIDTH + CARD_GAP;
 const CARDS_PER_PAGE = 3;
 
 export interface ExpertsSectionProps {
-  /** Filtre domaine appliqué aux experts (cf. V1 logic retrouvée :
-   *  filtre via SPORT_DOMAIN / ESPORT_DOMAIN constants de lib/sports).
+  /** Filtre domaine appliqué aux experts (filtre via
+   *  SPORT_DOMAIN / ESPORT_DOMAIN constants de lib/sports).
    *  null = pas de filtre, tous les experts affichés. */
   filterDomain?: DomainId | null;
 }
@@ -91,7 +91,7 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
       .finally(() => setLoaded(true));
   }, []);
 
-  // Reproduction V1 (bae3a79 page.tsx) : filtre les experts par sports
+  // Filtre les experts par sports
   // appartenant au domaine sélectionné. SPORT regroupe tous les sports
   // physiques (FOOTBALL, TENNIS, BASKETBALL, etc.) ; ESPORT n'a qu'un
   // sport (ESPORT). Un expert match si AU MOINS UN de ses sports est

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useState, type ComponentType } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -9,7 +9,7 @@ import { Download, type IconProps, Lock, Trash, WarningCircle } from "@phosphor-
 import { DeleteAccountModal } from "@/components/account/delete-account-modal";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/hooks/use-user";
-import { apiFetch, apiGet, apiPost } from "@/lib/api";
+import { ApiError, apiBlob, apiFetch, apiGet, apiPost } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 // Section "Confidentialité & données" — remplace l'ex DangerZone. Le
@@ -49,41 +49,41 @@ export function ConfidentialitySection() {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelError, setCancelError] = useState("");
 
-  const refreshDeletionStatus = () => {
-    apiGet<DeletionStatus>("/auth/me/deletion-status")
-      .then(setDeletionStatus)
-      .catch(() => setDeletionStatus({ canDelete: true }));
-  };
+  const refreshDeletionStatus = useCallback(async () => {
+    try {
+      const data = await apiGet<DeletionStatus>("/auth/me/deletion-status");
+      setDeletionStatus(data);
+    } catch {
+      // Fallback safe : si la query échoue (réseau, 5xx), on assume
+      // canDelete=true plutôt que de bloquer l'UI sur un état inconnu.
+      setDeletionStatus({ canDelete: true });
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
     refreshDeletionStatus();
-  }, [user]);
+  }, [user, refreshDeletionStatus]);
 
   async function handleExport() {
     if (exportLoading) return;
     setExportLoading(true);
     setExportMsg(null);
     try {
-      const res = await apiFetch("/auth/me/export");
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        throw new Error(errBody.error || `Erreur ${res.status}`);
-      }
-      const blob = await res.blob();
-      const cd = res.headers.get("Content-Disposition") || "";
-      const match = cd.match(/filename="([^"]+)"/);
-      const filename = match ? match[1] : "plarya-export.json";
+      const { blob, filename } = await apiBlob("/auth/me/export");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = filename;
+      a.download = filename ?? "plarya-export.json";
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
       setExportMsg({ text: "Export téléchargé ✓", isError: false });
       setTimeout(() => setExportMsg(null), 5000);
     } catch (err) {
-      setExportMsg({ text: err instanceof Error ? err.message : "Erreur", isError: true });
+      const message = err instanceof ApiError ? err.message : "Erreur lors de l'export";
+      setExportMsg({ text: message, isError: true });
     } finally {
       setExportLoading(false);
     }

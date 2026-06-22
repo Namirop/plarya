@@ -59,12 +59,6 @@ const buttonVariants = cva(
         // rouge). Focus ring rouge (cohérent avec l'intention).
         destructive:
           "bg-destructive text-white border border-destructive hover:bg-destructive/90 focus-visible:ring-destructive/40",
-
-        // ──────────── Legacy shadcn variants (conservés) ────────────
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
-        outline:
-          "border border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         // DS CTA standard : padding 16/32, text-body-16 → h ≈ 48px
@@ -83,18 +77,10 @@ const buttonVariants = cva(
 
         // Bouton inline plus petit
         sm: "px-4 py-2 text-body-16",
-
-        // Existants (legacy, pour shadcn V1)
-        xs: "h-6 gap-1 rounded-lg px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        icon: "size-10",
-        "icon-xs":
-          "size-6 rounded-lg in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8 rounded-lg in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-12",
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "primary",
       size: "default",
     },
   },
@@ -102,7 +88,7 @@ const buttonVariants = cva(
 
 function Button({
   className,
-  variant = "default",
+  variant = "primary",
   size = "default",
   render,
   nativeButton,

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { X } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
+import { useModalA11y } from "@/hooks/use-modal-a11y";
 import { fieldClsCompact } from "@/lib/admin-styles";
 import { cn } from "@/lib/utils";
 
@@ -21,10 +22,6 @@ export interface WarningModalProps {
   onSave: (message: string) => Promise<void> | void;
 }
 
-// Aligné sur ConfirmModal / LoginModal pour la cohérence du focus trap.
-const FOCUSABLE_SELECTOR =
-  'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex]:not([tabindex="-1"]), [contenteditable]';
-
 /**
  * Modale d'avertissement expert (admin). Remplace l'édition inline dans
  * le tableau : un textarea pour rédiger le message + Enregistrer/Annuler.
@@ -40,17 +37,12 @@ export function WarningModal({
 }: WarningModalProps) {
   const [value, setValue] = useState(initialValue);
   const [submitting, setSubmitting] = useState(false);
-  const dialogRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Réinitialise le contenu à chaque ouverture (l'expert ciblé change).
+  // Le focus initial du textarea est géré par useModalA11y.
   useEffect(() => {
-    if (open) {
-      setValue(initialValue);
-      // Focus le textarea après le mount.
-      const id = window.setTimeout(() => textareaRef.current?.focus(), 0);
-      return () => window.clearTimeout(id);
-    }
+    if (open) setValue(initialValue);
   }, [open, initialValue]);
 
   function handleClose() {
@@ -71,53 +63,14 @@ export function WarningModal({
     }
   }
 
-  // ── Scroll lock body ──
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  // ── Focus trap + Escape ──
-  useEffect(() => {
-    if (!open) return;
-    const root = dialogRef.current;
-    if (!root) return;
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        handleClose();
-        return;
-      }
-      if (e.key !== "Tab" || !root) return;
-
-      const focusables = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-        (el) => el.offsetParent !== null,
-      );
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      const active = document.activeElement as HTMLElement | null;
-
-      if (e.shiftKey) {
-        if (active === first || !root.contains(active)) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else if (active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  // a11y : scroll-lock body, focus initial (textarea), focus trap,
+  // Escape, restauration du focus à la fermeture — cf. useModalA11y.
+  // handleClose bloque déjà la fermeture pendant submitting.
+  const { containerRef } = useModalA11y({
+    open,
+    onClose: handleClose,
+    initialFocusRef: textareaRef,
+  });
 
   if (!open) return null;
 
@@ -130,7 +83,7 @@ export function WarningModal({
       />
 
       <div
-        ref={dialogRef}
+        ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="warning-modal-title"

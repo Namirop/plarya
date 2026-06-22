@@ -15,7 +15,7 @@ import { SectionSeparator } from "@/components/ui/section-separator";
 // HomePage côté client. Wrapper de la coordination scroll/filtre
 // entre <DomainsSection> et <ExpertsSection>. Le state activeDomain
 // est partagé entre les deux composants ; le scroll vers #experts
-// est déclenché uniquement quand on ACTIVE un filtre (V1 inchangé).
+// est déclenché uniquement quand on ACTIVE un filtre.
 //
 // La page.tsx parent reste server component pour permettre une
 // future migration de fetch SSR (ExpertsSection fetch encore

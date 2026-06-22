@@ -25,7 +25,7 @@ import { createPronoSchema, pronoIdParamsSchema, updateResultSchema } from "../v
  *    ServiceError → status code, fallback 500 + log structuré)
  *
  * Le pattern routes minces permet de tester la logique métier
- * sans monter Express (cf. backend-patterns.md §"Service layer").
+ * sans monter Express (cf. web-patterns.md §"Service layer").
  */
 
 const router = Router();

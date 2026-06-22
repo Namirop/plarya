@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 
 import { X } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
+import { useModalA11y } from "@/hooks/use-modal-a11y";
 import { useUser } from "@/hooks/use-user";
-import { cn } from "@/lib/utils";
+import { formDaModalInputCls } from "@/lib/form-da";
 
 // Clé sessionStorage utilisée pour porter une destination "post-login"
 // entre l'envoi du magic-link (ici) et l'effet de redirection dans
@@ -29,23 +30,6 @@ interface LoginModalProps {
   redirectAfterLogin?: string;
 }
 
-// Pattern input DS aligné /devenir-expert + EmailCheckoutModal + /compte.
-// Inline ici pour éviter une dépendance — à factoriser dans
-// lib/styles si on en ajoute un 4ᵉ consommateur.
-const fieldCls = cn(
-  "h-12 w-full rounded-xl border border-surface-elevated bg-black/40 px-4 py-3",
-  "font-body text-body-16 text-foreground placeholder:text-muted-foreground/50",
-  "transition-colors duration-200",
-  "focus-visible:border-accent/60 focus-visible:outline-none",
-  "disabled:cursor-not-allowed disabled:opacity-70",
-);
-
-// Sélecteur des éléments focusables pour le focus trap. Inclut les
-// <button>, <a>, <input>, etc. ; exclut explicitement ceux marqués
-// `disabled` ou `tabindex="-1"`.
-const FOCUSABLE_SELECTOR =
-  'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex]:not([tabindex="-1"]), [contenteditable]';
-
 export function LoginModal({
   open,
   onClose,
@@ -59,11 +43,10 @@ export function LoginModal({
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
 
-  const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // ── Reset states + onClose parent ──
-  // Conserve le comportement V1 : une réouverture future part propre
+  // Reset des states : une réouverture future part propre
   // (form vide, pas d'erreur résiduelle, branche initiale).
   function handleClose() {
     setEmail("");
@@ -72,74 +55,13 @@ export function LoginModal({
     onClose();
   }
 
-  // ── Scroll lock du body ──
-  // Empêche le contenu derrière l'overlay de scroller pendant que la
-  // modale est ouverte. Restore la valeur précédente au cleanup pour
-  // jouer nice avec d'autres modales potentielles.
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  // Focus input à l'ouverture (remplace autoFocus déprécié a11y). Délai
-  // 50 ms : laisse le mount + animations terminer avant de voler le
-  // focus, sinon les readers d'écran ratent l'annonce du dialog.
-  useEffect(() => {
-    if (!open) return;
-    const timer = setTimeout(() => inputRef.current?.focus(), 50);
-    return () => clearTimeout(timer);
-  }, [open, sent]);
-
-  // ── Focus trap + Escape ──
-  // Un seul listener `keydown` global, attaché tant que la modale est
-  // ouverte. Escape ferme la modale ; Tab / Shift+Tab cyclent dans les
-  // éléments focusables internes (boucle premier ↔ dernier).
-  useEffect(() => {
-    if (!open) return;
-    const root = dialogRef.current;
-    if (!root) return;
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        handleClose();
-        return;
-      }
-      if (e.key !== "Tab" || !root) return;
-
-      const focusables = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-        (el) => el.offsetParent !== null,
-      ); // visible only
-
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      const active = document.activeElement as HTMLElement | null;
-
-      if (e.shiftKey) {
-        if (active === first || !root.contains(active)) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (active === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-    // handleClose est stable (pas de deps externes hors setState), on
-    // évite de la mettre dans les deps pour ne pas re-attacher
-    // l'écouteur à chaque render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  // a11y : scroll-lock body, focus initial (input email), focus trap,
+  // Escape, restauration du focus à la fermeture — cf. useModalA11y.
+  const { containerRef } = useModalA11y({
+    open,
+    onClose: handleClose,
+    initialFocusRef: inputRef,
+  });
 
   if (!open) return null;
 
@@ -181,7 +103,7 @@ export function LoginModal({
           DS, padding 32. max-w 480 px aligné avec EmailCheckoutModal et
           la modale upsell pour cohérence des modales. */}
       <div
-        ref={dialogRef}
+        ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="login-modal-title"
@@ -248,7 +170,7 @@ export function LoginModal({
                 placeholder="ton@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={fieldCls}
+                className={formDaModalInputCls}
                 autoComplete="email"
                 disabled={submitting}
               />

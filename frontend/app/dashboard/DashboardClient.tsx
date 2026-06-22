@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { AnalysesList } from "@/components/dashboard/analyses-list";
-import { PublishAnalysisForm } from "@/components/dashboard/publish-analysis-form";
+import { PublishAnalysisForm } from "@/components/dashboard/publish-analysis/publish-analysis-form";
 import { SectionTitle } from "@/components/ui/section-title";
 import { StatBlock } from "@/components/ui/stat-block";
 import { apiGet, apiPatch } from "@/lib/api";
@@ -39,7 +39,7 @@ export default function DashboardClient({
       const profileData = await apiGet<ExpertProfile>("/experts/me");
       setProfile(profileData);
     } catch {
-      /* silent — comportement V1 conservé */
+      /* silent — échec non-bloquant, on garde l'état courant */
     }
   }
 
@@ -48,7 +48,7 @@ export default function DashboardClient({
     setProfile(updatedProfile);
   }
 
-  // Stats computées côté client à partir de `pronos` (mapping V1).
+  // Stats computées côté client à partir de `pronos`.
   const now = new Date();
   const pronosThisMonth = pronos.filter((p) => {
     const d = new Date(p.createdAt);

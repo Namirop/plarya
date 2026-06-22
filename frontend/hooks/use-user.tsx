@@ -3,15 +3,10 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 
 import { apiGet, apiPost } from "@/lib/api";
-
-interface User {
-  id: string;
-  email: string;
-  role: "USER" | "EXPERT" | "ADMIN";
-}
+import type { AuthUser } from "@/lib/types/auth";
 
 interface UserContextValue {
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
   requestMagicLink: (email: string) => Promise<void>;
   logout: () => void;
@@ -22,7 +17,7 @@ interface UserContextValue {
 const UserContext = createContext<UserContextValue | null>(null);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   // setLoading(false) déplacé dans le finally interne plutôt que dans
@@ -32,7 +27,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // loading à false, ce qui est inoffensif (déjà false en steady-state).
   const fetchUser = useCallback(async () => {
     try {
-      const data = await apiGet<User>("/auth/me");
+      const data = await apiGet<AuthUser>("/auth/me");
       setUser(data);
     } catch {
       setUser(null);

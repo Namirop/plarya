@@ -9,8 +9,9 @@ import { List, X, CaretRight } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 
 import { cn } from "@/lib/utils";
+import type { UserRole } from "@/lib/types/auth";
 
-export type HeaderRole = "USER" | "EXPERT" | "ADMIN";
+export type HeaderRole = UserRole;
 
 export interface HeaderProps {
   /** "loading" : on n'a pas encore résolu la session (1ʳᵉ frame post

@@ -11,6 +11,7 @@ import type {
   SalesPage,
   Stats,
 } from "@/lib/types/admin";
+import type { AuthUser } from "@/lib/types/auth";
 
 import AdminClient from "./AdminClient";
 
@@ -26,18 +27,12 @@ import AdminClient from "./AdminClient";
  * défaut). L'AdminClient peut ensuite paginer
  * via /admin/pronos?limit=50&offset=N.
  */
-interface MeUser {
-  id: string;
-  email: string;
-  role: "USER" | "EXPERT" | "ADMIN";
-}
-
 const PRONOS_PAGE_SIZE = 50;
 
 export default async function AdminPage() {
   const meRes = await serverFetch("/auth/me");
   if (!meRes.ok) redirect("/");
-  const me = (await meRes.json()) as MeUser;
+  const me = (await meRes.json()) as AuthUser;
   if (me.role !== "ADMIN") redirect("/");
 
   const [statsRes, revenueRes, salesRes, byExpertRes, expertsRes, pronosRes, usersRes] =

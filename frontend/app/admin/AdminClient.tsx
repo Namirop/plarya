@@ -157,7 +157,7 @@ export default function AdminClient({ initialData }: { initialData: AdminInitial
     setPendingOverride({ pronoId, result });
   }
 
-  // ── KPIs computés depuis revenueDays (cohérent avec V1) ──
+  // ── KPIs computés depuis revenueDays ──
   const now = new Date();
   const currentMonthDays = revenueDays.filter((d) => {
     const date = new Date(d.date);
