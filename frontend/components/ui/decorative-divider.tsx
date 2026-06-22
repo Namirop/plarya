@@ -1,6 +1,6 @@
-// Divider décoratif "ligne — point — ligne" — anciennement doré
-// (Figma frame `80:736`), neutralisé en 3B : sur la homepage règle
-// MAX 3 occurrences dorées, ce divider décoratif n'en fait pas partie.
+// Divider décoratif "ligne — point — ligne" — anciennement doré,
+// neutralisé : sur la homepage, règle MAX 3 occurrences dorées, ce
+// divider décoratif n'en fait pas partie.
 // Garde la forme + l'opacité subtile, juste la couleur passe en blanc.
 //
 // Largeur : 280 px mobile (rentre dans viewport 393 sans clipping),

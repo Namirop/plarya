@@ -299,7 +299,7 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
             recouvre la fin de la liste d'analyses. */}
         <div className="mx-auto w-full max-w-[960px] flex-1 px-4 pt-10 pb-32 md:px-6 md:pt-16">
           {/* Bandeau d'avertissement admin — neutre (anciennement
-              doré, neutralisé en 3B : la règle /experts/[id] réserve
+              doré, neutralisé : la règle /experts/[id] réserve
               le doré au badge EXPERT, badge featured, cote featured
               et CTA primary). Le warning reste visible via la bordure
               + le fond surface-elevated subtil. */}
@@ -323,8 +323,8 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
           {/* ═══ BLOC IDENTITÉ ═══
               Card englobante DS : bg-black/40, bordure subtile, radius 16,
               padding 24/32. Layout horizontal desktop, stack vertical mobile.
-              Pas de glow décoratif (règle anti-AI : aucun halo de fond sur
-              élément non-CTA). */}
+              Pas de glow décoratif (aucun halo de fond sur élément
+              non-CTA). */}
           <section className="rounded-2xl border border-surface-elevated bg-black/40 p-6 md:p-8">
             <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
               {/* Avatar 96×96, ring doré subtil. */}
@@ -365,7 +365,7 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
                 )}
 
                 {/* Spécialité en mention inline éditoriale (plus de pills
-                    rounded-full + icône — règle anti-AI). */}
+                    rounded-full + icône). */}
                 {expert.sports.length > 0 && (
                   <p className="font-body text-sm text-muted-foreground">
                     Spécialiste {expert.sports.map(getSportLabel).join(", ").toLowerCase()}

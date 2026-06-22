@@ -3,9 +3,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export interface PageStubProps {
-  /** Titre H1 — sur 1 ligne, Work Sans bold (cf. règle typo CLAUDE.md §3 :
-   *  les stubs UI internes ne sont pas du contenu marketing → pas de
-   *  font-display). */
+  /** Titre H1 — sur 1 ligne, Mona Sans bold : les stubs UI internes ne
+   *  sont pas du contenu marketing → pas de font-display. */
   title: string;
   /** Sous-titre court / description "à venir". */
   description?: string;

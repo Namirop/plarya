@@ -3,8 +3,8 @@ import { z } from "zod";
 import { Sport } from "../generated/prisma/enums";
 
 /**
- * Schéma Zod commun pour la liste de sports d'un expert (Sprint Polish
- * B2.2). Utilisé par TOUS les endpoints qui acceptent un array `sports`
+ * Schéma Zod commun pour la liste de sports d'un expert. Utilisé par
+ * TOUS les endpoints qui acceptent un array `sports`
  * en entrée — sans cette centralisation, expert-self.ts validait juste
  * `z.array(z.string())` et laissait passer "yoga", "padel", etc.
  *

@@ -84,8 +84,8 @@ export default async function ExpertProfileLayout({
   const expert = await fetchExpertForSeo(id);
 
   // JSON-LD ProfilePage qui wrap un Person — Google reconnaît mieux
-  // ce type pour les pages de profil utilisateur (cf. Sprint Polish
-  // C.6, recommandation audit). Le `mainEntity` Person reste lisible
+  // ce type pour les pages de profil utilisateur. Le `mainEntity`
+  // Person reste lisible
   // par les bots qui ne supportent pas encore ProfilePage. Skip total
   // si le fetch échoue plutôt que de pousser un schema incomplet.
   const profilePageLd = expert

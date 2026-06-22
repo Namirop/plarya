@@ -201,8 +201,7 @@ export async function overridePronoResult(pronoId: string, input: UpdateResultIn
 
 /**
  * Stats globales. `estimatedRevenueCents` = somme du prix actuel de
- * chaque sub active (prix lu sur l'expert lié, pas hardcodé — cf.
- * audit-final.md §J).
+ * chaque sub active (prix lu sur l'expert lié, pas hardcodé).
  */
 export async function getGlobalStats(): Promise<GlobalStats> {
   const [usersCount, expertsCount, pronosCount, activeSubscriptionsCount] = await Promise.all([

@@ -18,7 +18,7 @@ export interface HeaderProps {
    *  flash "guest → connected" visible 50-200 ms au refresh. */
   variant?: "connected" | "guest" | "loading";
   /** Rôle de l'utilisateur connecté. Pilote les liens de nav affichés
-   *  (cf. nav role-aware §5 de project-state.md) :
+   *  selon le rôle :
    *    - USER  : "Mon Compte" (vue acheteur : abonnements + historique)
    *    - EXPERT : "Dashboard" + "Mon Compte" (éditeur profil expert)
    *    - ADMIN : "Admin" uniquement

@@ -1,27 +1,10 @@
-// === HISTORIQUE DES POLICES ===
-// V1 originale : DM Serif Display + Work Sans
-// V2 testée et rejetée : Geist + Instrument Serif (mai 2026)
-// V3 actuelle : Mona Sans (body) + Hubot Sans (display) — GitHub OFL
-//
-// Pour rollback rapide :
-//   1. Commenter les imports/configs actifs (V3)
-//   2. Décommenter le bloc V1 ou V2 ci-dessous (next/font/google)
-//   3. Update `frontend/app/globals.css` (bloc `--font-*` sous @theme) :
-//        V1 : --font-display: var(--font-dm-serif), …
-//             --font-body / --font-sans: var(--font-work-sans), …
-//        V2 : --font-display: var(--font-instrument-serif), …
-//             --font-body / --font-sans: var(--font-geist), …
-//   4. Update la className sur <html> en bas du fichier
-//   5. Restart le dev server (next/font cache parfois agressivement)
+// Polices locales (SIL Open Font License, usage commercial libre) :
+//   - Mona Sans  (body)              → public/fonts/Mona-Sans.woff2 (variable)
+//   - Hubot Sans (display marketing) → public/fonts/Hubot-Sans.ttf
+// display: "swap" pour éviter le FOIT et garder un LCP rapide même si la
+// police met du temps à charger.
 
 import localFont from "next/font/local";
-
-// ↓↓↓ V1 (Work Sans + DM Serif Display) — gardée pour rollback ultime
-// import { Work_Sans, DM_Serif_Display } from "next/font/google";
-//
-// ↓↓↓ V2 (Geist + Instrument Serif) — testée et rejetée
-// import { Geist, Instrument_Serif } from "next/font/google";
-
 import type { Metadata } from "next";
 
 import { FlagEmojiPolyfill } from "@/components/layout/flag-emoji-polyfill";
@@ -31,20 +14,6 @@ import { CookieBanner } from "@/components/legal/cookie-banner";
 import { UserProvider } from "@/hooks/use-user";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
-
-// ════════════════════════════════════════════════════════════════
-// V3 ACTUELLE — Mona Sans (body) + Hubot Sans (display)
-//
-// Fichiers locaux dans `public/fonts/` :
-//   - Mona-Sans.woff2 (variable, ~521KB) — axes wdth + wght + opsz + ital
-//   - Hubot-Sans.ttf  (variable, ~713KB) — pas de woff2 variable
-//     officiel dans le repo GitHub, on charge le TTF. Hubot étant
-//     réservé aux titres marketing (utilisation rare), le poids
-//     supplémentaire est acceptable avec `display: "swap"`.
-//
-// Les deux polices sont SOUS GitHub (SIL Open Font License, gratuites
-// pour usage commercial).
-// ════════════════════════════════════════════════════════════════
 
 const monaSans = localFont({
   src: "../public/fonts/Mona-Sans.woff2",
@@ -57,31 +26,6 @@ const hubotSans = localFont({
   variable: "--font-hubot-sans",
   display: "swap",
 });
-
-// ↓↓↓ V1 configs — gardées commentées pour rollback
-// const workSans = Work_Sans({
-//   subsets: ["latin"],
-//   variable: "--font-work-sans",
-//   weight: ["400", "500", "600", "700"],
-// });
-// const dmSerif = DM_Serif_Display({
-//   subsets: ["latin"],
-//   variable: "--font-dm-serif",
-//   weight: ["400"],
-// });
-//
-// ↓↓↓ V2 configs — gardées commentées pour rollback
-// const geist = Geist({
-//   subsets: ["latin"],
-//   variable: "--font-geist",
-//   display: "swap",
-// });
-// const instrumentSerif = Instrument_Serif({
-//   subsets: ["latin"],
-//   weight: "400",
-//   variable: "--font-instrument-serif",
-//   display: "swap",
-// });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -117,8 +61,7 @@ export const metadata: Metadata = {
     title: `${SITE_NAME} — Analyses sportives par des experts`,
     description: SITE_DESCRIPTION,
     // L'OG image est auto-résolue par Next via app/opengraph-image.tsx
-    // (ou app/opengraph-image.{png,jpg}). Cf. récap Phase 1 SEO pour
-    // l'état de cette ressource.
+    // (ou app/opengraph-image.{png,jpg}).
   },
   twitter: {
     card: "summary_large_image",

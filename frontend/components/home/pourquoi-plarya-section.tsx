@@ -11,8 +11,7 @@ type Pillar = {
   description: string;
 };
 
-// 3 piliers de réassurance. Wording verbatim de la maquette Figma
-// (frame `94:824`), cf. pourquoi-plarya-section-spec.md §3.
+// 3 piliers de réassurance. Wording verbatim de la maquette.
 const PILLARS: Pillar[] = [
   {
     icon: Clock,
@@ -38,9 +37,8 @@ export function PourquoiPlaryaSection() {
     // pt-16 = 64 px (gap depuis Experts).
     <section className="pt-16">
       <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
-        {/* Header HORS de la card encadrée (conforme à la maquette
-            Figma — voir pourquoi-plarya-section-spec.md §2). Le "?"
-            est en doré accent — pattern unique à cette section. */}
+        {/* Header HORS de la card encadrée (conforme à la maquette). Le
+            "?" est en doré accent — pattern unique à cette section. */}
         <MarketingSectionTitle
           title={
             <>

@@ -1,8 +1,8 @@
 import crypto from "crypto";
 
 /**
- * Connexion démo 1-clic — UNIQUEMENT pour MONTRER les espaces EXPERT et
- * USER au client pendant la phase démo (sans email ni mot de passe).
+ * Connexion démo 1-clic — accès rapide aux espaces EXPERT et USER pour
+ * démonstrations (sans email ni mot de passe), activé via env.
  *
  * Sécurité & cycle de vie :
  *  - Désactivé par défaut. Actif SEULEMENT si `ENABLE_DEMO_LOGIN="true"`.

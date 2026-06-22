@@ -43,7 +43,7 @@ export function initCronJobs(): void {
 
   // Tous les jours à 3h : cleanup des magic-links et sessions
   // expirés. Sans ce job, ces 2 tables grossissent linéairement
-  // avec le trafic (cf. audit-final.md §B).
+  // avec le trafic.
   cron.schedule(
     "0 3 * * *",
     async () => {
@@ -166,8 +166,7 @@ export async function autoDeletePendingExperts(): Promise<void> {
     try {
       // Réutilise softDeleteUserNow (account-service) : MÊME logique
       // que la branche immédiate de DELETE /auth/me. Sans cette
-      // dédup, les deux chemins divergent au fil des refactos (cf.
-      // audit-final.md §K).
+      // dédup, les deux chemins divergent au fil des refactos.
       await softDeleteUserNow({
         userId: expert.userId,
         email: expert.user.email,

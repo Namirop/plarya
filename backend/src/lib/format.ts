@@ -5,7 +5,6 @@
 // les emails envoyés à ses abonnés sans cet escape (les clients mail
 // modernes isolent le JS mais peuvent rendre la réécriture du DOM
 // → phishing visuel possible).
-// Cf. audit-final.md §E.
 export function escapeHtml(unsafe: string): string {
   return unsafe
     .replace(/&/g, "&amp;")

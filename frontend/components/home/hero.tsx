@@ -146,7 +146,7 @@ export function Hero() {
 
               {/* CTAs : taille `default` mobile (text-body-16 16px),
                   `lg` desktop (text-h5 20px). Spec Figma mobile : btn
-                  mobile = Work Sans Medium 16px. */}
+                  mobile = Mona Sans Medium 16px. */}
               <motion.div
                 className="mt-8 md:mt-12 flex flex-col gap-4 md:flex-row md:gap-4"
                 initial="hidden"

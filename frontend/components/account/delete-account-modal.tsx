@@ -142,7 +142,7 @@ export function DeleteAccountModal({
           <X className="size-5" />
         </button>
 
-        {/* Titre : Work Sans bold blanc (pas rouge — le rouge se mérite
+        {/* Titre : Mona Sans bold blanc (pas rouge — le rouge se mérite
             sur l'action, pas sur le titre). */}
         <h2
           id="delete-account-title"

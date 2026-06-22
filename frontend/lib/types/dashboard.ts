@@ -1,6 +1,6 @@
 // Types partagés entre l'app dashboard et ses composants. Extraits de
-// `app/dashboard/page.tsx` lors de l'éclatement Bloc 2 — la page V1
-// déclarait ces interfaces inline. Ils restent fidèles aux réponses
+// `app/dashboard/page.tsx` qui les déclarait inline. Ils restent
+// fidèles aux réponses
 // API actuelles (cf. backend `routes/experts.ts`, `routes/pronos.ts`,
 // `routes/bookmakers.ts`).
 

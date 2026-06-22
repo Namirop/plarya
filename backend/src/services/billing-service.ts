@@ -25,7 +25,7 @@ import { stripe, STRIPE_APP_TAG } from "../lib/stripe";
  * jusqu'à 3 jours par défaut).
  */
 
-// Sprint Polish A.10 — Zod parse de `sports` désérialisé du metadata
+// Zod parse de `sports` désérialisé du metadata
 // Stripe. Un payload corrompu (Dashboard manipulé, retry sur event avec
 // metadata altérée) ferait passer des strings invalides dans l'enum
 // Sport de Prisma → 500. Zod garantit que ce qui arrive en DB est
@@ -304,12 +304,24 @@ async function processUserSubscriptionSession(
     return;
   }
 
-  const stripeSubId = type === "MONTHLY" ? (session.subscription as string) : null;
+  let stripeSubId: string | null = null;
+  if (type === "MONTHLY") {
+    if (!session.subscription) {
+      webhookLogger.error(
+        { eventId: event.id, eventType: event.type, expertId, type },
+        "Monthly subscription session has no subscription ID — skipping",
+      );
+      await markEventProcessed(prisma, event);
+      return;
+    }
+    stripeSubId = session.subscription;
+  }
   const expiresAt = type === "DAY_PASS" ? new Date(Date.now() + DAY) : new Date(Date.now() + MONTH);
 
   await prisma.$transaction(async (tx) => {
-    const existing = await tx.subscription.findFirst({
+    const existing = await tx.subscription.findUnique({
       where: { stripeSessionId: session.id },
+      select: { id: true },
     });
     if (existing) {
       await markEventProcessed(tx, event);

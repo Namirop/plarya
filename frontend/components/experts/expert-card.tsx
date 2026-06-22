@@ -17,7 +17,7 @@ import { SportIcon } from "@/lib/sports-icons";
 // (signal sémantique). La flèche puce de liste est passée en blanc.
 const ACCENT_GOLD = "#DFB968";
 
-// Divider neutre — anciennement gradient doré, neutralisé en 3B
+// Divider neutre — anciennement gradient doré, neutralisé
 // (multiplié par N cards dans le carrousel = saturation).
 const DIVIDER_NEUTRAL_GRADIENT =
   "linear-gradient(to right, transparent 0%, rgba(255,255,255,0.15) 51%, transparent 100%)";
@@ -167,7 +167,7 @@ export function ExpertCard({
   // Si pas d'id (vitrine / tests), on rend la card "nue", sans navigation.
   if (!id) return <CardTilt>{inner}</CardTilt>;
 
-  // Wrapper Link sur toute la card — UX décidée brief Bloc 1 §2 : la
+  // Wrapper Link sur toute la card — décision UX : la
   // card entière mène au profil expert, y compris en état `locked`
   // (l'utilisateur peut vouloir voir les analyses futures de l'expert).
   return (

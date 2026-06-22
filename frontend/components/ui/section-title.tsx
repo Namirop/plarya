@@ -7,13 +7,13 @@ import { CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 // ════════════════════════════════════════════════════════════════════
-// Deux composants distincts par RÈGLE D'USAGE TYPO (cf. CLAUDE.md §3) :
+// Deux composants distincts par RÈGLE D'USAGE TYPO :
 //
-//  - <MarketingSectionTitle> : font-display (DM Serif Display) — réservé
+//  - <MarketingSectionTitle> : font-display (Hubot Sans) — réservé
 //    aux sections marketing de la homepage (Domaines, Experts, Pourquoi
 //    Plarya, Devenir créateur). Effet éditorial / "presse".
 //
-//  - <SectionTitle> : font-body (Work Sans) bold — UI interne (dashboard,
+//  - <SectionTitle> : font-body (Mona Sans) bold — UI interne (dashboard,
 //    admin, compte, etc.). Hiérarchie portée par la taille + le weight,
 //    pas par le changement de famille.
 //
@@ -66,13 +66,13 @@ export function SectionTitle({ title, cta, className, ctaClassName }: SectionTit
     <div className={cn("flex w-full items-center justify-between gap-6", className)}>
       <div className="flex items-center gap-4">
         {/* Bar prefix neutre — anciennement bg-accent (doré), mis en
-            neutre en 3B (règle /dashboard /admin /compte : titres
-            internes sans doré). Le doré reste pour MarketingSectionTitle. */}
+            neutre (règle /dashboard /admin /compte : titres internes
+            sans doré). Le doré reste pour MarketingSectionTitle. */}
         <span
           aria-hidden
           className="block h-[28px] md:h-[32px] w-px shrink-0 bg-foreground"
         />
-        {/* Work Sans bold (700) — pas de font-display ici. Le contraste
+        {/* Mona Sans bold (700) — pas de font-display ici. Le contraste
             vient de la taille (24px mobile, 28px desktop) + du weight
             bold + de la bar prefix. */}
         <h2 className="font-body font-bold text-[22px] leading-none md:text-[28px] text-foreground">

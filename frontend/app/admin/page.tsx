@@ -15,7 +15,7 @@ import type {
 import AdminClient from "./AdminClient";
 
 /**
- * Server component /admin (Sprint Polish B1.3).
+ * Server component /admin.
  *
  * Réservé aux ADMIN. Pour USER/EXPERT → redirect /. On parallélise
  * les 7 fetchs initiaux (Promise.all) → temps de rendu = max(fetchs)
@@ -23,7 +23,7 @@ import AdminClient from "./AdminClient";
  * d'autorisation et on redirect au lieu de partir en erreur 500.
  *
  * Le premier batch de pronos est fetché avec limit=50 (page size par
- * défaut, cf. Sprint Polish A.7). L'AdminClient peut ensuite paginer
+ * défaut). L'AdminClient peut ensuite paginer
  * via /admin/pronos?limit=50&offset=N.
  */
 interface MeUser {

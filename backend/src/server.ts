@@ -161,8 +161,8 @@ app.use("/checkout", checkoutLimiter, checkoutRoutes);
 app.use("/bookmakers", bookmakerRoutes);
 
 // Backward-compat : anciennes URLs /tipsters/* → /experts/* en 301.
-// Couvre les magic-links générés avant le rename (cf. CLAUDE.md §1.1
-// renommage produit). À retirer après 6 mois si aucun hit sur ces routes.
+// Couvre les magic-links générés avant le renommage produit. À retirer
+// après 6 mois si aucun hit sur ces routes.
 app.use("/tipsters", (req, res) => {
   res.redirect(301, "/experts" + req.url);
 });

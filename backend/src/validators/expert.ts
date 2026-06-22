@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { sportsSchema } from "./shared";
 
-// Bornes prix (centimes). Cf. audit-final.md §J : sans guard, un
+// Bornes prix (centimes). Sans guard, un
 // admin distrait peut set monthlyPrice à 1 et créer une session
 // Stripe à 0,01€. min(100)=1€ floor, max(5000)=50€ ceiling pour
 // dayPass. min(500)=5€, max(50000)=500€ pour mensuel.

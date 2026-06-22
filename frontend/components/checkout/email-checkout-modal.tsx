@@ -33,8 +33,8 @@ export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheck
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset des states à la fermeture. Pattern aligné sur
-  // DeleteAccountModal / LoginModal / ConfirmModal (cf. Sprint Polish
-  // B2.5 — homogénéisation a11y des modales).
+  // DeleteAccountModal / LoginModal / ConfirmModal (homogénéisation
+  // a11y des modales).
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) {

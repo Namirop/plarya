@@ -29,8 +29,8 @@ interface LoginModalProps {
   redirectAfterLogin?: string;
 }
 
-// Pattern input DS aligné /devenir-expert + EmailCheckoutModal (Bloc 2)
-// + /compte. Inline ici pour éviter une dépendance — à factoriser dans
+// Pattern input DS aligné /devenir-expert + EmailCheckoutModal + /compte.
+// Inline ici pour éviter une dépendance — à factoriser dans
 // lib/styles si on en ajoute un 4ᵉ consommateur.
 const fieldCls = cn(
   "h-12 w-full rounded-xl border border-surface-elevated bg-black/40 px-4 py-3",
@@ -155,7 +155,7 @@ export function LoginModal({
       // ── POST_LOGIN_REDIRECT_KEY ──
       // Posé AVANT l'appel API : si l'utilisateur clique le lien magic-
       // link depuis le même navigateur, sessionStorage est dispo dès le
-      // retour. Ne PAS déplacer après le `await` (cf. audit §pièges).
+      // retour. Ne PAS déplacer après le `await`.
       if (redirectAfterLogin && typeof window !== "undefined") {
         sessionStorage.setItem(POST_LOGIN_REDIRECT_KEY, redirectAfterLogin);
       }
@@ -170,8 +170,7 @@ export function LoginModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Overlay — bg-black/80 backdrop-blur-md (pattern Bloc 2). Clic =
-          handleClose (comportement V1 conservé). */}
+      {/* Overlay — bg-black/80 backdrop-blur-md. Clic = handleClose. */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
         onClick={handleClose}
@@ -188,7 +187,7 @@ export function LoginModal({
         aria-labelledby="login-modal-title"
         className="relative z-10 mx-4 w-full max-w-[480px] rounded-2xl border border-surface-elevated bg-surface-1 p-6 sm:p-8"
       >
-        {/* Close X — Phosphor, taille 5 (=20 px), pattern Bloc 2. */}
+        {/* Close X — Phosphor, taille 5 (=20 px). */}
         <button
           type="button"
           onClick={handleClose}

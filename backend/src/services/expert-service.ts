@@ -224,8 +224,7 @@ export async function updateOwnExpertProfile(
  *
  * Optim N+1 : une seule query Prisma avec `include` pronos du jour →
  * pronosToday se calcule côté JS (length de l'array). Avant cette
- * refacto, on faisait 2 queries supplémentaires PAR expert (cf. audit
- * Sprint Polish A.6).
+ * refacto, on faisait 2 queries supplémentaires PAR expert.
  *
  * Filtre `deletedAt: null + pendingDeletionAt: null` : les experts
  * soft-deleted ou en suppression programmée n'apparaissent pas sur la

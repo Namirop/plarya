@@ -29,9 +29,9 @@ const RISE_IN_TRANSITION = { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const };
 // filteredExperts sur SPORT_DOMAIN / ESPORT_DOMAIN).
 export type DomainId = "SPORT" | "ESPORT";
 
-// 3 cards Figma frame `87:211` — voir domains-section-spec.md.
-// Note : pas de lien "Voir tous les domaines" (acté avec le client :
-// pas de sens avec seulement 3 domaines, cf. homepage-spec.md §3).
+// 3 cards selon la maquette.
+// Pas de lien "Voir tous les domaines" : la liste reste contenue à la
+// home (décision produit — pas de sens avec seulement 3 domaines).
 const DOMAINS = [
   {
     id: "SPORT" as DomainId,

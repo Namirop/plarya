@@ -5,7 +5,7 @@ import { serverFetch } from "@/lib/server-fetch";
 import CompteClient, { type ExpertProfile, type SubscriptionWithExpert } from "./CompteClient";
 
 /**
- * Server component /compte (Sprint Polish B1.1).
+ * Server component /compte.
  *
  * Pattern :
  *  1. Resolve session via /auth/me (cookie session_token forwardé).

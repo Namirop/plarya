@@ -140,7 +140,7 @@ export async function logoutSession(sessionToken: string | undefined): Promise<v
  * l'existence d'une Subscription Stripe (anti-énumération).
  */
 export async function resendAccessUnlocked(stripeSessionId: string): Promise<void> {
-  const subscription = await prisma.subscription.findFirst({
+  const subscription = await prisma.subscription.findUnique({
     where: { stripeSessionId },
     include: {
       user: { select: { email: true } },
@@ -193,7 +193,7 @@ export type DemoLoginOutcome =
 
 /**
  * Crée une session pour un compte démo (expert ou user), sans email ni
- * mot de passe — UNIQUEMENT pour montrer ces espaces au client.
+ * mot de passe — pour les démonstrations des espaces EXPERT et USER.
  *
  *  - `account_missing` : le compte seedé n'existe pas (ou est supprimé)
  *    → le seed n'a pas tourné sur cet environnement.

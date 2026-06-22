@@ -17,7 +17,7 @@ import type { Bookmaker, Prono, ExpertProfile } from "@/lib/types/dashboard";
 import { cn } from "@/lib/utils";
 
 // ════════════════════════════════════════════════════════════════════
-// Publish Analysis Form — wizard 2 étapes (spec docs/redesign-publish-analysis-form.md)
+// Publish Analysis Form — wizard 2 étapes
 //
 // Étape 1 "Le pari" : data structurée (match, ligue, pick, cote,
 //   teasing, heure, bookmakers, toggle "analyse du jour")

@@ -61,8 +61,8 @@ const cardCls = "rounded-2xl border border-surface-elevated bg-black/40";
 
 
 // Divider neutre — séparateur fin entre lignes de l'historique.
-// Anciennement gradient doré, neutralisé en ménage 3B (aucun doré
-// sur l'historique).
+// Anciennement gradient doré, neutralisé (aucun doré sur
+// l'historique).
 const DIVIDER_NEUTRAL_GRADIENT =
   "linear-gradient(to right, transparent 0%, var(--color-surface-elevated) 51%, transparent 100%)";
 

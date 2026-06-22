@@ -7,7 +7,7 @@ import { sportsSchema } from "./shared";
 // On ne les expose donc pas dans ce schéma (YAGNI : on les rajoutera
 // si/quand PATCH /experts/me ouvre cette capabilité).
 //
-// Sprint Polish B2.2 — `sports` partage maintenant le schéma strict
+// `sports` partage maintenant le schéma strict
 // `sportsSchema` (z.nativeEnum(Sport) + bornes min/max). Avant, on
 // acceptait z.array(z.string()) et un expert pouvait PATCH "yoga"
 // sans rejet à la validation.

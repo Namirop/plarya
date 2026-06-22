@@ -6,7 +6,7 @@ import type { Bookmaker, Prono, ExpertProfile } from "@/lib/types/dashboard";
 import DashboardClient from "./DashboardClient";
 
 /**
- * Server component /dashboard (Sprint Polish B1.2).
+ * Server component /dashboard.
  *
  * Réservé aux EXPERT. USER → redirect /. ADMIN → redirect /admin (le
  * panel admin contient ses propres outils, /dashboard est expert-only).

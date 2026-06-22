@@ -57,8 +57,8 @@ export function ConfirmModal({
     } catch {
       // L'appelant gère ses erreurs dans onConfirm. Si une exception
       // remonte, on laisse la modale ouverte pour que l'admin
-      // recommence. Le feedback erreur lui-même viendra du Bloc 3
-      // (toast global).
+      // recommence. Le feedback erreur lui-même viendra du toast
+      // global.
     } finally {
       setSubmitting(false);
     }
@@ -117,7 +117,7 @@ export function ConfirmModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Overlay — bg-black/80 + blur, click = handleClose (sauf si
-          submitting). Pattern Bloc 2 cohérent avec les autres modales. */}
+          submitting). Pattern cohérent avec les autres modales. */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
         onClick={handleClose}

@@ -87,7 +87,7 @@ export function AnalysisCardTicket({
         "relative mx-auto w-full max-w-[480px] rounded-[6px] border border-white/10 bg-surface-2",
         "px-6 pb-6 pt-5 md:mx-0 md:max-w-none md:px-8 md:pb-8 md:pt-6",
         // Élévation sobre : hairline clair + ombre douce. Pas de glow
-        // doré (réservé aux CTA — règle anti-AI).
+        // doré (réservé aux CTA).
         "shadow-[0_2px_6px_rgba(0,0,0,0.45),0_24px_48px_-22px_rgba(0,0,0,0.9)]",
         started && !hasAccess && "opacity-60",
       )}
@@ -457,7 +457,7 @@ function LockedBlock({
       </div>
       <div className="absolute inset-0 flex items-center justify-center">
         {/* Cadenas = signal de statut métier (contenu gaté), pas une
-            décoration → usage d'icône légitime (cf. anti-AI §6). */}
+            décoration → usage d'icône légitime. */}
         <Lock className="size-6 text-foreground" aria-label="Contenu verrouillé" />
       </div>
     </div>

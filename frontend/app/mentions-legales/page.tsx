@@ -22,33 +22,33 @@ export default function MentionsLegalesPage() {
         <LegalList>
           <li>
             <strong>Raison sociale</strong> :{" "}
-            <em className="text-muted-foreground">à compléter par le client</em>
+            <em className="text-muted-foreground">À renseigner par l'éditeur du site</em>
           </li>
           <li>
             <strong>Forme juridique</strong> :{" "}
             <em className="text-muted-foreground">
-              à compléter par le client (SAS, SARL, EI, etc.)
+              À renseigner par l'éditeur du site (SAS, SARL, EI, etc.)
             </em>
           </li>
           <li>
             <strong>Capital social</strong> :{" "}
-            <em className="text-muted-foreground">à compléter par le client</em>
+            <em className="text-muted-foreground">À renseigner par l'éditeur du site</em>
           </li>
           <li>
             <strong>RCS / SIRET</strong> :{" "}
-            <em className="text-muted-foreground">à compléter par le client</em>
+            <em className="text-muted-foreground">À renseigner par l'éditeur du site</em>
           </li>
           <li>
             <strong>Numéro de TVA intracommunautaire</strong> :{" "}
-            <em className="text-muted-foreground">à compléter par le client</em>
+            <em className="text-muted-foreground">À renseigner par l'éditeur du site</em>
           </li>
           <li>
             <strong>Siège social</strong> :{" "}
-            <em className="text-muted-foreground">à compléter par le client</em>
+            <em className="text-muted-foreground">À renseigner par l'éditeur du site</em>
           </li>
           <li>
             <strong>Directeur de la publication</strong> :{" "}
-            <em className="text-muted-foreground">à compléter par le client</em>
+            <em className="text-muted-foreground">À renseigner par l'éditeur du site</em>
           </li>
           <li>
             <strong>Contact</strong> : contact@plarya.com
