@@ -1,13 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { API_URL, SITE_URL } from "@/lib/site";
-
-// Shape minimal de l'API GET /experts pour la génération du sitemap.
-// On lit juste l'id pour construire l'URL. L'API renvoie aussi
-// d'autres champs qu'on ignore ici.
-interface ExpertListItem {
-  id: string;
-}
+import type { ExpertListItem } from "@/lib/types/expert";
 
 // Sitemap généré au build-time. Si le backend est down au build,
 // fallback sur les pages statiques uniquement (try/catch). Pour

@@ -126,18 +126,23 @@ export async function parseApiError(res: Response): Promise<ApiError> {
   return new ApiError(message, { code, status: res.status });
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const res = await apiFetch(path);
+export async function apiGet<T>(path: string, options?: { signal?: AbortSignal }): Promise<T> {
+  const res = await apiFetch(path, { signal: options?.signal });
   if (!res.ok) {
     throw await parseApiError(res);
   }
   return res.json();
 }
 
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+export async function apiPost<T>(
+  path: string,
+  body: unknown,
+  options?: { signal?: AbortSignal },
+): Promise<T> {
   const res = await apiFetch(path, {
     method: "POST",
     body: JSON.stringify(body),
+    signal: options?.signal,
   });
   if (!res.ok) {
     throw await parseApiError(res);
@@ -145,10 +150,15 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   return res.json();
 }
 
-export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+export async function apiPatch<T>(
+  path: string,
+  body: unknown,
+  options?: { signal?: AbortSignal },
+): Promise<T> {
   const res = await apiFetch(path, {
     method: "PATCH",
     body: JSON.stringify(body),
+    signal: options?.signal,
   });
   if (!res.ok) {
     throw await parseApiError(res);
