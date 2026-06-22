@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { Request, Response } from "express";
 
 import { sendDailyWinningEmails } from "../lib/cron";
 import { handleError } from "../lib/http-errors";
@@ -6,6 +7,7 @@ import { adminMiddleware } from "../middleware/admin";
 import { authMiddleware } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import { validateParams } from "../middleware/validate-params";
+import { validateQuery } from "../middleware/validate-query";
 import {
   buildSalesCsv,
   createExpertAccount,
@@ -20,6 +22,14 @@ import {
   setExpertDisplayOrder,
   setExpertWarning,
 } from "../services/admin-service";
+import {
+  paginationQuerySchema,
+  salesExportQuerySchema,
+  salesFilterQuerySchema,
+  type PaginationQuery,
+  type SalesExportQuery,
+  type SalesFilterQuery,
+} from "../validators/admin";
 import {
   createExpertSchema,
   displayOrderSchema,
@@ -99,17 +109,17 @@ router.get("/users", async (_req, res) => {
 
 // ── Pronos ──────────────────────────────────────────────────────────
 
-router.get("/pronos", async (req, res) => {
-  try {
-    const result = await listPronosPaginated({
-      limit: req.query.limit as string | undefined,
-      offset: req.query.offset as string | undefined,
-    });
-    res.json(result);
-  } catch (err) {
-    handleError(err, res, "GET /admin/pronos");
-  }
-});
+router.get(
+  "/pronos",
+  validateQuery(paginationQuerySchema),
+  async (req: Request<unknown, unknown, unknown, PaginationQuery>, res: Response) => {
+    try {
+      res.json(await listPronosPaginated(req.query));
+    } catch (err) {
+      handleError(err, res, "GET /admin/pronos");
+    }
+  },
+);
 
 router.patch(
   "/pronos/:id/result",
@@ -142,20 +152,17 @@ router.get("/stats/revenue", async (_req, res) => {
   }
 });
 
-router.get("/stats/sales", async (req, res) => {
-  try {
-    const result = await listSalesPaginated({
-      limit: req.query.limit as string | undefined,
-      offset: req.query.offset as string | undefined,
-      from: req.query.from as string | undefined,
-      to: req.query.to as string | undefined,
-      expertId: req.query.expertId as string | undefined,
-    });
-    res.json(result);
-  } catch (err) {
-    handleError(err, res, "GET /admin/stats/sales");
-  }
-});
+router.get(
+  "/stats/sales",
+  validateQuery(salesFilterQuerySchema),
+  async (req: Request<unknown, unknown, unknown, SalesFilterQuery>, res: Response) => {
+    try {
+      res.json(await listSalesPaginated(req.query));
+    } catch (err) {
+      handleError(err, res, "GET /admin/stats/sales");
+    }
+  },
+);
 
 router.get("/stats/by-expert", async (_req, res) => {
   try {
@@ -165,19 +172,20 @@ router.get("/stats/by-expert", async (_req, res) => {
   }
 });
 
-router.get("/stats/export.csv", async (req, res) => {
-  try {
-    const { csv, month } = await buildSalesCsv({
-      from: req.query.from as string | undefined,
-      to: req.query.to as string | undefined,
-    });
-    res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="ventes-${month}.csv"`);
-    res.send(csv);
-  } catch (err) {
-    handleError(err, res, "GET /admin/stats/export.csv");
-  }
-});
+router.get(
+  "/stats/export.csv",
+  validateQuery(salesExportQuerySchema),
+  async (req: Request<unknown, unknown, unknown, SalesExportQuery>, res: Response) => {
+    try {
+      const { csv, month } = await buildSalesCsv(req.query);
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="ventes-${month}.csv"`);
+      res.send(csv);
+    } catch (err) {
+      handleError(err, res, "GET /admin/stats/export.csv");
+    }
+  },
+);
 
 // ── Actions ────────────────────────────────────────────────────────
 

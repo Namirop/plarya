@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import type { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
@@ -23,13 +24,16 @@ const PORT = process.env.PORT || 4000;
 // Security headers + CSP strict (cf. audit Polish A.8).
 //
 // On configure helmet manuellement plutôt qu'en defaults pour pouvoir
-// définir une Content-Security-Policy adaptée au projet :
-//  - script-src 'self' + 'unsafe-inline' : nécessaire pour Next dev
-//    (HMR injecte des scripts inline). En prod on durcira via nonce
-//    quand on aura une étape de build dédiée — pour l'instant accepté
-//    car le risque XSS reste limité par les autres mitigations.
-//  - style-src 'self' + 'unsafe-inline' : Tailwind v4 + Next CSS-in-JS
-//    posent des styles inline nécessaires pour l'hydratation.
+// définir une Content-Security-Policy adaptée au projet. NB : ce
+// process Express ne sert quasi-exclusivement que du JSON (+ /health en
+// texte, export CSV) — Next ne tourne PAS ici (front séparé). Une CSP
+// n'est appliquée par le navigateur que sur des contextes "document",
+// donc elle n'a aucun effet runtime sur nos réponses API. On la garde
+// néanmoins en defense-in-depth / signal d'intention sécu, et on la
+// resserre au maximum puisqu'on ne sert pas de HTML inline :
+//  - script-src 'self' (pas de 'unsafe-inline' : aucun script inline
+//    servi par ce backend).
+//  - style-src 'self' (idem, pas de style inline servi ici).
 //  - img-src 'self' + data: + SportsDB (badges ligues) + hôtes
 //    images whitelistés (cf. next.config.ts remotePatterns).
 //  - connect-src 'self' + api.stripe.com (Stripe.js fetch) + r.stripe.com
@@ -46,8 +50,8 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
         imgSrc: [
           "'self'",
           "data:",
@@ -161,6 +165,18 @@ app.use("/bookmakers", bookmakerRoutes);
 // renommage produit). À retirer après 6 mois si aucun hit sur ces routes.
 app.use("/tipsters", (req, res) => {
   res.redirect(301, "/experts" + req.url);
+});
+
+// Catch-all des erreurs non-handled remontées via next(err) ou par les
+// routes qui auraient oublié leur try/catch. Sans ce handler, Express
+// renvoie son HTML par défaut → vilain côté API JSON.
+//
+// Signature à 4 args obligatoire : c'est ce qui signale à Express que
+// c'est un error-handling middleware (et non un handler normal).
+app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+  logger.error({ err, method: req.method, path: req.path }, "Unhandled error reached global handler");
+  if (res.headersSent) return;
+  res.status(500).json({ error: "Erreur serveur" });
 });
 
 app.listen(PORT, () => {

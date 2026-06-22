@@ -1,3 +1,5 @@
+import { Prisma } from "../generated/prisma/client";
+import type { UserRole } from "../generated/prisma/enums";
 import { logger } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 
@@ -80,24 +82,21 @@ export async function getDeletionStatus(userId: string): Promise<DeletionStatusR
 
   const expertId = user.expert.id;
 
-  const [lastActiveSub, activeSubsCount] = await Promise.all([
-    prisma.subscription.findFirst({
-      where: {
-        expertId,
-        status: "ACTIVE",
-        expiresAt: { gt: new Date() },
-      },
-      orderBy: { expiresAt: "desc" },
-      select: { expiresAt: true },
-    }),
-    prisma.subscription.count({
-      where: {
-        expertId,
-        status: "ACTIVE",
-        expiresAt: { gt: new Date() },
-      },
-    }),
-  ]);
+  // 1 seule query au lieu de findFirst + count en parallèle : on
+  // récupère les subs actives triées par expiration décroissante,
+  // count = length, dernière sub = [0].
+  const activeSubs = await prisma.subscription.findMany({
+    where: {
+      expertId,
+      status: "ACTIVE",
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { expiresAt: "desc" },
+    select: { expiresAt: true },
+  });
+
+  const activeSubsCount = activeSubs.length;
+  const lastActiveSub = activeSubs[0] ?? null;
 
   if (user.expert.pendingDeletionAt) {
     return {
@@ -291,7 +290,9 @@ export async function cancelScheduledDeletion(userId: string): Promise<void> {
  * soft-deleted (defense in depth, normalement les sessions sont
  * wipées à la suppression).
  */
-export async function getActiveUser(userId: string) {
+export type ActiveUser = { id: string; email: string; role: UserRole };
+
+export async function getActiveUser(userId: string): Promise<ActiveUser> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, email: true, role: true, deletedAt: true },
@@ -311,61 +312,77 @@ export async function getActiveUser(userId: string) {
  * Si pas de user trouvé ou soft-deleted : throw UserNotFoundError
  * (cohérence avec /auth/me).
  */
-export async function exportUserData(userId: string) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
+// Select de l'export RGPD extrait en const + `as const` : préserve les
+// littéraux `true` (un `satisfies`/inférence simple les élargirait en
+// boolean), ce qui permet de dériver le type exact du payload via
+// `Prisma.UserGetPayload<{ select: typeof exportUserSelect }>` — même
+// pattern que `bookmakerOddsInclude` dans prono-service.
+const exportUserSelect = {
+  id: true,
+  email: true,
+  role: true,
+  createdAt: true,
+  deletedAt: true,
+  stripeCustomerId: true,
+  expert: {
     select: {
       id: true,
-      email: true,
-      role: true,
+      pseudo: true,
+      bio: true,
+      photoUrl: true,
+      sports: true,
+      dayPassPrice: true,
+      monthlyPrice: true,
+      subStatus: true,
+      subExpiresAt: true,
+      displayOrder: true,
+      viewsToday: true,
       createdAt: true,
-      deletedAt: true,
-      stripeCustomerId: true,
-      expert: {
+      updatedAt: true,
+      pronos: {
         select: {
           id: true,
-          pseudo: true,
-          bio: true,
-          photoUrl: true,
-          sports: true,
-          dayPassPrice: true,
-          monthlyPrice: true,
-          subStatus: true,
-          subExpiresAt: true,
-          displayOrder: true,
-          viewsToday: true,
+          matchName: true,
+          league: true,
+          pick: true,
+          odds: true,
+          teasing: true,
+          result: true,
+          argument: true,
+          startTime: true,
+          matchDate: true,
           createdAt: true,
-          updatedAt: true,
-          pronos: {
-            select: {
-              id: true,
-              matchName: true,
-              league: true,
-              pick: true,
-              odds: true,
-              teasing: true,
-              result: true,
-              argument: true,
-              startTime: true,
-              matchDate: true,
-              createdAt: true,
-            },
-            orderBy: { createdAt: "desc" },
-          },
-        },
-      },
-      subscriptions: {
-        select: {
-          id: true,
-          type: true,
-          status: true,
-          expiresAt: true,
-          createdAt: true,
-          expert: { select: { id: true, pseudo: true } },
         },
         orderBy: { createdAt: "desc" },
       },
     },
+  },
+  subscriptions: {
+    select: {
+      id: true,
+      type: true,
+      status: true,
+      expiresAt: true,
+      createdAt: true,
+      expert: { select: { id: true, pseudo: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  },
+} as const;
+
+type ExportUserRow = Prisma.UserGetPayload<{ select: typeof exportUserSelect }>;
+
+export type UserDataExport = {
+  exportDate: string;
+  user: Pick<ExportUserRow, "id" | "email" | "role" | "createdAt" | "stripeCustomerId">;
+  expertProfile: ExportUserRow["expert"];
+  subscriptions: ExportUserRow["subscriptions"];
+};
+
+export async function exportUserData(userId: string): Promise<UserDataExport> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: exportUserSelect,
   });
 
   if (!user || user.deletedAt) {

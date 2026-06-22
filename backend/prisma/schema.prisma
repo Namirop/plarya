@@ -159,7 +159,7 @@ model Expert {
   monthlyPrice    Int             @default(2900) // centimes (29€)
   subStatus       ExpertSubStatus @default(FREE)
   subExpiresAt    DateTime?
-  stripeSubId     String?          // Stripe subscription for expert quarterly plan
+  stripeSubId     String?         // Stripe subscription for expert quarterly plan
   warningMessage  String?
   dailyNote       String?
   dailyNoteDate   DateTime?
@@ -189,6 +189,7 @@ model Expert {
 
   @@index([deletedAt])
   @@index([pendingDeletionAt])
+  @@index([stripeSubId])
   @@map("experts")
 }
 
@@ -221,7 +222,7 @@ model Subscription {
   expertId              String
   type                  SubscriptionType
   status                SubscriptionStatus @default(ACTIVE)
-  stripeSessionId       String?
+  stripeSessionId       String?            @unique
   stripeSubId           String?
   checkoutSessionUsed   Boolean            @default(false)
   expiresAt             DateTime
@@ -234,6 +235,7 @@ model Subscription {
   @@index([userId])
   @@index([expertId])
   @@index([expiresAt])
+  @@index([stripeSubId])
   @@map("subscriptions")
 }
 

@@ -1,5 +1,5 @@
 import { Prisma } from "../generated/prisma/client";
-import type { UserRole } from "../generated/prisma/enums";
+import type { Sport, UserRole } from "../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
 import { calcWinRate } from "../lib/stats";
 import type { UpdateExpertInput } from "../validators/expert-self";
@@ -10,6 +10,7 @@ import {
   PronoSubscriptionRequiredError,
   PseudoTakenError,
 } from "./errors";
+import { bookmakerOddsInclude, type PronoWithBookmakers } from "./prono-service";
 
 /**
  * Service Expert — logique métier autour du profil expert.
@@ -33,23 +34,117 @@ function todayStart(): Date {
   return d;
 }
 
+// ── Types de retour exportés (contrats consommés par les routes) ─────
+
+export type OwnExpertProfile = {
+  id: string;
+  pseudo: string;
+  bio: string | null;
+  dailyNote: string | null;
+  dailyNoteDate: Date | null;
+  photoUrl: string | null;
+  sports: Sport[];
+  dayPassPrice: number;
+  monthlyPrice: number;
+  warningMessage: string | null;
+  winRate: number;
+  pronosToday: number;
+};
+
+export type UpdatedExpertProfile = {
+  id: string;
+  pseudo: string;
+  bio: string | null;
+  dailyNote: string | null;
+  dailyNoteDate: Date | null;
+  sports: Sport[];
+};
+
+// Prono tel que sélectionné sur le profil public (pick inclus brut —
+// masqué ensuite côté map).
+type PublicExpertProno = Prisma.PronoGetPayload<{
+  select: {
+    id: true;
+    matchName: true;
+    league: true;
+    pick: true;
+    odds: true;
+    teasing: true;
+    result: true;
+    startTime: true;
+    isFeatured: true;
+    matchDate: true;
+    createdAt: true;
+  };
+}>;
+
+export type PublicExpertProfile = {
+  id: string;
+  pseudo: string;
+  bio: string | null;
+  dailyNote: string | null;
+  photoUrl: string | null;
+  sports: Sport[];
+  dayPassPrice: number;
+  monthlyPrice: number;
+  warningMessage: string | null;
+  viewsToday: number;
+  pendingDeletion: boolean;
+  pronosToday: number;
+  // pick = null sur les pronos PENDING (gating publique), sinon exposé.
+  pronos: (Omit<PublicExpertProno, "pick"> & { pick: string | null })[];
+};
+
+// Prono tel qu'inclus dans le listing homepage (pas de pick du tout).
+type PublicExpertListProno = Prisma.PronoGetPayload<{
+  select: {
+    id: true;
+    matchName: true;
+    league: true;
+    odds: true;
+    teasing: true;
+    result: true;
+    startTime: true;
+    isFeatured: true;
+    matchDate: true;
+    createdAt: true;
+  };
+}>;
+
+export type PublicExpertListItem = {
+  id: string;
+  pseudo: string;
+  bio: string | null;
+  dailyNote: string | null;
+  photoUrl: string | null;
+  sports: Sport[];
+  dayPassPrice: number;
+  monthlyPrice: number;
+  warningMessage: string | null;
+  viewsToday: number;
+  pronosToday: number;
+  todayPronos: PublicExpertListProno[];
+};
+
 /**
  * GET /experts/me — Profile + stats internes (winRate, pronosToday) de
  * l'expert connecté. Throw ExpertProfileNotFoundError si pas de profile
  * (ou soft-deleted — un compte supprimé ne doit plus accéder à ses
  * anciennes ressources).
  */
-export async function getOwnExpertProfile(userId: string) {
+export async function getOwnExpertProfile(userId: string): Promise<OwnExpertProfile> {
   const expert = await prisma.expert.findUnique({ where: { userId } });
 
   if (!expert || expert.deletedAt) {
     throw new ExpertProfileNotFoundError();
   }
 
-  const winRate = await calcWinRate(expert.id);
-  const pronosToday = await prisma.prono.count({
-    where: { expertId: expert.id, createdAt: { gte: todayStart() } },
-  });
+  const [winRate, pronosToday] = await Promise.all([
+    calcWinRate(expert.id),
+    prisma.prono.count({
+      where: { expertId: expert.id, createdAt: { gte: todayStart() } },
+    }),
+  ]);
 
   return {
     id: expert.id,
@@ -81,7 +176,10 @@ export async function getOwnExpertProfile(userId: string) {
  * `dailyNotes` au lieu de `dailyNote`) crashe tsc plutôt que d'être
  * silently-ignorée par Prisma.
  */
-export async function updateOwnExpertProfile(userId: string, input: UpdateExpertInput) {
+export async function updateOwnExpertProfile(
+  userId: string,
+  input: UpdateExpertInput,
+): Promise<UpdatedExpertProfile> {
   const expert = await prisma.expert.findUnique({ where: { userId } });
 
   if (!expert) {
@@ -137,7 +235,7 @@ export async function updateOwnExpertProfile(userId: string, input: UpdateExpert
  * simplifier — la table experts reste petite (~dizaines), pas
  * d'optim DB nécessaire ici.
  */
-export async function listPublicExperts(options: { all: boolean }) {
+export async function listPublicExperts(options: { all: boolean }): Promise<PublicExpertListItem[]> {
   const experts = await prisma.expert.findMany({
     where: { deletedAt: null, pendingDeletionAt: null },
     orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }],
@@ -192,7 +290,7 @@ export async function listPublicExperts(options: { all: boolean }) {
  * analyses jusqu'à expiration de leur sub. On expose `pendingDeletion:
  * boolean` pour que le frontend désactive les CTA d'achat.
  */
-export async function getPublicExpertProfile(expertId: string) {
+export async function getPublicExpertProfile(expertId: string): Promise<PublicExpertProfile> {
   const expert = await prisma.expert.findUnique({
     where: { id: expertId },
     include: { user: { select: { email: true } } },
@@ -202,28 +300,29 @@ export async function getPublicExpertProfile(expertId: string) {
     throw new ExpertNotFoundError();
   }
 
-  const pronosToday = await prisma.prono.count({
-    where: { expertId: expert.id, createdAt: { gte: todayStart() } },
-  });
-
-  const rawPronos = await prisma.prono.findMany({
-    where: { expertId: expert.id },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-    select: {
-      id: true,
-      matchName: true,
-      league: true,
-      pick: true,
-      odds: true,
-      teasing: true,
-      result: true,
-      startTime: true,
-      isFeatured: true,
-      matchDate: true,
-      createdAt: true,
-    },
-  });
+  const [pronosToday, rawPronos] = await Promise.all([
+    prisma.prono.count({
+      where: { expertId: expert.id, createdAt: { gte: todayStart() } },
+    }),
+    prisma.prono.findMany({
+      where: { expertId: expert.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        matchName: true,
+        league: true,
+        pick: true,
+        odds: true,
+        teasing: true,
+        result: true,
+        startTime: true,
+        isFeatured: true,
+        matchDate: true,
+        createdAt: true,
+      },
+    }),
+  ]);
 
   const pronos = rawPronos.map((p) => ({
     ...p,
@@ -284,7 +383,7 @@ export async function incrementViewCounter(expertId: string): Promise<void> {
 export async function getExpertPronosForUser(
   expertId: string,
   caller: { userId: string; role: UserRole },
-) {
+): Promise<PronoWithBookmakers[]> {
   const [subscription, expert] = await Promise.all([
     prisma.subscription.findFirst({
       where: {
@@ -311,12 +410,6 @@ export async function getExpertPronosForUser(
   return prisma.prono.findMany({
     where: { expertId },
     orderBy: { createdAt: "desc" },
-    include: {
-      bookmakerOdds: {
-        include: {
-          bookmaker: { include: { affiliateLinks: true } },
-        },
-      },
-    },
+    include: bookmakerOddsInclude,
   });
 }

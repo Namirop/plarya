@@ -8,30 +8,38 @@ import { prisma } from "./prisma";
 const cronLogger = logger.child({ context: "cron" });
 
 export function initCronJobs(): void {
-  // Tous les jours à 10h00
-  cron.schedule("0 10 * * *", async () => {
-    cronLogger.info({ job: "daily_winning_emails" }, "Job started");
-    try {
-      await sendDailyWinningEmails();
-    } catch (err) {
-      cronLogger.error({ err, job: "daily_winning_emails" }, "Job failed");
-    }
-  });
+  // Tous les jours à 10h00 (Europe/Paris)
+  cron.schedule(
+    "0 10 * * *",
+    async () => {
+      cronLogger.info({ job: "daily_winning_emails" }, "Job started");
+      try {
+        await sendDailyWinningEmails();
+      } catch (err) {
+        cronLogger.error({ err, job: "daily_winning_emails" }, "Job failed");
+      }
+    },
+    { timezone: "Europe/Paris" },
+  );
 
-  // Chaque jour à minuit : reset viewsToday + isFeatured
-  cron.schedule("0 0 * * *", async () => {
-    cronLogger.info({ job: "midnight_reset" }, "Job started");
-    try {
-      await prisma.expert.updateMany({ data: { viewsToday: 0 } });
-      await prisma.prono.updateMany({
-        where: { isFeatured: true },
-        data: { isFeatured: false },
-      });
-      cronLogger.info({ job: "midnight_reset" }, "Job done (viewsToday + isFeatured)");
-    } catch (err) {
-      cronLogger.error({ err, job: "midnight_reset" }, "Job failed");
-    }
-  });
+  // Chaque jour à minuit (Europe/Paris) : reset viewsToday + isFeatured
+  cron.schedule(
+    "0 0 * * *",
+    async () => {
+      cronLogger.info({ job: "midnight_reset" }, "Job started");
+      try {
+        await prisma.expert.updateMany({ data: { viewsToday: 0 } });
+        await prisma.prono.updateMany({
+          where: { isFeatured: true },
+          data: { isFeatured: false },
+        });
+        cronLogger.info({ job: "midnight_reset" }, "Job done (viewsToday + isFeatured)");
+      } catch (err) {
+        cronLogger.error({ err, job: "midnight_reset" }, "Job failed");
+      }
+    },
+    { timezone: "Europe/Paris" },
+  );
 
   // Tous les jours à 3h : cleanup des magic-links et sessions
   // expirés. Sans ce job, ces 2 tables grossissent linéairement
@@ -87,8 +95,8 @@ export function initCronJobs(): void {
     { timezone: "Europe/Paris" },
   );
 
-  cronLogger.info("Daily J+1 email job scheduled (10:00 AM)");
-  cronLogger.info("Midnight reset job scheduled (00:00)");
+  cronLogger.info("Daily J+1 email job scheduled (10:00 Europe/Paris)");
+  cronLogger.info("Midnight reset job scheduled (00:00 Europe/Paris)");
   cronLogger.info("Auth tokens cleanup job scheduled (03:00 Europe/Paris)");
   cronLogger.info("Pending experts auto-delete job scheduled (03:15 Europe/Paris)");
 }
@@ -123,19 +131,34 @@ export async function autoDeletePendingExperts(): Promise<void> {
     return;
   }
 
+  // N+1 éliminé : un seul groupBy compte les subs actives de TOUS les
+  // experts pending d'un coup, au lieu d'un count par expert dans la
+  // boucle.
+  const pendingExpertIds = pendingExperts.map((e) => e.id);
+
+  const subsByExpert = await prisma.subscription.groupBy({
+    by: ["expertId"],
+    where: {
+      expertId: { in: pendingExpertIds },
+      status: "ACTIVE",
+      expiresAt: { gt: now },
+    },
+    _count: { _all: true },
+  });
+
+  const activeCountMap = new Map(
+    subsByExpert.map((row) => [row.expertId, row._count._all]),
+  );
+
   let deletedCount = 0;
   let skippedCount = 0;
 
+  // softDeleteUserNow reste séquentiel dans la boucle : chaque
+  // suppression est une transaction Prisma indépendante — paralléliser
+  // saturerait le pool de connexions et compliquerait le log par expert.
   for (const expert of pendingExperts) {
-    const activeSubsCount = await prisma.subscription.count({
-      where: {
-        expertId: expert.id,
-        status: "ACTIVE",
-        expiresAt: { gt: now },
-      },
-    });
-
-    if (activeSubsCount > 0) {
+    const activeCount = activeCountMap.get(expert.id) ?? 0;
+    if (activeCount > 0) {
       skippedCount++;
       continue;
     }
@@ -221,33 +244,48 @@ export async function sendDailyWinningEmails(): Promise<void> {
     }
   }
 
+  // N+1 éliminé : un seul findMany récupère les subs de TOUS les
+  // experts concernés, puis on groupe par expertId côté JS. Le distinct
+  // porte sur le couple (userId, expertId) — sans expertId, un user
+  // abonné à 2 experts gagnants n'apparaîtrait qu'une fois au total.
+  const expertIds = Array.from(expertMap.keys());
+
+  const subscriptions = await prisma.subscription.findMany({
+    where: {
+      expertId: { in: expertIds },
+      OR: [
+        { status: "ACTIVE", expiresAt: { gt: new Date() } },
+        { status: "ACTIVE", expiresAt: { gte: yesterdayStart } },
+        { status: "EXPIRED", expiresAt: { gte: yesterdayStart } },
+      ],
+    },
+    select: {
+      expertId: true,
+      userId: true,
+      user: { select: { email: true } },
+    },
+    distinct: ["userId", "expertId"],
+  });
+
+  const subsByExpert = new Map<string, typeof subscriptions>();
+  for (const sub of subscriptions) {
+    const arr = subsByExpert.get(sub.expertId) ?? [];
+    arr.push(sub);
+    subsByExpert.set(sub.expertId, arr);
+  }
+
   let emailsSent = 0;
 
   for (const [expertId, { pseudo, matchNames }] of expertMap) {
-    // Users avec un abonnement actif ou expiré depuis hier
-    const subscriptions = await prisma.subscription.findMany({
-      where: {
-        expertId,
-        OR: [
-          { status: "ACTIVE", expiresAt: { gt: new Date() } },
-          { status: "ACTIVE", expiresAt: { gte: yesterdayStart } },
-          { status: "EXPIRED", expiresAt: { gte: yesterdayStart } },
-        ],
-      },
-      select: {
-        userId: true,
-        user: { select: { email: true } },
-      },
-      distinct: ["userId"],
-    });
+    const subs = subsByExpert.get(expertId) ?? [];
 
     const matchLabel =
       matchNames.length > 1
         ? `${matchNames[0]} (+${matchNames.length - 1} autre${matchNames.length > 2 ? "s" : ""})`
         : matchNames[0];
 
-    for (const sub of subscriptions) {
-      sendWinningPronoEmail(sub.user.email, pseudo, expertId, matchLabel);
+    for (const sub of subs) {
+      void sendWinningPronoEmail(sub.user.email, pseudo, expertId, matchLabel);
       emailsSent++;
     }
   }

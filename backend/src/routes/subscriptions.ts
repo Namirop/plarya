@@ -1,9 +1,14 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { prisma } from "../lib/prisma";
-import { logger } from "../lib/logger";
+
+import { handleError } from "../lib/http-errors";
 import { authMiddleware, type AuthenticatedRequest } from "../middleware/auth";
 import { validate } from "../middleware/validate";
+import {
+  hasActiveSubscription,
+  isCheckoutSessionReady,
+  listOwnSubscriptions,
+} from "../services/subscription-service";
 import { checkSubscriptionSchema } from "../validators/checkout";
 
 const router = Router();
@@ -19,25 +24,16 @@ const sessionLookupLimiter = rateLimit({
   message: { error: "Trop de requêtes, réessayez dans une minute" },
 });
 
-// POST /subscriptions/check — Check if user has access to an expert's pronos
+// POST /subscriptions/check — Check if user has access to an expert's pronos.
+// Renvoie uniquement { hasAccess } : l'objet Subscription complet n'est
+// pas exposé (pas de leak id/dates/type côté client).
 router.post("/check", authMiddleware, validate(checkSubscriptionSchema), async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   try {
-    const { expertId } = req.body;
-
-    const subscription = await prisma.subscription.findFirst({
-      where: {
-        userId: authReq.user.userId,
-        expertId,
-        status: "ACTIVE",
-        expiresAt: { gt: new Date() },
-      },
-    });
-
-    res.json({ hasAccess: !!subscription, subscription });
+    const hasAccess = await hasActiveSubscription(authReq.user.userId, req.body.expertId);
+    res.json({ hasAccess });
   } catch (err) {
-    logger.error({ err, route: "POST /subscriptions/check" }, "Sub check failed");
-    res.status(500).json({ error: "Erreur serveur" });
+    handleError(err, res, "POST /subscriptions/check");
   }
 });
 
@@ -65,40 +61,21 @@ router.get("/check-stripe-session", sessionLookupLimiter, async (req, res) => {
       res.status(400).json({ error: "stripe_session_id requis" });
       return;
     }
-
-    const sub = await prisma.subscription.findFirst({
-      where: { stripeSessionId: sessionId },
-      select: { id: true },
-    });
-
-    res.json({ ready: !!sub });
+    const ready = await isCheckoutSessionReady(sessionId);
+    res.json({ ready });
   } catch (err) {
-    logger.error(
-      { err, route: "GET /subscriptions/check-stripe-session" },
-      "Session lookup failed",
-    );
-    res.status(500).json({ error: "Erreur serveur" });
+    handleError(err, res, "GET /subscriptions/check-stripe-session");
   }
 });
 
-// GET /subscriptions/me — User's active subscriptions
+// GET /subscriptions/me — User's subscriptions (all statuses) + linked expert
 router.get("/me", authMiddleware, async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   try {
-    const subscriptions = await prisma.subscription.findMany({
-      where: { userId: authReq.user.userId },
-      include: {
-        expert: {
-          select: { id: true, pseudo: true, photoUrl: true, sports: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
+    const subscriptions = await listOwnSubscriptions(authReq.user.userId);
     res.json(subscriptions);
   } catch (err) {
-    logger.error({ err, route: "GET /subscriptions/me" }, "List own subs failed");
-    res.status(500).json({ error: "Erreur serveur" });
+    handleError(err, res, "GET /subscriptions/me");
   }
 });
 

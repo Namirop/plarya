@@ -3,7 +3,7 @@ import { z } from "zod";
 import { sportsSchema } from "./shared";
 
 export const createCheckoutSchema = z.object({
-  expertId: z.string().min(1),
+  expertId: z.string().cuid(),
   type: z.enum(["DAY_PASS", "MONTHLY"]),
   email: z.string().email().optional(),
 });
@@ -20,7 +20,7 @@ export const becomeExpertSchema = z.object({
 });
 
 export const checkSubscriptionSchema = z.object({
-  expertId: z.string().min(1, "expertId requis"),
+  expertId: z.string().cuid("expertId invalide"),
 });
 
 export type CreateCheckoutInput = z.infer<typeof createCheckoutSchema>;

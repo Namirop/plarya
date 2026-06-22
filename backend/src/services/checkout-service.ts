@@ -101,8 +101,12 @@ export async function createCheckoutSession(
     customerEmail = dbUser?.email;
   } else if (bodyEmail) {
     customerEmail = bodyEmail.toLowerCase();
-    const existingUser = await prisma.user.findUnique({
-      where: { email: customerEmail },
+    // findFirst (et non findUnique) : on filtre sur email + deletedAt
+    // null, donc plus une clé unique stricte. Sans le filtre deletedAt,
+    // un compte soft-deleted serait ré-attaché à un nouveau paiement.
+    const existingUser = await prisma.user.findFirst({
+      where: { email: customerEmail, deletedAt: null },
+      select: { id: true },
     });
     if (existingUser) {
       userId = existingUser.id;

@@ -1,4 +1,7 @@
+import { Prisma, type Expert, type Prono } from "../generated/prisma/client";
+import type { SubscriptionType } from "../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
+import type { PaginationQuery, SalesExportQuery, SalesFilterQuery } from "../validators/admin";
 import type { CreateExpertInput, DisplayOrderInput, WarningInput } from "../validators/expert";
 import type { UpdateResultInput } from "../validators/prono";
 
@@ -11,48 +14,74 @@ import { EmailAlreadyUsedError, ExpertNotFoundError, PronoNotFoundError } from "
  * `authMiddleware + adminMiddleware` (cf. routes/admin.ts) — les
  * services ici n'ont donc pas à revérifier le rôle.
  *
- * Convention de pagination : les caps (MAX_LIMIT, defaults) sont
- * définis ICI plutôt que dans le route (la règle métier "ne pas
- * exposer plus de 200 lignes en une page" n'est pas une décision
- * HTTP — un cron qui veut paginer hériterait du même cap).
+ * Pagination : la validation + les bornes (cap 200, default 50) vivent
+ * désormais côté HTTP via validateQuery(paginationQuerySchema) (cf.
+ * validators/admin.ts). Les services reçoivent donc des params déjà
+ * coercés et bornés (limit/offset: number, from/to: Date).
  */
 
-const MAX_PAGINATION_LIMIT = 200;
-const DEFAULT_PAGINATION_LIMIT = 50;
+// ── Types de retour exportés (contrats consommés par les routes) ─────
 
-/** Clamp un nombre dans [min, max]. */
-function clamp(n: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, n));
-}
-
-/**
- * Normalise les params de pagination depuis les query strings. Renvoie
- * { limit, offset } toujours dans des bornes safe :
- *  - limit ∈ [1, MAX_PAGINATION_LIMIT], default DEFAULT_PAGINATION_LIMIT
- *  - offset ≥ 0, default 0
- *
- * Acceptable côté MVP — pour une V2 stricte, valider via Zod avec un
- * validateQuery() middleware générique.
- */
-export function parsePagination(input: { limit?: string; offset?: string }): {
-  limit: number;
-  offset: number;
-} {
-  const limitRaw = parseInt(input.limit ?? "");
-  const offsetRaw = parseInt(input.offset ?? "");
-  return {
-    limit: clamp(
-      Number.isNaN(limitRaw) ? DEFAULT_PAGINATION_LIMIT : limitRaw,
-      1,
-      MAX_PAGINATION_LIMIT,
-    ),
-    offset: Number.isNaN(offsetRaw) ? 0 : Math.max(0, offsetRaw),
+export type AdminExpertListItem = Prisma.ExpertGetPayload<{
+  include: {
+    user: { select: { email: true } };
+    _count: { select: { pronos: true; subscriptions: true } };
   };
-}
+}>;
+
+export type AdminUserListItem = Prisma.UserGetPayload<{
+  select: {
+    id: true;
+    email: true;
+    role: true;
+    createdAt: true;
+    _count: { select: { subscriptions: true } };
+  };
+}>;
+
+export type AdminCreatedExpert = Prisma.UserGetPayload<{ include: { expert: true } }>;
+
+export type AdminPronoListItem = Prisma.PronoGetPayload<{
+  include: { expert: { select: { pseudo: true } } };
+}>;
+
+export type PaginatedPronos = {
+  items: AdminPronoListItem[];
+  meta: { total: number; limit: number; offset: number; hasMore: boolean };
+};
+
+export type GlobalStats = {
+  usersCount: number;
+  expertsCount: number;
+  pronosCount: number;
+  activeSubscriptionsCount: number;
+  estimatedRevenueCents: number;
+};
+
+export type RevenueByDay = { date: string; revenue: number; salesCount: number };
+
+export type SalesItem = {
+  id: string;
+  date: Date;
+  email: string;
+  expertPseudo: string;
+  type: SubscriptionType;
+  amount: number;
+};
+
+export type PaginatedSales = { sales: SalesItem[]; total: number };
+
+export type ExpertRevenue = {
+  expertId: string;
+  pseudo: string;
+  salesCount: number;
+  totalRevenue: number;
+  expertShare: number;
+};
 
 // ── Experts ─────────────────────────────────────────────────────────
 
-export async function listAllExperts() {
+export async function listAllExperts(): Promise<AdminExpertListItem[]> {
   return prisma.expert.findMany({
     include: {
       user: { select: { email: true } },
@@ -62,7 +91,7 @@ export async function listAllExperts() {
   });
 }
 
-export async function listAllUsers() {
+export async function listAllUsers(): Promise<AdminUserListItem[]> {
   return prisma.user.findMany({
     select: {
       id: true,
@@ -79,7 +108,7 @@ export async function listAllUsers() {
  * Crée un Expert + son User en une transaction implicite (Prisma
  * nested create). 409 si l'email est déjà pris.
  */
-export async function createExpertAccount(input: CreateExpertInput) {
+export async function createExpertAccount(input: CreateExpertInput): Promise<AdminCreatedExpert> {
   const { email, pseudo, bio, sports, subStatus } = input;
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -104,7 +133,7 @@ export async function createExpertAccount(input: CreateExpertInput) {
   });
 }
 
-export async function setExpertWarning(expertId: string, input: WarningInput) {
+export async function setExpertWarning(expertId: string, input: WarningInput): Promise<Expert> {
   const expert = await prisma.expert.findUnique({ where: { id: expertId } });
   if (!expert) {
     throw new ExpertNotFoundError();
@@ -115,7 +144,10 @@ export async function setExpertWarning(expertId: string, input: WarningInput) {
   });
 }
 
-export async function setExpertDisplayOrder(expertId: string, input: DisplayOrderInput) {
+export async function setExpertDisplayOrder(
+  expertId: string,
+  input: DisplayOrderInput,
+): Promise<Expert> {
   const expert = await prisma.expert.findUnique({ where: { id: expertId } });
   if (!expert) {
     throw new ExpertNotFoundError();
@@ -128,8 +160,8 @@ export async function setExpertDisplayOrder(expertId: string, input: DisplayOrde
 
 // ── Pronos (override admin) ─────────────────────────────────────────
 
-export async function listPronosPaginated(input: { limit?: string; offset?: string }) {
-  const { limit, offset } = parsePagination(input);
+export async function listPronosPaginated(input: PaginationQuery): Promise<PaginatedPronos> {
+  const { limit, offset } = input;
 
   const [total, items] = await Promise.all([
     prisma.prono.count(),
@@ -154,7 +186,7 @@ export async function listPronosPaginated(input: { limit?: string; offset?: stri
   };
 }
 
-export async function overridePronoResult(pronoId: string, input: UpdateResultInput) {
+export async function overridePronoResult(pronoId: string, input: UpdateResultInput): Promise<Prono> {
   const prono = await prisma.prono.findUnique({ where: { id: pronoId } });
   if (!prono) {
     throw new PronoNotFoundError();
@@ -172,7 +204,7 @@ export async function overridePronoResult(pronoId: string, input: UpdateResultIn
  * chaque sub active (prix lu sur l'expert lié, pas hardcodé — cf.
  * audit-final.md §J).
  */
-export async function getGlobalStats() {
+export async function getGlobalStats(): Promise<GlobalStats> {
   const [usersCount, expertsCount, pronosCount, activeSubscriptionsCount] = await Promise.all([
     prisma.user.count(),
     prisma.expert.count(),
@@ -208,7 +240,7 @@ export async function getGlobalStats() {
  * revenue=0 / salesCount=0 — sans pré-remplissage, le frontend devrait
  * fabriquer les trous lui-même).
  */
-export async function getRevenueByDay() {
+export async function getRevenueByDay(): Promise<RevenueByDay[]> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   thirtyDaysAgo.setHours(0, 0, 0, 0);
@@ -251,23 +283,8 @@ export async function getRevenueByDay() {
  * via inférence — pas de `Record<string, unknown>` qui éteignait la
  * type-safety dans le code initial.
  */
-export async function listSalesPaginated(input: {
-  limit?: string;
-  offset?: string;
-  from?: string;
-  to?: string;
-  expertId?: string;
-}) {
-  const limit = clamp(
-    parseInt(input.limit ?? "") || DEFAULT_PAGINATION_LIMIT,
-    1,
-    MAX_PAGINATION_LIMIT,
-  );
-  const offset = Math.max(0, parseInt(input.offset ?? "") || 0);
-
-  const from = input.from ? new Date(input.from) : undefined;
-  const to = input.to ? new Date(input.to) : undefined;
-  const expertId = input.expertId;
+export async function listSalesPaginated(input: SalesFilterQuery): Promise<PaginatedSales> {
+  const { limit, offset, from, to, expertId } = input;
 
   const where = {
     ...((from || to) && {
@@ -313,7 +330,7 @@ export async function listSalesPaginated(input: {
  * à calculer la part 70% à reverser à chaque expert (en V1, virement
  * bancaire mensuel par l'admin).
  */
-export async function getRevenueByExpert() {
+export async function getRevenueByExpert(): Promise<ExpertRevenue[]> {
   const experts = await prisma.expert.findMany({
     select: {
       id: true,
@@ -349,14 +366,12 @@ export async function getRevenueByExpert() {
  * suffixe €) est intentionnel — le destinataire est un tableur Excel
  * en FR locale pour le reversement comptable.
  */
-export async function buildSalesCsv(input: { from?: string; to?: string }): Promise<{
+export async function buildSalesCsv(input: SalesExportQuery): Promise<{
   csv: string;
   month: string;
 }> {
-  const from = input.from
-    ? new Date(input.from)
-    : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const to = input.to ? new Date(input.to) : new Date();
+  const from = input.from ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const to = input.to ?? new Date();
 
   const sales = await prisma.subscription.findMany({
     where: { createdAt: { gte: from, lte: to } },

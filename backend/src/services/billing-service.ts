@@ -165,7 +165,19 @@ async function processBecomeExpertSession(
   // Validation stricte du metadata. Si payload corrompu, on log + mark
   // processed (évite retry storm) → admin peut ré-attribuer le sub
   // manuellement.
-  const sportsParsed = sportsArraySchema.safeParse(JSON.parse(sportsJson));
+  let sportsRaw: unknown;
+  try {
+    sportsRaw = JSON.parse(sportsJson);
+  } catch (err) {
+    webhookLogger.error(
+      { eventId: event.id, eventType: event.type, rawSports: sportsJson, err },
+      "Malformed sports JSON in become_expert metadata — skipping",
+    );
+    await markEventProcessed(prisma, event);
+    return;
+  }
+
+  const sportsParsed = sportsArraySchema.safeParse(sportsRaw);
   if (!sportsParsed.success) {
     webhookLogger.error(
       {
@@ -181,7 +193,15 @@ async function processBecomeExpertSession(
   }
 
   const sports = sportsParsed.data;
-  const stripeSubId = session.subscription as string;
+  if (!session.subscription) {
+    webhookLogger.error(
+      { eventId: event.id, eventType: event.type, userId },
+      "Become-expert session has no subscription ID — skipping",
+    );
+    await markEventProcessed(prisma, event);
+    return;
+  }
+  const stripeSubId = session.subscription;
 
   await prisma.$transaction(async (tx) => {
     // Application-level idempotence (defense in depth — event table
@@ -252,32 +272,26 @@ async function processUserSubscriptionSession(
 
   if (!resolvedUserId && email) {
     const normalizedEmail = email.toLowerCase();
-    let user = await prisma.user.findUnique({
+    // Upsert atomique : élimine la race find-then-create si deux
+    // webhooks arrivent simultanément pour le même email (User.email
+    // a une contrainte unique). L'`update` backfill aussi
+    // stripeCustomerId si le User existait déjà sans Customer lié —
+    // ce qui rend l'ancien bloc updateMany de backfill redondant.
+    const user = await prisma.user.upsert({
       where: { email: normalizedEmail },
+      update: session.customer ? { stripeCustomerId: session.customer } : {},
+      create: {
+        email: normalizedEmail,
+        ...(session.customer ? { stripeCustomerId: session.customer } : {}),
+      },
     });
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: normalizedEmail,
-          ...(session.customer ? { stripeCustomerId: session.customer } : {}),
-        },
-      });
-      webhookLogger.info(
-        { eventId: event.id, eventType: event.type, email: maskEmail(normalizedEmail) },
-        "User auto-created",
-      );
-    }
     resolvedUserId = user.id;
-  }
-
-  // Backfill stripeCustomerId si le User existait déjà SANS Customer
-  // Stripe lié (cas : User créé manuellement / via magic-link sans
-  // achat préalable, puis premier achat).
-  if (resolvedUserId && session.customer) {
-    await prisma.user.updateMany({
-      where: { id: resolvedUserId, stripeCustomerId: null },
-      data: { stripeCustomerId: session.customer },
-    });
+    // Le log "User auto-created" devient moins précis (upsert peut être
+    // update), on log l'événement sans distinguer create/update :
+    webhookLogger.info(
+      { eventId: event.id, eventType: event.type, email: maskEmail(normalizedEmail) },
+      "User resolved via upsert",
+    );
   }
 
   if (!resolvedUserId) {
