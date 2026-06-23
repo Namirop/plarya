@@ -36,7 +36,7 @@ export interface PronoData {
   bookmakerOdds?: BookmakerOddsData[];
 }
 
-export interface ExpertProfile {
+export interface PublicExpertProfile {
   id: string;
   pseudo: string;
   bio: string | null;
@@ -67,13 +67,13 @@ export interface ExpertProfile {
  * Cache court : `viewsToday` du profil bouge plusieurs fois par heure,
  * donc 60s = compromis entre fraîcheur et charge backend.
  */
-export async function fetchExpert(id: string): Promise<ExpertProfile | null> {
+export async function fetchExpert(id: string): Promise<PublicExpertProfile | null> {
   try {
     const res = await fetch(`${API_URL}/experts/${id}`, {
       next: { revalidate: 60 },
     });
     if (!res.ok) return null;
-    return (await res.json()) as ExpertProfile;
+    return (await res.json()) as PublicExpertProfile;
   } catch {
     return null;
   }

@@ -46,8 +46,8 @@ function Toggle({ checked, onChange, ariaLabel }: ToggleProps) {
       className={cn(
         "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full",
         "transition-colors duration-200 outline-none",
-        "focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#181818]",
-        checked ? "bg-accent" : "bg-[#2A2A2A]",
+        "focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-elevated",
+        checked ? "bg-accent" : "bg-border-subtle",
       )}
     >
       <span
@@ -149,7 +149,7 @@ export function Step1BetDetails({ values, errors, bookmakers, onChange, onContin
               }
               aria-invalid={!!errors.odds}
               className={cn(
-                "h-[60px] w-full rounded-[3px] border border-[#2A2A2A] bg-transparent",
+                "h-[60px] w-full rounded-[3px] border border-border-subtle bg-transparent",
                 "pt-5 pb-2 pl-3.5 pr-3.5",
                 "text-right font-display text-[24px] tabular-nums text-foreground placeholder:text-muted-foreground/40",
                 "outline-none transition-all duration-150",
@@ -239,7 +239,7 @@ export function Step1BetDetails({ values, errors, bookmakers, onChange, onContin
             aria-invalid={!!errors.timeRaw}
             aria-label="Heure de début"
             className={cn(
-              "h-[46px] w-full rounded-[3px] border border-[#2A2A2A] bg-transparent px-3.5",
+              "h-[46px] w-full rounded-[3px] border border-border-subtle bg-transparent px-3.5",
               "text-right font-display text-[20px] tabular-nums text-foreground placeholder:text-muted-foreground/40",
               "outline-none transition-colors duration-200",
               "focus-visible:border-accent/60",

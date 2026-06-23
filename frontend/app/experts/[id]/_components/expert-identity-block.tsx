@@ -2,7 +2,7 @@ import Image from "next/image";
 
 import { Eye } from "@phosphor-icons/react";
 
-import type { ExpertProfile } from "@/lib/experts";
+import type { PublicExpertProfile } from "@/lib/experts";
 import { getSportLabel } from "@/lib/sports";
 
 /**
@@ -10,7 +10,7 @@ import { getSportLabel } from "@/lib/sports";
  * identité de l'expert (avatar, pseudo, badge, vues, bio, spécialité,
  * note du jour). Présentationnel pur.
  */
-export function ExpertIdentityBlock({ expert }: { expert: ExpertProfile }) {
+export function ExpertIdentityBlock({ expert }: { expert: PublicExpertProfile }) {
   const isPendingDeletion = !!expert.pendingDeletion;
 
   return (

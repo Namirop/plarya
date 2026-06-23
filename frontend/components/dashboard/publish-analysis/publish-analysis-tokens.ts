@@ -4,7 +4,7 @@
 import { cn } from "@/lib/utils";
 
 export const INPUT_BASE = cn(
-  "w-full rounded-[3px] border border-[#2A2A2A] bg-transparent px-3.5 py-3",
+  "w-full rounded-[3px] border border-border-subtle bg-transparent px-3.5 py-3",
   "font-body text-[16px] text-foreground placeholder:text-muted-foreground/60",
   "outline-none transition-colors duration-200",
   "focus-visible:border-accent/60",
@@ -14,18 +14,18 @@ export const INPUT_BASE = cn(
 export const INPUT_INVALID = "border-destructive/60 focus-visible:border-destructive";
 
 export const SELECT_TRIGGER = cn(
-  "flex w-full items-center justify-between gap-2 rounded-[3px] border border-[#2A2A2A] bg-transparent px-3.5 py-3",
+  "flex w-full items-center justify-between gap-2 rounded-[3px] border border-border-subtle bg-transparent px-3.5 py-3",
   "font-body text-[16px] text-foreground data-placeholder:text-muted-foreground/60",
   "outline-none transition-colors duration-200",
   "focus-visible:border-accent/60",
   "h-[46px] data-[size=default]:h-[46px]",
 );
 
-// Popup déroulant : bg légèrement au-dessus du form (#181818) pour
-// que le menu flotte sans paraître écrasé. Border et radius matchent
-// les inputs (3px, #2A2A2A) → cohérence visuelle avec le form.
+// Popup déroulant : bg surface-3 (un cran au-dessus du form en
+// surface-elevated) pour que le menu flotte sans paraître écrasé. Border
+// et radius matchent les inputs (3px, border-subtle) → cohérence visuelle.
 export const SELECT_CONTENT = cn(
-  "rounded-[3px] border border-[#2A2A2A] bg-[#1F1F1F] text-foreground shadow-xl",
+  "rounded-[3px] border border-border-subtle bg-surface-3 text-foreground shadow-xl",
 );
 
 export const SELECT_ITEM = cn(

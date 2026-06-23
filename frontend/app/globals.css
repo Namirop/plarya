@@ -50,6 +50,7 @@
 
   /* ── Bordures ── */
   --color-border-gold: #e1aa36;
+  --color-border-subtle: #2a2a2a; /* hairline neutre sur inputs / cards (form DA) */
 
   /* ── Fonts ──
      V3 (mai 2026) : Mona Sans (body) + Hubot Sans (display) — GitHub OFL,

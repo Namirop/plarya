@@ -3,9 +3,9 @@ import type { UserRole } from "./auth";
 /**
  * Profil expert tel que renvoyé par GET /experts/me (vue propriétaire).
  * Subset des champs exposés au propriétaire du profil — ne pas confondre
- * avec PublicExpertProfile (lib/types/expert.ts si créé un jour).
+ * avec PublicExpertProfile (lib/experts.ts, vue publique du profil).
  */
-export interface ExpertProfile {
+export interface OwnExpertProfile {
   id: string;
   pseudo: string;
   bio: string | null;

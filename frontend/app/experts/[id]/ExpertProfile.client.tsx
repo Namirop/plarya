@@ -9,7 +9,7 @@ import { useUser } from "@/hooks/use-user";
 import { apiGet, apiPost } from "@/lib/api";
 import { formatPrice } from "@/lib/constants";
 import { allStarted } from "@/lib/date";
-import type { ExpertProfile, PronoData } from "@/lib/experts";
+import type { PronoData, PublicExpertProfile } from "@/lib/experts";
 import { createCheckoutSession } from "@/lib/stripe";
 
 import { AnalysesSection } from "./_components/analyses-section";
@@ -22,7 +22,7 @@ import { useEmailGatePolling } from "./_hooks/use-email-gate-polling";
 import { useOwnerDetection } from "./_hooks/use-owner-detection";
 
 interface ExpertProfileClientProps {
-  initialExpert: ExpertProfile;
+  initialExpert: PublicExpertProfile;
 }
 
 type ResendState = "idle" | "sending" | "sent" | "error";
@@ -34,7 +34,7 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
 
   // Expert rendu server-side (page.tsx) puis passé en initialExpert →
   // pas de fetch initial client, pas de spinner au mount.
-  const [expert] = useState<ExpertProfile>(initialExpert);
+  const [expert] = useState<PublicExpertProfile>(initialExpert);
   const [error, setError] = useState("");
 
   // Accès payant (source de vérité après /subscriptions/check ou poll).

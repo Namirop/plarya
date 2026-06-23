@@ -7,10 +7,10 @@ import { PublishAnalysisForm } from "@/components/dashboard/publish-analysis/pub
 import { SectionTitle } from "@/components/ui/section-title";
 import { StatBlock } from "@/components/ui/stat-block";
 import { apiGet, apiPatch } from "@/lib/api";
-import type { Bookmaker, Prono, ExpertProfile } from "@/lib/types/dashboard";
+import type { Bookmaker, Prono, DashboardExpertStats } from "@/lib/types/dashboard";
 
 interface DashboardClientProps {
-  initialProfile: ExpertProfile;
+  initialProfile: DashboardExpertStats;
   initialPronos: Prono[];
   initialBookmakers: Bookmaker[];
 }
@@ -22,7 +22,7 @@ export default function DashboardClient({
 }: DashboardClientProps) {
   // States initialisés depuis les data server — pas de fetch initial
   // côté client, pas de spinner au mount.
-  const [profile, setProfile] = useState<ExpertProfile>(initialProfile);
+  const [profile, setProfile] = useState<DashboardExpertStats>(initialProfile);
   const [pronos, setPronos] = useState<Prono[]>(initialPronos);
   // Bookmakers : peu utiles à muter (set au mount, jamais re-fetché)
   // mais on garde un state pour pouvoir le rafraîchir si on en ajoute
@@ -36,14 +36,14 @@ export default function DashboardClient({
       });
       setPronos((prev) => prev.map((p) => (p.id === pronoId ? updated : p)));
       // Refresh winRate qui dépend de l'override.
-      const profileData = await apiGet<ExpertProfile>("/experts/me");
+      const profileData = await apiGet<DashboardExpertStats>("/experts/me");
       setProfile(profileData);
     } catch {
       /* silent — échec non-bloquant, on garde l'état courant */
     }
   }
 
-  function handlePublished(newProno: Prono, updatedProfile: ExpertProfile) {
+  function handlePublished(newProno: Prono, updatedProfile: DashboardExpertStats) {
     setPronos((prev) => [newProno, ...prev]);
     setProfile(updatedProfile);
   }

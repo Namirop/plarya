@@ -86,7 +86,7 @@ export function Step2Analysis({
           rows={12}
           aria-describedby="word-count"
           className={cn(
-            "min-h-[280px] md:min-h-[400px] w-full resize-y rounded-[4px] bg-[#1F1F1F] p-6",
+            "min-h-[280px] md:min-h-[400px] w-full resize-y rounded-[4px] bg-surface-3 p-6",
             "font-body text-[18px] leading-[1.7] text-foreground placeholder:text-muted-foreground/60",
             "outline-none transition-shadow duration-200",
             "focus-visible:ring-1 focus-visible:ring-accent",

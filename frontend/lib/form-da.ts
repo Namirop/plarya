@@ -6,11 +6,11 @@ import { cn } from "@/lib/utils";
 // /devenir-expert et tout autre form où la DA cohérente est requise.
 //
 // Pattern :
-//   - Card : fond noir neutre #181818 (+5 luminance vs body #131212),
+//   - Card : fond surface-elevated (#181818, +5 luminance vs body #131212),
 //     radius 8px, pas de border / shadow / gradient. Le contraste vient
 //     uniquement de la nuance d'élévation.
-//   - Input : border 1px #2A2A2A, radius 3px, bg transparent (la
-//     surface card transparaît). Focus border doré subtil (accent/60).
+//   - Input : border 1px border-subtle (#2A2A2A), radius 3px, bg transparent
+//     (la surface card transparaît). Focus border doré subtil (accent/60).
 //   - Label : 11px uppercase tracking 0.15em muted (sur-titre éditorial).
 //
 // Anti-pattern à ne pas réintroduire : pas de glow, pas de gradient
@@ -20,14 +20,14 @@ import { cn } from "@/lib/utils";
 // Card : conteneur principal de form. Padding 6 mobile / 10 desktop
 // (à override via className si besoin de plus grand padding type
 // hero form publication).
-export const formDaCardCls = "rounded-lg bg-[#181818] p-6 md:p-10";
+export const formDaCardCls = "rounded-lg bg-surface-elevated p-6 md:p-10";
 
 // Input texte / number — hauteur fixe 46px pour aligner avec les Select.
 // `focus-visible:ring-0 aria-invalid:ring-0` neutralise les rings par
 // défaut de shadcn (au cas où la classe est appliquée à un <Input> via
 // className).
 export const formDaInputCls = cn(
-  "h-[46px] w-full rounded-[3px] border border-[#2A2A2A] bg-transparent px-3.5 py-3",
+  "h-[46px] w-full rounded-[3px] border border-border-subtle bg-transparent px-3.5 py-3",
   "font-body text-[16px] text-foreground placeholder:text-muted-foreground/60",
   "outline-none transition-colors duration-200",
   "focus-visible:border-accent/60 focus-visible:ring-0",
@@ -37,7 +37,7 @@ export const formDaInputCls = cn(
 
 // Textarea — même DA que l'input mais resize-y et min-h 120.
 export const formDaTextareaCls = cn(
-  "min-h-[120px] w-full resize-y rounded-[3px] border border-[#2A2A2A] bg-transparent px-3.5 py-3",
+  "min-h-[120px] w-full resize-y rounded-[3px] border border-border-subtle bg-transparent px-3.5 py-3",
   "font-body text-[16px] text-foreground placeholder:text-muted-foreground/60",
   "outline-none transition-colors duration-200",
   "focus-visible:border-accent/60 focus-visible:ring-0",

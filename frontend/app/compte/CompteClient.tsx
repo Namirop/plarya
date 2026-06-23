@@ -1,13 +1,13 @@
 "use client";
 
-import type { CompteUserRole, ExpertProfile, SubscriptionWithExpert } from "@/lib/types/account";
+import type { CompteUserRole, OwnExpertProfile, SubscriptionWithExpert } from "@/lib/types/account";
 
 import { ExpertView } from "./_components/expert-view";
 import { UserView } from "./_components/user-view";
 
 interface CompteClientProps {
   role: CompteUserRole;
-  initialExpertProfile: ExpertProfile | null;
+  initialExpertProfile: OwnExpertProfile | null;
   initialSubscriptions: SubscriptionWithExpert[] | null;
 }
 

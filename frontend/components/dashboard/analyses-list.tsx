@@ -58,8 +58,8 @@ const RESULT_INDICATOR_BASE = cn(
   "flex w-full items-center justify-center gap-2 px-4 py-3",
   "font-body text-body-16 font-semibold",
 );
-const RESULT_INDICATOR_WIN = "bg-[#22c55e]/15 text-[#4ade80]";
-const RESULT_INDICATOR_LOSS = "bg-[#ef4444]/15 text-[#f87171]";
+const RESULT_INDICATOR_WIN = "bg-green-500/15 text-green-400";
+const RESULT_INDICATOR_LOSS = "bg-red-500/15 text-red-400";
 
 // Bouton modifier — icône seule sur mobile en top-right corner, icône
 // + texte sur desktop (responsive). Posé en absolute pour ne pas
@@ -160,10 +160,10 @@ function AnalysisCard({
   return (
     <li
       className={cn(
-        "group relative overflow-hidden rounded-2xl border border-[#1a1a1a]",
+        "group relative overflow-hidden rounded-2xl border border-surface-2",
         // Gradient diagonal subtle (cohérence mockup Hero Devenir Expert).
         "bg-[linear-gradient(135deg,rgba(20,18,18,0.55)_0%,rgba(10,9,9,0.65)_100%)]",
-        "transition-colors duration-200 hover:border-[#2a2828]",
+        "transition-colors duration-200 hover:border-surface-4",
       )}
     >
       {/* Bouton modifier — absolute top-right, icône seule en mobile,
@@ -267,7 +267,7 @@ function AnalysisCard({
             RESULT_INDICATOR_BASE,
             prono.result === "WON" ? RESULT_INDICATOR_WIN : RESULT_INDICATOR_LOSS,
             "border-t",
-            prono.result === "WON" ? "border-[#22c55e]/20" : "border-[#ef4444]/20",
+            prono.result === "WON" ? "border-green-500/20" : "border-red-500/20",
           )}
         >
           <span className="inline-flex items-center gap-2 leading-none">
@@ -296,7 +296,7 @@ function AnalysisCard({
 
 function EmptyState() {
   return (
-    <div className="rounded-2xl border border-[#181818] bg-black/40 px-4 py-10 text-center md:px-6 md:py-12">
+    <div className="rounded-2xl border border-surface-elevated bg-black/40 px-4 py-10 text-center md:px-6 md:py-12">
       <p className="font-body text-body-16 text-foreground">
         Tu n&apos;as publié aucune analyse pour l&apos;instant.
       </p>

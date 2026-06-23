@@ -1,16 +1,7 @@
 import type { Metadata } from "next";
 
 import { API_URL, SITE_NAME, SITE_URL } from "@/lib/site";
-
-// Shape minimal de la réponse GET /experts/:id qu'on utilise pour
-// la metadata + le JSON-LD. Les autres champs sont ignorés ici.
-interface ExpertSeo {
-  id: string;
-  pseudo: string;
-  bio: string | null;
-  photoUrl: string | null;
-  sports: string[];
-}
+import type { ExpertSeo } from "@/lib/types/expert";
 
 async function fetchExpertForSeo(id: string): Promise<ExpertSeo | null> {
   try {

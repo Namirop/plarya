@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { serverFetch } from "@/lib/server-fetch";
 import type { AuthUser } from "@/lib/types/auth";
-import type { Bookmaker, Prono, ExpertProfile } from "@/lib/types/dashboard";
+import type { Bookmaker, Prono, DashboardExpertStats } from "@/lib/types/dashboard";
 
 import DashboardClient from "./DashboardClient";
 
@@ -39,7 +39,7 @@ export default async function DashboardPage() {
     profileRes.json(),
     pronosRes.json(),
     bookmakersRes.json(),
-  ])) as [ExpertProfile, Prono[], Bookmaker[]];
+  ])) as [DashboardExpertStats, Prono[], Bookmaker[]];
 
   return (
     <DashboardClient

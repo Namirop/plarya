@@ -64,7 +64,7 @@ export function ExpertProfileMockup({ className }: ExpertProfileMockupProps) {
             />
             <span
               aria-hidden
-              className="absolute -bottom-0.5 -right-0.5 block size-3 rounded-full border-2 border-surface-2 bg-[#22C55E]"
+              className="absolute -bottom-0.5 -right-0.5 block size-3 rounded-full border-2 border-surface-2 bg-green-500"
             />
           </div>
           <div className="min-w-0 flex-1">

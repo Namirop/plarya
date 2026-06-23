@@ -4,7 +4,7 @@
 // API actuelles (cf. backend `routes/experts.ts`, `routes/pronos.ts`,
 // `routes/bookmakers.ts`).
 
-export interface ExpertProfile {
+export interface DashboardExpertStats {
   id: string;
   pseudo: string;
   winRate: number;

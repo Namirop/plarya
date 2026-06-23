@@ -8,7 +8,7 @@ import { useUser } from "@/hooks/use-user";
 import { apiPatch } from "@/lib/api";
 import { SPORT_LABELS, stripSportEmoji } from "@/lib/constants";
 import { formDaCardCls, formDaInputCls, formDaLabelCls, formDaTextareaCls } from "@/lib/form-da";
-import type { ExpertProfile } from "@/lib/types/account";
+import type { OwnExpertProfile } from "@/lib/types/account";
 import { cn } from "@/lib/utils";
 
 import { AccountSectionTitle } from "./account-section-title";
@@ -16,7 +16,7 @@ import { ExpertIdentityHeader } from "./expert-identity-header";
 
 const DAILY_NOTE_MAX = 200;
 
-export function ExpertView({ initial }: { initial: ExpertProfile }) {
+export function ExpertView({ initial }: { initial: OwnExpertProfile }) {
   const { user } = useUser();
 
   const [pseudo, setPseudo] = useState(initial.pseudo);
@@ -43,7 +43,7 @@ export function ExpertView({ initial }: { initial: ExpertProfile }) {
     setNoteIsError(false);
     setNoteSaving(true);
     try {
-      await apiPatch<ExpertProfile>("/experts/me", { dailyNote });
+      await apiPatch<OwnExpertProfile>("/experts/me", { dailyNote });
       setNoteMsg("Note mise à jour");
     } catch (err) {
       setNoteMsg(err instanceof Error ? err.message : "Erreur");
@@ -63,7 +63,7 @@ export function ExpertView({ initial }: { initial: ExpertProfile }) {
     }
     setProfileSaving(true);
     try {
-      await apiPatch<ExpertProfile>("/experts/me", { pseudo, bio, sports });
+      await apiPatch<OwnExpertProfile>("/experts/me", { pseudo, bio, sports });
       setProfileMsg("Profil mis à jour");
     } catch (err) {
       setProfileMsg(err instanceof Error ? err.message : "Erreur");
@@ -205,7 +205,9 @@ export function ExpertView({ initial }: { initial: ExpertProfile }) {
                       aria-pressed={isActive}
                       className={cn(
                         "group cursor-pointer inline-flex items-baseline gap-1.5 px-1 py-1 font-body text-[16px] transition-colors duration-150",
-                        isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                        isActive
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground",
                       )}
                     >
                       <span

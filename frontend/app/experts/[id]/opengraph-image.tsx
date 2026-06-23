@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
 import { API_URL, SITE_NAME } from "@/lib/site";
+import type { ExpertSeo } from "@/lib/types/expert";
 
 /**
  * OG image dynamique par expert (convention Next App Router :
@@ -26,11 +27,6 @@ export const alt = "Profil expert Plarya";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-interface ExpertSeo {
-  pseudo: string;
-  bio: string | null;
-}
-
 async function fetchExpert(id: string): Promise<ExpertSeo | null> {
   try {
     const res = await fetch(`${API_URL}/experts/${id}`, {
@@ -43,6 +39,8 @@ async function fetchExpert(id: string): Promise<ExpertSeo | null> {
       // Log explicite pour distinguer "expert 404" d'un vrai problème
       // (backend down, mauvaise URL). Apparaît dans les logs Next côté
       // serveur, pas dans la response HTTP.
+      // TODO observabilité : remonter à Sentry/Logflare plutôt que
+      // console.error une fois en prod commerciale.
       console.error(`[og-image] fetch ${API_URL}/experts/${id} → HTTP ${res.status}`);
       return null;
     }
@@ -50,6 +48,8 @@ async function fetchExpert(id: string): Promise<ExpertSeo | null> {
   } catch (err) {
     // ECONNREFUSED / DNS / timeout : on log la cause exacte pour
     // débugger en dev sans casser la génération de l'image.
+    // TODO observabilité : remonter à Sentry/Logflare plutôt que
+    // console.error une fois en prod commerciale.
     console.error(`[og-image] fetch ${API_URL}/experts/${id} threw:`, err);
     return null;
   }

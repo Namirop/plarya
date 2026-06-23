@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { serverFetch } from "@/lib/server-fetch";
-import type { ExpertProfile, SubscriptionWithExpert } from "@/lib/types/account";
+import type { OwnExpertProfile, SubscriptionWithExpert } from "@/lib/types/account";
 import type { AuthUser } from "@/lib/types/auth";
 
 import CompteClient from "./CompteClient";
@@ -33,13 +33,13 @@ export default async function ComptePage() {
     redirect("/admin");
   }
 
-  let initialExpertProfile: ExpertProfile | null = null;
+  let initialExpertProfile: OwnExpertProfile | null = null;
   let initialSubscriptions: SubscriptionWithExpert[] | null = null;
 
   if (me.role === "EXPERT") {
     const res = await serverFetch("/experts/me");
     if (res.ok) {
-      initialExpertProfile = (await res.json()) as ExpertProfile;
+      initialExpertProfile = (await res.json()) as OwnExpertProfile;
     }
   } else {
     // USER

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 //
 // Polish v2 : le glow doré (border-accent/30 + shadow-shine-soft) a
 // été retiré (effet "néon AI"). La card décolle maintenant par sa
-// nuance de fond surface-3 (un cran au-dessus du form en surface-2),
+// nuance de fond surface-3 (un cran au-dessus du form en surface-elevated),
 // avec une border subtle white/10.
 
 export interface PricingCardProps {
@@ -27,10 +27,10 @@ export function PricingCard({ className }: PricingCardProps) {
   return (
     <div
       className={cn(
-        // Card nestée dans le formulaire (lui-même en #181818, DA form
-        // publication). bg #1F1F1F : un cran au-dessus → décollage
+        // Card nestée dans le formulaire (lui-même en surface-elevated, DA
+        // form publication). bg surface-3 : un cran au-dessus → décollage
         // dans la palette noire neutre. Border white/10 (neutre).
-        "rounded-lg border border-white/10 bg-[#1F1F1F] p-6 md:p-7",
+        "rounded-lg border border-white/10 bg-surface-3 p-6 md:p-7",
         className,
       )}
     >

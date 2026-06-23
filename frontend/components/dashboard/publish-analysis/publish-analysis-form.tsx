@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { apiGet, apiPost } from "@/lib/api";
-import type { Bookmaker, Prono, ExpertProfile } from "@/lib/types/dashboard";
+import type { Bookmaker, Prono, DashboardExpertStats } from "@/lib/types/dashboard";
 import { cn } from "@/lib/utils";
 
 import { parseTimeInput } from "./parse-time-input";
@@ -40,7 +40,7 @@ const INITIAL_DRAFT: DraftState = {
 
 export interface PublishAnalysisFormProps {
   bookmakers: Bookmaker[];
-  onPublished: (newProno: Prono, updatedProfile: ExpertProfile) => void;
+  onPublished: (newProno: Prono, updatedProfile: DashboardExpertStats) => void;
 }
 
 export function PublishAnalysisForm({ bookmakers, onPublished }: PublishAnalysisFormProps) {
@@ -158,7 +158,7 @@ export function PublishAnalysisForm({ bookmakers, onPublished }: PublishAnalysis
         ...(bmOddsPayload.length > 0 ? { bookmakerOdds: bmOddsPayload } : {}),
       });
 
-      const updatedProfile = await apiGet<ExpertProfile>("/experts/me");
+      const updatedProfile = await apiGet<DashboardExpertStats>("/experts/me");
       resetForm();
       onPublished(newProno, updatedProfile);
     } catch (err) {
@@ -172,7 +172,7 @@ export function PublishAnalysisForm({ bookmakers, onPublished }: PublishAnalysis
     // Conteneur : fond noir neutre 2-3 points au-dessus du body bg.
     // Pas de border / shadow / gradient — le contraste vient de la
     // nuance d'élévation. Radius 8px (lg).
-    <div className="mx-auto w-full max-w-[1000px] rounded-lg bg-[#181818] px-5 py-7 md:px-12 md:py-10">
+    <div className="mx-auto w-full max-w-[1000px] rounded-lg bg-surface-elevated px-5 py-7 md:px-12 md:py-10">
       <Stepper step={step} />
 
       {step === 1 ? (
@@ -216,7 +216,7 @@ function Stepper({ step }: { step: 1 | 2 }) {
         aria-hidden
         className={cn(
           "block h-px w-10 transition-colors",
-          step === 2 ? "bg-accent" : "bg-[#2A2A2A]",
+          step === 2 ? "bg-accent" : "bg-border-subtle",
         )}
       />
       <span

@@ -27,6 +27,9 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
   // suffit (associé à un log côté serveur via la stack Next).
   useEffect(() => {
     if (process.env.NODE_ENV !== "production") {
+      // TODO observabilité : ce console reste dev-only (en prod, l'erreur
+      // est tracée via le digest Next + les logs serveur). À router vers
+      // Sentry/Logflare le jour où on veut de l'alerting.
       console.error("[ErrorPage]", error);
     }
   }, [error]);

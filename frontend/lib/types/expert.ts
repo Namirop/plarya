@@ -16,3 +16,17 @@ export interface ExpertListItem {
     result: "PENDING" | "WON" | "LOST";
   }[];
 }
+
+/**
+ * Subset des données expert renvoyé par GET /experts/:id, utilisé pour
+ * les metadata SEO (layout.tsx) et la génération de l'OG image
+ * (opengraph-image.tsx). L'OG image n'en lit qu'une partie (pseudo +
+ * bio) ; le layout utilise tout (JSON-LD Person). Pas exposé au runtime UI.
+ */
+export interface ExpertSeo {
+  id: string;
+  pseudo: string;
+  bio: string | null;
+  photoUrl: string | null;
+  sports: string[];
+}
