@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { SubscriptionWithExpert } from "@/lib/types/account";
 
 import { formatDate, formatPeriod } from "../_helpers";
+
 import { ExpertAvatar } from "./expert-avatar";
 
 export function HistoryRow({ sub }: { sub: SubscriptionWithExpert }) {

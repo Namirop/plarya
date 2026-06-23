@@ -5,6 +5,7 @@
 // police met du temps à charger.
 
 import localFont from "next/font/local";
+
 import type { Metadata } from "next";
 
 import { FlagEmojiPolyfill } from "@/components/layout/flag-emoji-polyfill";

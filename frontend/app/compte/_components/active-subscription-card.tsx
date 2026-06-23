@@ -4,6 +4,7 @@ import type { SubscriptionWithExpert } from "@/lib/types/account";
 import { cn } from "@/lib/utils";
 
 import { cardCls, formatDate } from "../_helpers";
+
 import { ExpertAvatar } from "./expert-avatar";
 
 // Durée d'un cycle de facturation mensuel (en ms). Source de vérité

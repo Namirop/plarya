@@ -38,6 +38,10 @@ export function useDraftStorage<T extends object>(initialValue: T): {
       const raw = sessionStorage.getItem(DRAFT_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw) as Partial<T>;
+      // Restauration browser-only après hydratation (cf. en-tête) : non
+      // dérivable en render sans mismatch SSR. Cas légitime, identique à
+      // cookie-banner.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDraft((prev) => ({ ...prev, ...parsed }));
     } catch {
       /* draft corrompu → on ignore */

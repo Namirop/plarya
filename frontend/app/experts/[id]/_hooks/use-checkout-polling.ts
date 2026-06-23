@@ -31,8 +31,13 @@ export function useCheckoutPolling({
 }): { status: PollStatus; retry: () => void } {
   const [status, setStatus] = useState<PollStatus>(null);
   const [nonce, setNonce] = useState(0);
+  // Latest-ref : garde la dernière `onSuccess` sans relancer la boucle de
+  // polling quand son identité change. Écriture en effect (pas en render) —
+  // la ref n'est lue que dans le callback async, post-commit.
   const onSuccessRef = useRef(onSuccess);
-  onSuccessRef.current = onSuccess;
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  });
 
   const retry = useCallback(() => setNonce((n) => n + 1), []);
 
@@ -40,6 +45,10 @@ export function useCheckoutPolling({
     if (!enabled || !expertId) return;
     let cancelled = false;
     const controller = new AbortController();
+    // Reset à "polling" au (re)démarrage de la boucle (mount, ou retry via
+    // nonce après un "failed") — synchronisation avec le lancement d'une
+    // opération async externe, pas une cascade de renders.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus("polling");
 
     void (async () => {

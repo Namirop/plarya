@@ -1,5 +1,6 @@
-import { Lock } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
+
+import { Lock } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
 

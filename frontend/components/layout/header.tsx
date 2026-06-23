@@ -8,8 +8,8 @@ import Link from "next/link";
 import { List, X, CaretRight } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 
-import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types/auth";
+import { cn } from "@/lib/utils";
 
 export type HeaderRole = UserRole;
 

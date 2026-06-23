@@ -33,6 +33,10 @@ export function useEmailGatePolling({
   useEffect(() => {
     if (!enabled) return;
     if (!sessionId) {
+      // sessionId null = redirect Stripe manipulé/incomplet → échec immédiat
+      // sans poll. Edge déterministe sur un changement de prop, pas une
+      // cascade de renders.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus("failed");
       return;
     }

@@ -18,6 +18,10 @@ export function useOwnerDetection(user: AuthUser | null, expertId: string): bool
 
   useEffect(() => {
     if (user?.role !== "EXPERT") {
+      // Reset synchrone quand l'user n'est pas (ou plus) EXPERT — l'endpoint
+      // /experts/me est gated, donc pas de fetch. Edge déterministe sur le
+      // changement de prop `user`, pas une cascade de renders.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOwnExpertId(null);
       return;
     }

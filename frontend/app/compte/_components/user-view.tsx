@@ -6,6 +6,7 @@ import type { SubscriptionWithExpert } from "@/lib/types/account";
 import { cn } from "@/lib/utils";
 
 import { cardCls, DIVIDER_NEUTRAL_GRADIENT, isActiveSubscription } from "../_helpers";
+
 import { AccountSectionTitle } from "./account-section-title";
 import { ActiveSubscriptionCard } from "./active-subscription-card";
 import { EmptyState } from "./empty-state";
@@ -15,7 +16,9 @@ import { IdentityHeader } from "./identity-header";
 export function UserView({ subscriptions }: { subscriptions: SubscriptionWithExpert[] }) {
   const { user } = useUser();
 
-  const monthlyActive = subscriptions.filter((s) => s.type === "MONTHLY" && isActiveSubscription(s));
+  const monthlyActive = subscriptions.filter(
+    (s) => s.type === "MONTHLY" && isActiveSubscription(s),
+  );
   const monthlyExpired = subscriptions.filter(
     (s) => s.type === "MONTHLY" && !isActiveSubscription(s),
   );
