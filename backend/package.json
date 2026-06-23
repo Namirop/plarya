@@ -1,7 +1,7 @@
 {
   "name": "plarya-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Plarya — API REST (Express 5 + Prisma 7, magic-link auth, Stripe webhooks)",
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -19,8 +19,8 @@
     "format:check": "prettier --check ."
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Romain Maes",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "@prisma/adapter-pg": "^7.6.0",

@@ -8,7 +8,7 @@ Express 5 + Prisma 7 — API REST Plarya.
 - Prisma 7 + PostgreSQL
 - Auth : magic-link (Resend), session cookies httpOnly
 - Paiements : Stripe webhooks + Checkout sessions (idempotent, signature-verified)
-- Cron : node-cron (en prod : Vercel Cron / cron externe)
+- Cron : node-cron (jobs récurrents dans le process backend long-running)
 - Logs : pino structuré + masquage PII
 - Validation : Zod (schémas partagés via `validators/shared.ts`)
 
@@ -42,7 +42,7 @@ Express 5 + Prisma 7 — API REST Plarya.
 ### Checkout / Stripe
 
 - `POST /checkout/create-session` — Day pass / abonnement
-- `POST /checkout/become-expert` — Candidature expert 39€/trimestre
+- `POST /checkout/become-expert` — Candidature expert (abonnement trimestriel)
 - `POST /webhooks/stripe` — Webhook signé par Stripe (idempotent au niveau event)
 
 ### Subscriptions

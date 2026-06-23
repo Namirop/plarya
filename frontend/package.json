@@ -2,6 +2,9 @@
   "name": "plarya-frontend",
   "version": "0.1.0",
   "private": true,
+  "description": "Plarya — Frontend (Next.js 16 App Router, React 19, Tailwind v4)",
+  "author": "Romain Maes",
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
