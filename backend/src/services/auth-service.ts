@@ -169,7 +169,7 @@ export async function resendAccessUnlocked(stripeSessionId: string): Promise<voi
   );
 }
 
-// ── Connexion démo (phase démo client) ──────────────────────────────
+// ── Connexion démo (présentations) ──────────────────────────────────
 //
 // Cf. lib/demo-login.ts pour le gating (flag + secret). Ce service ne
 // fait que résoudre le compte démo et poser une session — il NE vérifie

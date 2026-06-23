@@ -61,7 +61,7 @@ export function UserView({ subscriptions }: { subscriptions: SubscriptionWithExp
           </div>
         )}
 
-        {/* TODO V2 : bouton de résiliation in-app + endpoint backend
+        {/* TODO : bouton de résiliation in-app + endpoint backend
             DELETE /subscriptions/:id. Pour le MVP, on garde l'opt-out
             par email (mention discrète volontaire — pas un CTA). */}
         {monthlyActive.length > 0 && (

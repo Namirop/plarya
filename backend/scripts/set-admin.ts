@@ -6,8 +6,9 @@ import { PrismaClient } from "../src/generated/prisma/client";
 /**
  * Promeut (ou crée) le compte ADMIN réel — par défaut contact@plarya.com.
  *
- * Pourquoi un script dédié (et pas le seed) : c'est l'admin PERMANENT du
- * client, il ne doit pas dépendre du cycle de vie des fausses données.
+ * Pourquoi un script dédié (et pas le seed) : c'est l'admin PERMANENT
+ * de la plateforme, il ne doit pas dépendre du cycle de vie des fausses
+ * données.
  *  - Idempotent : ré-exécutable sans risque.
  *  - Survit à `npm run db:seed` (le seed soft ne touche que ses propres
  *    emails de test, cf. SEEDED_EMAILS).
@@ -42,7 +43,7 @@ async function main() {
   });
 
   console.log(`\n✓ ${email} → rôle ADMIN (userId: ${user.id})`);
-  console.log("\nConnexion du client :");
+  console.log("\nÉtapes de connexion :");
   console.log(`  1. Aller sur le site → « Se connecter »`);
   console.log(`  2. Saisir ${email}`);
   console.log(`  3. Cliquer le magic-link reçu dans la boîte → /admin (session 30j)\n`);

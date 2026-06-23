@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
     //  - www.gravatar.com : fallback éventuel pour les avatars
     //    basés sur l'email.
     //
-    // TODO V2 : quand on aura un service d'upload contrôlé (S3,
+    // TODO : quand on aura un service d'upload contrôlé (S3,
     // Vercel Blob, Cloudinary), restreindre à ce seul domaine
     // pour éviter le SSRF / hotlinking depuis n'importe quel host.
     remotePatterns: [

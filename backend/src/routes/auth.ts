@@ -166,10 +166,10 @@ router.get("/verify", async (req, res) => {
 
 // GET /auth/demo-login?role=expert|user&key=<secret>
 //
-// ⚠️ Connexion démo 1-clic — phase démo client UNIQUEMENT (cf.
+// ⚠️ Connexion démo 1-clic pour démonstrations / présentations (cf.
 // lib/demo-login.ts). Réservée aux espaces EXPERT et USER ; ne donne
-// JAMAIS l'ADMIN (compte sérieux → magic-link sur contact@plarya.com).
-// À couper avant le launch : ENABLE_DEMO_LOGIN=false sur Railway.
+// JAMAIS l'ADMIN (compte permanent → magic-link sur contact@plarya.com).
+// À couper en production : ENABLE_DEMO_LOGIN=false.
 router.get("/demo-login", demoLoginLimiter, async (req, res) => {
   try {
     // Désactivé ou clé invalide → 404 nu : on ne révèle pas l'existence

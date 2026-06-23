@@ -40,7 +40,7 @@ async function fetchExpert(id: string): Promise<ExpertSeo | null> {
       // (backend down, mauvaise URL). Apparaît dans les logs Next côté
       // serveur, pas dans la response HTTP.
       // TODO observabilité : remonter à Sentry/Logflare plutôt que
-      // console.error une fois en prod commerciale.
+      // console.error en production.
       console.error(`[og-image] fetch ${API_URL}/experts/${id} → HTTP ${res.status}`);
       return null;
     }
@@ -49,7 +49,7 @@ async function fetchExpert(id: string): Promise<ExpertSeo | null> {
     // ECONNREFUSED / DNS / timeout : on log la cause exacte pour
     // débugger en dev sans casser la génération de l'image.
     // TODO observabilité : remonter à Sentry/Logflare plutôt que
-    // console.error une fois en prod commerciale.
+    // console.error en production.
     console.error(`[og-image] fetch ${API_URL}/experts/${id} threw:`, err);
     return null;
   }
