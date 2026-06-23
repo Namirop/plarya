@@ -54,3 +54,8 @@ Voir [`frontend/.env.example`](frontend/.env.example) et [`backend/.env.example`
   ou `npm run format` dans chaque package
 - **Type-checking** : `npx tsc --noEmit` côté frontend et backend
 - **Dependabot** : PRs hebdomadaires groupées (cf. [`.github/dependabot.yml`](.github/dependabot.yml))
+
+## Licence
+
+Repo public à des fins de portfolio dev — utilisation, reproduction ou
+réutilisation du code soumise à autorisation préalable.

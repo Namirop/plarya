@@ -20,7 +20,7 @@
   },
   "keywords": [],
   "author": "Romain Maes",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "type": "commonjs",
   "dependencies": {
     "@prisma/adapter-pg": "^7.6.0",
