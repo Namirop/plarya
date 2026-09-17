@@ -22,7 +22,7 @@ export function StatsSection() {
             value="80%"
             valueAccent
             label="du chiffre d'affaires te revient"
-            description="Day pass 3,50€, abonnement 29€/mois. Paiements automatiques mensuels."
+            description="Day pass 3,50€, abonnement 29€/mois. Versements mensuels."
             withLeftDivider
           />
         </Reveal>

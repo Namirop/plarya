@@ -28,7 +28,7 @@ export function FaqSection() {
         <Reveal delay={0.16}>
           <FaqItem
             question="Quand suis-je payé ?"
-            answer="Les revenus sont versés mensuellement sur ton compte bancaire (via Stripe Connect, configuré depuis ton dashboard). Premier versement environ 30 jours après ta première vente."
+            answer="Les revenus sont versés mensuellement sur ton compte bancaire. Premier versement environ 30 jours après ta première vente."
           />
         </Reveal>
         <Reveal delay={0.24}>

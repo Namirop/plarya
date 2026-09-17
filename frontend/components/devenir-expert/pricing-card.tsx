@@ -20,7 +20,7 @@ const INCLUDED = [
   "Accès au dashboard expert",
   "Publication illimitée d'analyses",
   "Mise en avant dans les listings",
-  "Paiements automatiques (80% pour toi)",
+  "Versements mensuels (80% pour toi)",
 ] as const;
 
 export function PricingCard({ className }: PricingCardProps) {

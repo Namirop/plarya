@@ -101,7 +101,10 @@ export default function ConfidentialitePage() {
             <strong>Resend</strong> : envoi des emails transactionnels et magic-links.
           </li>
           <li>
-            <strong>Vercel</strong> : hébergement du site et du back-end.
+            <strong>Vercel</strong> : hébergement du site.
+          </li>
+          <li>
+            <strong>Railway</strong> : hébergement de l&apos;API et de la base de données.
           </li>
           <li>
             <strong>Autorités</strong> : sur réquisition légale uniquement.
