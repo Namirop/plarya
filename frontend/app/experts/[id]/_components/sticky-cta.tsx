@@ -49,8 +49,8 @@ export function StickyCta({
             >
               {checkoutLoading
                 ? "..."
-                : `Accéder aux ${pendingPronosCount} ${
-                    pendingPronosCount === 1 ? "analyse" : "analyses"
+                : `Accéder ${
+                    pendingPronosCount === 1 ? "à 1 analyse" : `aux ${pendingPronosCount} analyses`
                   } (${dayPrice}€)`}
             </Button>
             <button

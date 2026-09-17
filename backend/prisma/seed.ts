@@ -25,12 +25,12 @@ interface ExpertSeed {
 const EXPERTS: ExpertSeed[] = [
   {
     email: "expert@test.com",
-    pseudo: "ExpertTest",
+    pseudo: "MatchPoint",
     bio: "Expert Football & Tennis — Analyses pointues",
     sports: ["FOOTBALL", "TENNIS"],
     history: [
       ["PSG - Marseille", "ligue-1", "PSG gagne", 1.85, "PICK_SOLIDE", "WON", 10],
-      ["Nadal - Djokovic", "roland-garros", "Nadal en 4 sets", 2.1, "VALUE", "WON", 9],
+      ["Zverev - Rune", "atp", "Zverev gagne", 1.9, "VALUE", "WON", 9],
       ["Lyon - Monaco", "ligue-1", "+2.5 buts", 1.72, "SAFE", "WON", 8],
       ["Liverpool - Arsenal", "premier-league", "Arsenal gagne", 3.2, "OPPORTUNITE", "LOST", 7],
       ["Bayern - Dortmund", "bundesliga", "Bayern gagne", 1.55, "PICK_SOLIDE", "WON", 6],
@@ -38,11 +38,11 @@ const EXPERTS: ExpertSeed[] = [
       ["Inter - Milan", "serie-a", "Inter gagne", 1.9, "SAFE", "WON", 4],
       ["Real - Atletico", "la-liga", "Real gagne", 1.7, "PICK_SOLIDE", "WON", 3],
       ["Lille - Lens", "ligue-1", "Lens +0.5", 1.65, "SAFE", "WON", 2],
-      ["Medvedev - Rune", "wimbledon", "Medvedev gagne", 1.8, "PICK_SOLIDE", "WON", 1],
+      ["Medvedev - Rune", "atp", "Medvedev gagne", 1.8, "PICK_SOLIDE", "WON", 1],
     ],
     today: [
       ["PSG - Lyon", "ligue-1", "PSG gagne", 1.75, "PICK_SOLIDE"],
-      ["Djokovic - Alcaraz", "us-open-tennis", "Djokovic en 5", 2.8, "VALUE"],
+      ["Sinner - Alcaraz", "atp", "Match en 3 sets", 2.1, "VALUE"],
       ["Marseille - Monaco", "ligue-1", "+2.5 buts", 1.9, "PICK_DU_JOUR"],
     ],
   },
@@ -74,18 +74,18 @@ const EXPERTS: ExpertSeed[] = [
     bio: "Spécialiste ATP & WTA — 90%+ de réussite",
     sports: ["TENNIS"],
     history: [
-      ["Djokovic - Nadal", "roland-garros", "Djokovic gagne", 1.7, "PICK_SOLIDE", "WON", 10],
+      ["Sinner - Draper", "atp", "Sinner gagne", 1.45, "PICK_SOLIDE", "WON", 10],
       ["Swiatek - Sabalenka", "wta", "Swiatek gagne", 1.55, "SAFE", "WON", 9],
       ["Sinner - Medvedev", "atp", "Sinner en 3", 2.1, "VALUE", "WON", 8],
-      ["Alcaraz - Rune", "wimbledon", "Alcaraz gagne", 1.45, "SAFE", "WON", 7],
+      ["Alcaraz - Rune", "atp", "Alcaraz gagne", 1.45, "SAFE", "WON", 7],
       ["Tsitsipas - Zverev", "atp", "Zverev gagne", 2.0, "OPPORTUNITE", "LOST", 6],
       ["Djokovic - Sinner", "atp", "Djokovic gagne", 1.8, "PICK_SOLIDE", "WON", 5],
       ["Gauff - Keys", "wta", "Gauff gagne", 1.6, "PICK_SOLIDE", "WON", 4],
-      ["Alcaraz - Djokovic", "us-open-tennis", "Alcaraz gagne", 2.2, "VALUE", "WON", 3],
+      ["Alcaraz - Fritz", "atp", "Alcaraz gagne", 1.5, "VALUE", "WON", 3],
       ["Sinner - Alcaraz", "atp", "Sinner gagne", 1.9, "PICK_SOLIDE", "WON", 2],
       ["Medvedev - Fritz", "atp", "Medvedev gagne", 1.65, "SAFE", "WON", 1],
     ],
-    today: [["Djokovic - Alcaraz", "roland-garros", "Djokovic en 4", 2.4, "A_NE_PAS_RATER"]],
+    today: [["Zverev - Draper", "atp", "Zverev gagne", 1.6, "A_NE_PAS_RATER"]],
   },
   {
     email: "multisport@test.com",
@@ -94,18 +94,18 @@ const EXPERTS: ExpertSeed[] = [
     sports: ["BASKETBALL", "MMA", "FOOTBALL"],
     history: [
       ["Lakers - Celtics", "nba", "Lakers gagnent", 2.3, "VALUE", "WON", 10],
-      ["UFC 300 Main", "ufc", "Jones par KO", 1.8, "PICK_SOLIDE", "LOST", 9],
+      ["UFC Fight Night", "ufc", "Pereira par KO", 1.8, "PICK_SOLIDE", "LOST", 9],
       ["PSG - Lyon", "ligue-1", "PSG gagne", 1.5, "SAFE", "WON", 8],
       ["Warriors - Bucks", "nba", "Warriors gagnent", 2.5, "OPPORTUNITE", "LOST", 7],
       ["UFC Paris", "ufc", "Gane par TKO", 2.0, "PICK_DU_JOUR", "WON", 6],
       ["Nuggets - Heat", "nba", "Nuggets gagnent", 1.6, "SAFE", "WON", 5],
       ["Man Utd - Chelsea", "premier-league", "Nul", 3.2, "VALUE", "LOST", 4],
-      ["UFC 301", "ufc", "Topuria gagne", 1.7, "PICK_SOLIDE", "WON", 3],
+      ["UFC Fight Night", "ufc", "Topuria gagne", 1.7, "PICK_SOLIDE", "WON", 3],
       ["Mavs - Thunder", "nba", "Thunder gagnent", 1.85, "PICK_SOLIDE", "LOST", 2],
       ["Barca - Atlético", "la-liga", "Barca gagne", 1.9, "SAFE", "WON", 1],
     ],
     today: [
-      ["Celtics - Knicks", "nba", "Celtics gagnent", 1.7, "VALUE"],
+      ["Dortmund - Leipzig", "bundesliga", "+2.5 buts", 1.7, "VALUE"],
       ["UFC Fight Night", "ufc", "Pantoja par sub", 2.5, "PICK_SOLIDE"],
     ],
   },
@@ -116,11 +116,11 @@ const EXPERTS: ExpertSeed[] = [
     sports: ["RUGBY"],
     history: [
       ["Toulouse - La Rochelle", "top-14", "Toulouse gagne", 1.5, "SAFE", "WON", 10],
-      ["France - Irlande", "six-nations", "France gagne", 2.1, "VALUE", "WON", 9],
+      ["Toulon - Bayonne", "top-14", "Toulon gagne", 1.6, "VALUE", "WON", 9],
       ["Racing - Toulon", "top-14", "Racing gagne", 1.8, "PICK_SOLIDE", "LOST", 8],
-      ["Angleterre - Galles", "six-nations", "+40 pts", 1.7, "SAFE", "WON", 7],
+      ["La Rochelle - Pau", "top-14", "+40 pts", 1.7, "SAFE", "WON", 7],
       ["Bordeaux - Clermont", "top-14", "Bordeaux gagne", 1.6, "PICK_SOLIDE", "WON", 6],
-      ["NZ - Australie", "six-nations", "NZ gagne", 1.3, "SAFE", "WON", 5],
+      ["Clermont - Perpignan", "top-14", "Clermont gagne", 1.3, "SAFE", "WON", 5],
       ["Stade Fr - Lyon", "top-14", "Lyon gagne", 2.4, "OPPORTUNITE", "LOST", 4],
       ["Castres - Pau", "top-14", "+30 pts", 1.55, "SAFE", "LOST", 3],
     ],
@@ -138,7 +138,7 @@ const EXPERTS: ExpertSeed[] = [
       ["SEN - LOUD", "valorant", "SEN gagne", 2.3, "OPPORTUNITE", "WON", 7],
       ["BLG - JDG", "lpl", "BLG gagne", 1.8, "SAFE", "WON", 6],
       ["Vitality - Spirit", "cs2", "Vitality gagne", 1.6, "PICK_SOLIDE", "WON", 5],
-      ["T1 - DRX", "lol-worlds", "T1 gagne", 1.5, "SAFE", "WON", 4],
+      ["T1 - DRX", "lck", "T1 gagne", 1.5, "SAFE", "WON", 4],
       ["Navi - Astralis", "cs2", "Navi gagne", 1.4, "SAFE", "WON", 3],
       ["G2 - MAD", "lec", "G2 gagne", 1.75, "PICK_SOLIDE", "WON", 2],
       ["SEN - Paper Rex", "valorant", "SEN gagne", 2.0, "VALUE", "WON", 1],
@@ -149,6 +149,12 @@ const EXPERTS: ExpertSeed[] = [
     ],
   },
 ];
+
+// Deux photos en alternance, pour que les cartes de l'accueil ne montrent pas
+// toutes le même visage.
+function photoUrl(expertIdx: number): string {
+  return expertIdx % 2 === 0 ? "/profile.jpg" : "/profile2.png";
+}
 
 async function createTestMagicLink(email: string): Promise<string> {
   const token = crypto.randomBytes(32).toString("hex");
@@ -261,10 +267,15 @@ async function main() {
     // Upsert expert profile
     const expert = await prisma.expert.upsert({
       where: { userId: user.id },
+      // Pseudo, bio et sports suivent le seed : renommer un expert de démo ici
+      // le renomme aussi sur une base déjà peuplée.
       update: {
+        pseudo: e.pseudo,
+        bio: e.bio,
+        sports: e.sports,
         dayPassPrice: 350,
         viewsToday: Math.floor(Math.random() * 300),
-        photoUrl: "/profile.jpg",
+        photoUrl: photoUrl(expertIdx),
       },
       create: {
         userId: user.id,
@@ -273,7 +284,7 @@ async function main() {
         sports: e.sports,
         subStatus: "FREE",
         viewsToday: Math.floor(Math.random() * 300),
-        photoUrl: "/profile.jpg",
+        photoUrl: photoUrl(expertIdx),
       },
     });
 

@@ -92,7 +92,7 @@ export function ExpertCard({
 
       {/* Label section : y=162 → 47px après le divider (y=115). mt-12 = 48px, 1px d'écart négligeable. */}
       <p className="mt-12 font-body text-body-16 uppercase text-muted-foreground">
-        {analyses.length} analyses du jour
+        {analyses.length} {analyses.length === 1 ? "analyse" : "analyses"} du jour
       </p>
 
       {/* Liste analyses : y=194 → mt-4 (16px) après le label (qui finit à y=178).
