@@ -12,12 +12,13 @@ Next.js 16 (App Router) — interface utilisateur Plarya.
 
 ## Routes principales
 
-- `/` — Homepage (server, public)
+- `/` — Homepage (coquille serveur, experts chargés côté client, public)
 - `/experts/[id]` — Profil expert (server, public, SEO indexé, JSON-LD ProfilePage)
-- `/devenir-expert` — Formulaire candidature (server, public)
+- `/devenir-expert` — Landing + inscription expert → Stripe Checkout (client, public)
 - `/dashboard` — Espace expert (server, auth EXPERT)
 - `/compte` — Espace utilisateur (server, auth)
 - `/admin` — Panel admin (server, auth ADMIN)
+- `/auth/verify` — Validation du magic-link (lien invalide, expiré, compte supprimé)
 - `/cgu`, `/confidentialite`, `/mentions-legales`, `/contact` — Légal
 
 ## Architecture des pages connectées

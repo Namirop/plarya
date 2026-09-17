@@ -1,13 +1,14 @@
 # Plarya
 
-Plateforme d'analyses sportives par des experts vérifiés.
+Plateforme d'analyses sportives publiées par des experts, accessibles à la journée ou par abonnement.
 
 ## Stack
 
 - **Frontend** : Next.js 16 (App Router + Server Components), React 19, Tailwind v4, TypeScript 5
 - **Backend** : Express 5, Prisma 7, PostgreSQL, TypeScript 6
 - **Auth** : Magic-link (Resend), session cookies httpOnly + CSRF double-submit
-- **Paiements** : Stripe Checkout (day pass + abonnement mensuel + candidature expert quarterly)
+- **Paiements** : Stripe Checkout — day pass (paiement unique), abonnement mensuel à un expert,
+  abonnement expert trimestriel (compte EXPERT créé au webhook)
 - **Logs** : pino structuré, masquage PII (emails)
 
 ## Architecture
@@ -53,7 +54,7 @@ Voir [`frontend/.env.example`](frontend/.env.example) et [`backend/.env.example`
 - **Formatting** : Prettier partagé via [`.prettierrc`](.prettierrc) à la racine — `npx prettier --write .`
   ou `npm run format` dans chaque package
 - **Type-checking** : `npx tsc --noEmit` côté frontend et backend
-- **Dependabot** : PRs hebdomadaires groupées (cf. [`.github/dependabot.yml`](.github/dependabot.yml))
+- **Dependabot** : PRs mensuelles groupées, alertes de sécurité au fil de l'eau (cf. [`.github/dependabot.yml`](.github/dependabot.yml))
 
 ## Licence
 

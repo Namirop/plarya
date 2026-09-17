@@ -25,12 +25,14 @@ Express 5 + Prisma 7 — API REST Plarya.
 - `GET /auth/me/export` — Export RGPD JSON (rate-limited 1/24h)
 - `GET /auth/me/deletion-status` — Pilote l'UI Zone dangereuse
 - `GET /auth/csrf` — Force le set du cookie csrf_token
-- `POST /auth/resend-access-unlocked` — Renvoie le mail magic-link post-paiement
+- `POST /auth/resend-access-unlocked` — Renvoie le mail magic-link post-paiement (3/15min)
+- `GET /auth/demo-login?role=expert|user&key=…` — Connexion démo 1-clic aux comptes seedés, jamais ADMIN
+  (inactive tant que `ENABLE_DEMO_LOGIN` ≠ `true` ; clé comparée à `DEMO_LOGIN_SECRET`)
 
 ### Experts (public)
 
 - `GET /experts` — Liste (cache HTTP 60s)
-- `GET /experts/:id` — Profil public, mode Locked si non auth (cache 60s)
+- `GET /experts/:id` — Profil public : analyses du jour sans pick, pour tout le monde (cache 60s)
 - `POST /experts/:id/view` — Incrément vue (rate-limited 1/h/IP/expertId)
 
 ### Experts (authentifié)
@@ -39,10 +41,21 @@ Express 5 + Prisma 7 — API REST Plarya.
 - `PATCH /experts/me` — Update profile (EXPERT)
 - `GET /experts/:id/pronos` — Pronos complets (auth + sub active OU owner/admin)
 
+### Analyses (authentifié)
+
+- `POST /pronos` — Publier une analyse (EXPERT)
+- `GET /pronos/mine` — Mes analyses (EXPERT)
+- `PATCH /pronos/:id/result` — Déclarer le résultat (auteur ou admin)
+- `GET /pronos/:id` — Détail d'une analyse (accès actif requis)
+
+### Bookmakers
+
+- `GET /bookmakers` — Bookmakers et liens d'affiliation (bloc « Meilleures cotes »)
+
 ### Checkout / Stripe
 
 - `POST /checkout/create-session` — Day pass / abonnement
-- `POST /checkout/become-expert` — Candidature expert (abonnement trimestriel)
+- `POST /checkout/become-expert` — Abonnement expert trimestriel (rôle EXPERT attribué au webhook)
 - `POST /webhooks/stripe` — Webhook signé par Stripe (idempotent au niveau event)
 
 ### Subscriptions
@@ -56,20 +69,28 @@ Express 5 + Prisma 7 — API REST Plarya.
 - `GET /admin/stats`, `/admin/stats/revenue`, `/admin/stats/sales`, `/admin/stats/by-expert`
 - `GET /admin/stats/export.csv` — Export CSV ventes
 - `GET /admin/experts`, `/admin/users`
+- `POST /admin/experts` — Création d'un expert (prix bornés côté validation)
 - `GET /admin/pronos?limit&offset` — Paginé (default 50, max 200)
 - `PATCH /admin/pronos/:id/result` — Override résultat
 - `PATCH /admin/experts/:id/warning` — Avertissement profile
 - `PATCH /admin/experts/:id/display-order` — Réordonne la homepage
 - `POST /admin/send-daily-emails` — Trigger manuel emails J+1
 
+### Santé
+
+- `GET /health` — Vérifie la connexion à la base
+
 ## Sécurité
 
-- **helmet** avec CSP strict (script/style 'self', img + Stripe + SportsDB whitelist)
-- **Rate-limiters** par endpoint : auth (5/15min), checkout (5/min), admin (100/min),
+- **helmet** avec CSP strict (script/style 'self' ; img-src SportsDB, imgur, Cloudinary, Gravatar ;
+  Stripe en connect-src / frame-src)
+- **Rate-limiters** par endpoint : magic-link (5/15min), renvoi d'accès (3/15min), export RGPD (1/24h),
+  demo-login (20/min), checkout (5/min), check-stripe-session (60/min), admin (100/min),
   views (1/h/IP/expertId — IPv6 via `ipKeyGenerator`), global fallback (100/min)
 - **CSRF** double-submit cookie : `csrf_token` non-httpOnly + header `X-CSRF-Token` requis
   sur toute méthode mutante (POST/PATCH/PUT/DELETE), sauf `/webhooks` (signature Stripe)
-- **Sessions** : httpOnly + sameSite=lax + secure (prod), 30j TTL
+- **Sessions** : httpOnly, SameSite via `COOKIE_SAMESITE` (défaut `lax`, `none` force Secure),
+  domaine via `COOKIE_DOMAIN` (ex. `.plarya.com` pour partager apex et sous-domaine API), secure en prod, 30j TTL
 - **Magic-links** : crypto-random 32 bytes, single-use, 15min TTL, purge cron quotidien
 - **Cooldown RGPD** : 7j après suppression de compte, blocage silencieux des magic-links
   pour cet email (cf. table `DeletedEmailCooldown`)
@@ -77,7 +98,7 @@ Express 5 + Prisma 7 — API REST Plarya.
 ## Setup local
 
 1. Postgres local sur `:5432` avec une DB `plarya`
-2. `cp .env.example .env` puis remplir DATABASE_URL, STRIPE_SECRET_KEY, RESEND_API_KEY
+2. `cp .env.example .env` puis remplir DATABASE_URL, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY
 3. `npm install`
 4. `npx prisma migrate dev`
 5. `npm run db:seed` (crée 6 experts test + magic-links 24h dans les logs console)
@@ -90,10 +111,12 @@ Express 5 + Prisma 7 — API REST Plarya.
 - `npm run build` — Compile TypeScript → `dist/`
 - `npm run start` — Start prod (depuis `dist/`)
 - `npm run db:migrate` — Prisma migrate dev
+- `npm run db:deploy` — Prisma migrate deploy (migrations en prod)
 - `npm run db:generate` — Prisma generate
 - `npm run db:studio` — Prisma Studio
-- `npm run db:seed` — Reseed scopé (n'efface que les comptes test)
+- `npm run db:seed` — Reseed des comptes test ; ⚠ régénère aussi les cotes bookmakers de toutes les analyses
 - `npm run db:seed:reset` — Wipe complet + reseed
+- `npm run db:set-admin` — Crée ou promeut le compte ADMIN réel (idempotent, à relancer après un reset)
 - `npm run format` / `npm run format:check` — Prettier
 
 ## Conventions
