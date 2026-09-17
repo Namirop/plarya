@@ -17,8 +17,7 @@ import { prisma } from "../lib/prisma";
 const BACKEND_URL = (process.env.BACKEND_URL || "http://localhost:4000").replace(/\/+$/, "");
 
 export type MagicLinkRequestOutcome =
-  | { delivered: true }
-  | { delivered: false; reason: "cooldown" };
+  { delivered: true } | { delivered: false; reason: "cooldown" };
 
 /**
  * Envoie un magic-link, sauf si l'email est en cooldown après suppression

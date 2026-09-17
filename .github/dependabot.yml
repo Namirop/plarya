@@ -18,6 +18,16 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    # Majeures refusées par la config ESLint de Next : TypeScript 7 sort de la
+    # plage acceptée par typescript-eslint, ESLint 10 de celle
+    # d'eslint-plugin-import. @types/node suit la version de Node, pas npm.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       next:
         patterns:
@@ -53,6 +63,14 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    # TypeScript compile le build de prod (tsc) : une majeure se monte
+    # volontairement, pas via la PR mensuelle. @types/node suit la version de
+    # Node, pas npm.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       prisma:
         patterns:

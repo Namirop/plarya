@@ -4,7 +4,7 @@ import Stripe from "stripe";
 // du SDK ne change pas silencieusement la forme des payloads. À faire évoluer
 // avec le SDK, après lecture du changelog (https://docs.stripe.com/upgrades).
 export const stripe: Stripe.Stripe = Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-03-25.dahlia",
+  apiVersion: "2026-08-26.dahlia",
 });
 
 /**

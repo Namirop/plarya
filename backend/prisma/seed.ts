@@ -291,12 +291,7 @@ async function main() {
           pick,
           odds,
           teasing: teasing as
-            | "PICK_SOLIDE"
-            | "VALUE"
-            | "SAFE"
-            | "OPPORTUNITE"
-            | "PICK_DU_JOUR"
-            | "A_NE_PAS_RATER",
+            "PICK_SOLIDE" | "VALUE" | "SAFE" | "OPPORTUNITE" | "PICK_DU_JOUR" | "A_NE_PAS_RATER",
           argument: `Analyse détaillée pour ${matchName}.`,
           result: result as "WON" | "LOST",
           startTime: createdAt,
@@ -337,12 +332,7 @@ async function main() {
         pick,
         odds,
         teasing: teasing as
-          | "PICK_SOLIDE"
-          | "VALUE"
-          | "SAFE"
-          | "OPPORTUNITE"
-          | "PICK_DU_JOUR"
-          | "A_NE_PAS_RATER",
+          "PICK_SOLIDE" | "VALUE" | "SAFE" | "OPPORTUNITE" | "PICK_DU_JOUR" | "A_NE_PAS_RATER",
         argument: `Argumentaire pour ${matchName}.`,
         result: "PENDING" as const,
         startTime: startTimes[i],

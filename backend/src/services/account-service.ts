@@ -113,8 +113,7 @@ export async function getDeletionStatus(userId: string): Promise<DeletionStatusR
 }
 
 export type DeleteAccountResult =
-  | { status: "deleted" }
-  | { status: "scheduled"; pendingDeletionAt: Date; lastSubExpiresAt: Date };
+  { status: "deleted" } | { status: "scheduled"; pendingDeletionAt: Date; lastSubExpiresAt: Date };
 
 /**
  * Suppression RGPD :
