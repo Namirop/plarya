@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { API_URL, SITE_NAME, SITE_URL } from "@/lib/site";
+import { API_URL, SITE_NAME, SITE_URL, serializeJsonLd } from "@/lib/site";
 import type { ExpertSeo } from "@/lib/types/expert";
 
 async function fetchExpertForSeo(id: string): Promise<ExpertSeo | null> {
@@ -101,7 +101,7 @@ export default async function ExpertProfileLayout({
       {profilePageLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(profilePageLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(profilePageLd) }}
         />
       )}
       {children}

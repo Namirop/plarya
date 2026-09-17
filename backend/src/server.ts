@@ -21,6 +21,10 @@ import { csrfTokenIssuer, csrfValidator } from "./lib/csrf";
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Derrière le proxy de l'hébergeur, `req.ip` serait l'IP du proxy : tous
+// les rate limiters partageraient un seul compteur pour tout le site.
+app.set("trust proxy", 1);
+
 // Security headers + CSP strict.
 //
 // On configure helmet manuellement plutôt qu'en defaults pour pouvoir

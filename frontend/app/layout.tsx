@@ -13,7 +13,7 @@ import { HeaderAuth } from "@/components/layout/header-auth";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { CookieBanner } from "@/components/legal/cookie-banner";
 import { UserProvider } from "@/hooks/use-user";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, serializeJsonLd } from "@/lib/site";
 import "./globals.css";
 
 const monaSans = localFont({
@@ -119,11 +119,11 @@ export default function RootLayout({
             le payload est 100 % contrôlé serveur, pas d'input user. */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(organizationLd) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(websiteLd) }}
         />
         <FlagEmojiPolyfill />
         <UserProvider>
