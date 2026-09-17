@@ -163,7 +163,7 @@ async function createTestMagicLink(email: string): Promise<string> {
 
 // Liste des emails contrôlés par le seed. Toutes les opérations de
 // nettoyage en mode "soft" (default) sont scopées à ces emails →
-// les comptes réels créés via paiement Stripe (ex: romainmaes@…) ne
+// les comptes réels (ex : créés via un paiement Stripe) ne
 // sont JAMAIS effacés par `npm run db:seed`.
 const SEEDED_EMAILS = ["admin@test.com", "user@test.com", ...EXPERTS.map((e) => e.email)];
 
@@ -368,8 +368,8 @@ async function main() {
   console.log("\nSeeding test subscriptions...");
 
   // Delete existing test subscriptions. SCOPED aux users seedés
-  // uniquement : un user réel (ex: romainmaes@outlook.fr qui aurait
-  // acheté un day pass) garde ses subscriptions. En mode --reset
+  // uniquement : un user réel (ex : qui aurait acheté un day pass)
+  // garde ses subscriptions. En mode --reset
   // c'est un no-op (table déjà vidée par wipeAll()).
   await prisma.subscription.deleteMany({
     where: { user: { email: { in: SEEDED_EMAILS } } },

@@ -30,8 +30,8 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
   },
   // Backward-compat : les anciennes URLs /tipsters/* et /devenir-tipster
-  // (héritage du naming interne "tipster" pré-renommage produit, cf.
-  // CLAUDE.md §1.1) sont redirigées en 301 vers les routes canoniques
+  // (héritage du naming interne "tipster" pré-renommage produit) sont
+  // redirigées en 301 vers les routes canoniques
   // /experts/* et /devenir-expert. Couvre les liens magic-link / Stripe
   // / partages réseaux sociaux générés avant le rename.
   async redirects() {

@@ -6,7 +6,7 @@
 @theme inline {
   /* ════════════════════════════════════════════════════════════════
      PLARYA DESIGN SYSTEM — golden-da
-     Source : design-system.md (Figma DFTjdH42nddqFyAtHQ6eac)
+     Source : maquettes Figma du projet
      ════════════════════════════════════════════════════════════════ */
 
   /* ── Backgrounds ──
@@ -85,7 +85,7 @@
   --text-body-16--line-height: 16px;
   --text-body-16--font-weight: 400;
 
-  /* Tokens typo mobile (frame "1a. Mobile Homepage", Figma vxkUD2k0gxROZEGZLlSFqb) :
+  /* Tokens typo mobile (frame Figma "1a. Mobile Homepage") :
        h1 mobile : DM Serif Display 32 / 30
        H2 mobile : DM Serif Display 24 / 24
      Pas matérialisés ici en tokens Tailwind dédiés : Tailwind v4 ne génère

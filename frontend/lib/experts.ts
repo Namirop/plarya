@@ -5,8 +5,7 @@ import { API_URL } from "@/lib/site";
  *
  * Extraits de `app/experts/[id]/ExpertProfile.client.tsx` pour que la
  * page officielle consomme une source de vérité unique — pas de
- * duplication de logique métier (cf. brief redesign card analyse,
- * juin 2026).
+ * duplication de logique métier.
  */
 
 export interface BookmakerOddsData {

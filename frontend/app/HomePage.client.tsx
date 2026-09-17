@@ -19,7 +19,7 @@ import { SectionSeparator } from "@/components/ui/section-separator";
 //
 // La page.tsx parent reste server component pour permettre une
 // future migration de fetch SSR (ExpertsSection fetch encore
-// client-side ; à server-ifier en Phase Polish quand on aura un
+// client-side ; à server-ifier quand on aura un
 // endpoint qui inclut la liste pré-filtrée).
 export function HomePageClient() {
   const [activeDomain, setActiveDomain] = useState<DomainId | null>(null);

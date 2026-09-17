@@ -21,7 +21,7 @@ import { csrfTokenIssuer, csrfValidator } from "./lib/csrf";
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Security headers + CSP strict (cf. audit Polish A.8).
+// Security headers + CSP strict.
 //
 // On configure helmet manuellement plutôt qu'en defaults pour pouvoir
 // définir une Content-Security-Policy adaptée au projet. NB : ce

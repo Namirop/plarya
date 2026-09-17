@@ -292,8 +292,8 @@ router.get("/me/export", exportLimiter, authMiddleware, async (req, res) => {
   }
 });
 
-// NB : l'ancien endpoint GET /auth/session-from-checkout a été retiré
-// (sprint refonte 2 phase 2). Il posait un cookie session basé sur un
+// NB : l'ancien endpoint GET /auth/session-from-checkout a été retiré.
+// Il posait un cookie session basé sur un
 // `stripe_session_id` visible en URL → vecteur d'élévation si l'URL
 // fuitait (logs, screenshare). Le nouveau flow exige le magic-link
 // envoyé par email — cf. frontend/app/experts/[id]/page.tsx.

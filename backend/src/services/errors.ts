@@ -6,7 +6,7 @@
  *    handlers HTTP renvoient au client. Le `code` est DISCRIMINANT par
  *    sous-classe domaine — le frontend doit pouvoir distinguer deux
  *    erreurs partageant le même httpStatus sans matcher sur le message
- *    FR (cf. web-patterns.md §"code discriminant").
+ *    FR.
  *  - Le `name` est aligné sur le nom de la classe pour faciliter le
  *    log (`logger.error({ err: { name: err.name, ... } })`).
  *  - Le message est en français côté API (cohérent avec le reste du
@@ -37,8 +37,7 @@ export abstract class ServiceError extends Error {
 
   constructor(message: string, options?: { cause?: unknown }) {
     // Error.cause (ES2022 / Node 16.9+) propage l'erreur d'origine
-    // (Prisma, Stripe, fetch…) sans perdre la stack. Voir
-    // web-patterns.md §"chaîner les erreurs externes avec Error.cause".
+    // (Prisma, Stripe, fetch…) sans perdre la stack, via Error.cause.
     super(message, options);
     this.name = this.constructor.name;
   }

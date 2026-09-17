@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 // conservé sur la card), label discret à droite (renouvellement auto),
 // divider neutre, puis 4 bullets check blancs.
 //
-// Polish v2 : le glow doré (border-accent/30 + shadow-shine-soft) a
+// Le glow doré (border-accent/30 + shadow-shine-soft) a
 // été retiré (effet "néon AI"). La card décolle maintenant par sa
 // nuance de fond surface-3 (un cran au-dessus du form en surface-elevated),
 // avec une border subtle white/10.

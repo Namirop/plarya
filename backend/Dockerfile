@@ -3,7 +3,7 @@
 # Image backend Plarya (Express + Prisma). Portable : Railway, Render,
 # Fly.io, etc. Process long-running → les crons node-cron in-process
 # (emails J+1, reset minuit, cleanup RGPD) tournent nativement, contrai-
-# rement à un hébergement serverless. cf. docs/deploiement.md.
+# rement à un hébergement serverless.
 
 FROM node:22-slim AS build
 WORKDIR /app

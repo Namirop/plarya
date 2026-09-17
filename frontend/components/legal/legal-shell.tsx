@@ -19,8 +19,7 @@ export function LegalWarning() {
 }
 
 // Section d'une page juridique. Titre h2 (= text-h3 DS, 32 px weight
-// 500), espacement vertical 48 px (mt-12) entre 2 sections — cf.
-// brief §"espacement ~48px entre sections".
+// 500), espacement vertical 48 px (mt-12) entre 2 sections.
 export function LegalSection({
   title,
   children,
@@ -41,7 +40,7 @@ export function LegalSection({
 }
 
 // Liste à puces stylée pour les énumérations de droits RGPD, etc.
-// Préserve l'indentation du brief (pl-6) + gap entre items (mb-2 via
+// Indentation pl-6 + gap entre items (mb-2 via
 // `space-y-2` Tailwind pour éviter le margin-collapse).
 export function LegalList({
   children,

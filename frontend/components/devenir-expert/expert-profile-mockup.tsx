@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 // Pivot psychologique : l'utilisateur se projette en voyant ce qu'il
 // pourrait avoir comme "carte de visite" sur la plateforme.
 //
-// Card seule (la card "fantôme" derrière a été retirée — Romain la
-// trouvait visuellement parasite). Le halo doré ambient suffit pour
+// Card seule (la card "fantôme" derrière a été retirée — visuellement
+// parasite). Le halo doré ambient suffit pour
 // éviter l'effet "card flottante dans le vide".
 //
 // Avatar : image locale optimisée via next/image (profile2.png).

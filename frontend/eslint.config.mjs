@@ -9,7 +9,7 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    // Sprint Polish B2 — règles a11y + propreté imports.
+    // Règles a11y + propreté imports.
     // jsx-a11y est déjà chargé par eslint-config-next/core-web-vitals,
     // on ajoute seulement nos plugins propres et on override les
     // règles a11y au niveau projet.

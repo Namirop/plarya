@@ -41,8 +41,7 @@ export const pronoIdParamsSchema = z.object({
 
 // Types inférés depuis les schemas — source unique de vérité. Tous les
 // services + handlers qui manipulent ces shapes devraient consommer
-// ces types plutôt que de redéclarer leurs propres interfaces (cf.
-// web-patterns.md §"Inférence Zod").
+// ces types plutôt que de redéclarer leurs propres interfaces.
 export type CreatePronoInput = z.infer<typeof createPronoSchema>;
 export type UpdateResultInput = z.infer<typeof updateResultSchema>;
 export type BookmakerOddsItem = z.infer<typeof bookmakerOddsItemSchema>;

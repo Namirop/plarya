@@ -8,7 +8,7 @@ import { DecorativeDivider } from "@/components/ui/decorative-divider";
 // trop écarter sur petit écran.
 // Desktop : py-20 (= 80 px haut + 80 px bas). Avec le divider (~6 px),
 // gap visuel total ~166 px — le précédent py-10 était trop serré entre
-// Devenir Créateur et le Disclaimer (retour Romain).
+// Devenir Créateur et le Disclaimer.
 export function SectionSeparator() {
   return (
     <div className="pt-16 pb-12 md:py-20">

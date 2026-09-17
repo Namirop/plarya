@@ -63,8 +63,8 @@ export function ExpertProfilePreview({ pseudo, bio, sports }: ExpertProfilePrevi
           Wrapper externe : surface-2 (NEUTRE — la preview représente
           une vraie page du site, pas une zone de conversion, donc
           pas de teinte warm ici). Border surface-3 + shadow-2xl
-          pour donner du poids. Coins droits (rectangle) — Romain
-          préfère cette finition vs l'arrondi browser macOS. */}
+          pour donner du poids. Coins droits (rectangle), préférés
+          à l'arrondi browser macOS. */}
       <div className="mt-5 overflow-hidden border border-surface-3 bg-surface-2 shadow-2xl">
         {/* Chrome browser : 3 cercles macOS + URL bar centrée */}
         <div className="flex items-center gap-3 border-b border-surface-3 bg-surface-1 px-3 py-2.5">
