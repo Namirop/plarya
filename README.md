@@ -1,6 +1,36 @@
-# Plarya
+<h1 align="center">Plarya</h1>
 
-Plateforme d'analyses sportives publiées par des experts, accessibles à la journée ou par abonnement.
+<p align="center">
+  Plateforme d'analyses sportives publiées par des experts, accessibles à la journée ou par abonnement.<br>
+  <a href="https://plarya.com">plarya.com</a> (pré-lancement, accès restreint)
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs&logoColor=white" alt="Next.js">
+  <img src="https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Tailwind-v4-38bdf8?logo=tailwindcss&logoColor=white" alt="Tailwind">
+  <img src="https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white" alt="Express">
+  <img src="https://img.shields.io/badge/Prisma-7-2D3748?logo=prisma&logoColor=white" alt="Prisma">
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Stripe-Checkout-635bff?logo=stripe&logoColor=white" alt="Stripe">
+</p>
+
+<p align="center">
+  <img src="docs/images/01-couverture.jpg" alt="Plarya : des analyses sportives d'experts, à la journée ou en abonnement" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/images/02-experts.jpg" alt="Experts du jour sur l'accueil" width="32%">
+  <img src="docs/images/03-analyses.jpg" alt="Analyses verrouillées avant l'achat" width="32%">
+  <img src="docs/images/04-espace-expert.jpg" alt="Espace expert : publication et résultats" width="32%">
+</p>
+
+<p align="center">
+  <sub>Experts du jour · Analyses verrouillées avant l'achat · Espace expert</sub>
+</p>
+
+---
 
 ## Stack
 
