@@ -45,25 +45,15 @@ const TABS: { key: Tab; label: string }[] = [
 const PRONOS_PAGE_SIZE = 50;
 
 /**
- * Orchestrateur client du panel admin.
- *
- * Reçoit toutes les data initiales du server component (`page.tsx`)
- * et les distribue aux _components/*Section.tsx. Centralise :
- *  - le state global (data + toast)
- *  - la pagination des pronos
- *  - les modales de confirmation (send-emails, override-result)
- *  - les fetchers de refresh appelés après mutation
- *
- * Volontairement gardé monolithique (~280 lignes au lieu de 1146
- * avant la refacto) : centralise la coordination cross-section ; chaque
- * section reste indépendante côté rendering.
+ * Espace admin côté client : reçoit les données initiales de page.tsx et
+ * centralise l'état partagé, la pagination des pronos, les confirmations et
+ * les rechargements après mutation. Chaque section se contente du rendu.
  */
 export default function AdminClient({ initialData }: { initialData: AdminInitialData }) {
   const { showToast } = useToast();
   const [tab, setTab] = useState<Tab>("revenus");
 
-  // Tous les states miroirs des initial data — les mutations doivent
-  // appeler `fetchAll()` pour rester synchronisées avec le backend.
+  // Copies locales des données initiales : toute mutation appelle fetchAll().
   const [stats, setStats] = useState<Stats>(initialData.stats);
   const [revenueDays, setRevenueDays] = useState<RevenueDay[]>(initialData.revenueDays);
   const [sales, setSales] = useState<Sale[]>(initialData.sales);
@@ -82,9 +72,7 @@ export default function AdminClient({ initialData }: { initialData: AdminInitial
     result: "WON" | "LOST";
   } | null>(null);
 
-  // Refetch ciblé de la page de pronos courante (utilisé par
-  // pagination + après mutation override). Garde l'offset courant
-  // sauf si caller passe une nouvelle valeur.
+  // Recharge une page de pronos (pagination).
   const fetchPronosPage = useCallback(async (offset: number) => {
     try {
       const data = await apiGet<PronosPage>(
@@ -98,9 +86,8 @@ export default function AdminClient({ initialData }: { initialData: AdminInitial
     }
   }, []);
 
-  // Refetch GLOBAL — déclenché après une mutation qui peut impacter
-  // plusieurs sections (override prono → stats + by-expert + winRate
-  // expert). Coût acceptable côté admin (faible fréquence d'usage).
+  // Recharge tout après une mutation touchant plusieurs sections
+  // (ex. résultat d'un prono → stats et revenus par expert).
   const fetchAll = useCallback(async () => {
     try {
       const [s, rd, sl, tr, t, p, u] = await Promise.all([
@@ -143,8 +130,7 @@ export default function AdminClient({ initialData }: { initialData: AdminInitial
   async function executeOverrideResult(pronoId: string, result: "WON" | "LOST") {
     try {
       await apiPatch(`/admin/pronos/${pronoId}/result`, { result });
-      // Update optimiste local : permet à l'UI de refléter le
-      // changement immédiatement, fetchAll() ensuite resync l'état complet.
+      // Mise à jour locale immédiate, puis resynchronisation complète.
       setPronos((prev) => prev.map((p) => (p.id === pronoId ? { ...p, result } : p)));
       showToast(`Analyse marquée comme ${result === "WON" ? "gagnée" : "perdue"}`, "success");
       fetchAll();

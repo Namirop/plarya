@@ -4,22 +4,10 @@ import { ZodError, type ZodSchema, type z } from "zod";
 import { logger } from "../lib/logger";
 
 /**
- * Middleware générique de validation des query strings (`req.query`).
+ * Équivalent de validate() pour `req.query` (valeurs converties via `z.coerce`).
  *
- * Mêmes principes que validateParams() mais pour `req.query`. Permet de
- * typer/valider les ?limit=&offset=&from=... dispersés dans les routes
- * admin (cf. /admin/pronos, /admin/stats/sales, /admin/stats/export.csv)
- * et de coercer les strings en number/Date via `z.coerce` côté schéma.
- *
- * ⚠️ Express 5 : `req.query` est devenu un getter SANS setter — un
- * simple `req.query = parsed` est silencieusement ignoré (le getter
- * continue de renvoyer la query string parsée d'origine). On réécrit
- * donc la propriété via `Object.defineProperty` pour exposer au handler
- * la version validée + coercée (sinon les number/Date repasseraient en
- * string et casseraient les services en aval).
- *
- * 400 Bad Request si la validation échoue, même format de `details`
- * que validate() / validateParams() pour cohérence des réponses.
+ * Express 5 : `req.query` est un getter sans setter, une affectation directe
+ * serait ignorée. `Object.defineProperty` expose la version parsée au handler.
  */
 export function validateQuery<T extends ZodSchema>(schema: T) {
   return (

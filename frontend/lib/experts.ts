@@ -1,12 +1,6 @@
 import { API_URL } from "@/lib/site";
 
-/**
- * Types + loader server-side partagés du domaine "expert public".
- *
- * Extraits de `app/experts/[id]/ExpertProfile.client.tsx` pour que la
- * page officielle consomme une source de vérité unique — pas de
- * duplication de logique métier.
- */
+// Types et chargement serveur du profil public d'un expert.
 
 export interface BookmakerOddsData {
   id: string;
@@ -46,26 +40,14 @@ export interface PublicExpertProfile {
   monthlyPrice: number;
   warningMessage: string | null;
   viewsToday: number;
-  /**
-   * True si l'expert a programmé la suppression de son compte (cf.
-   * Expert.pendingDeletionAt côté backend). Les nouveaux paiements
-   * sont refusés (checkout/create-session 400) et le frontend doit
-   * désactiver les CTAs d'achat + afficher un banner.
-   */
+  /** Suppression de compte programmée : l'API refuse les nouveaux paiements (400). */
   pendingDeletion?: boolean;
+  acceptingSubscribers?: boolean;
   pronosToday: number;
   pronos: PronoData[];
 }
 
-/**
- * Fetch server-side du profil expert public. Le `layout.tsx` fait un
- * fetch similaire pour generateMetadata + JSON-LD Person ; Next dedupe
- * les fetch identiques (même URL + mêmes options) au sein d'une requête
- * → pas de double round-trip à l'API en pratique.
- *
- * Cache court : `viewsToday` du profil bouge plusieurs fois par heure,
- * donc 60s = compromis entre fraîcheur et charge backend.
- */
+/** Profil public, revalidé toutes les 60 s (`viewsToday` évolue souvent). */
 export async function fetchExpert(id: string): Promise<PublicExpertProfile | null> {
   try {
     const res = await fetch(`${API_URL}/experts/${id}`, {

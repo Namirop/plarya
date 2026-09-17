@@ -1,10 +1,5 @@
-// Divider décoratif "ligne — point — ligne" — anciennement doré,
-// neutralisé : sur la homepage, règle MAX 3 occurrences dorées, ce
-// divider décoratif n'en fait pas partie.
-// Garde la forme + l'opacité subtile, juste la couleur passe en blanc.
-//
-// Largeur : 280 px mobile (rentre dans viewport 393 sans clipping),
-// 402 px desktop (valeur Figma).
+// Séparateur « ligne — point — ligne » en blanc atténué : le doré reste
+// réservé à quelques accents de la page.
 
 const NEUTRAL_LINE_FADE =
   "linear-gradient(to right, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.4) 51%, rgba(255,255,255,0.05) 100%)";

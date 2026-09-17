@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-// Pagination commune aux routes admin. Les bornes (cap 200, default 50)
-// vivent désormais ICI plutôt que dans admin-service : la validation
-// d'entrée HTTP est un concern du middleware validateQuery (cf.
-// validate-query.ts), pas de la couche métier.
+// Pagination commune aux routes admin (appliquée par validateQuery).
 export const paginationQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),

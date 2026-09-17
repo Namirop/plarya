@@ -42,9 +42,7 @@ export function Step2Analysis({
   const timeParsed = parseTimeInput(values.timeRaw);
   const timeLabel = timeParsed ? formatTime(timeParsed) : "";
 
-  // Compose la ligne 1 du récap : Match · [Ligue ·] Heure. La ligue
-  // est skip si vide ou si l'expert a sélectionné "Aucune / Autre"
-  // (auquel cas leagueLabel est null).
+  // Récapitulatif : match · ligue (si renseignée) · heure.
   const line1Parts: string[] = [];
   if (values.matchName) line1Parts.push(values.matchName);
   if (leagueLabel) line1Parts.push(leagueLabel);
@@ -52,10 +50,7 @@ export function Step2Analysis({
 
   return (
     <div className="flex flex-col">
-      {/* ── Récap compact (sous le stepper) ──
-          Border-left 2px accent : marque le bloc comme "citation
-          contextuelle" sans alourdir avec une card. Padding agrandi
-          vs v1 pour donner plus de présence (px-5 py-5 + text 15px). */}
+      {/* ── Récapitulatif de l'étape 1 ── */}
       <div className="mb-10 border-l-2 border-accent px-5 py-5">
         <p className="font-body text-[15px] text-foreground">
           {line1Parts.map((part, i) => (
@@ -92,9 +87,6 @@ export function Step2Analysis({
             "focus-visible:ring-1 focus-visible:ring-accent",
           )}
         />
-        {/* Compteur de mots : absolu bottom-right, 12px depuis le bord.
-            Logique pluriel : "0 mots, 1 mot, 2 mots, 3 mots…" — seul le
-            singulier 1 mot n'a pas de "s". */}
         <span
           id="word-count"
           aria-live="polite"
@@ -107,8 +99,7 @@ export function Step2Analysis({
       {step2Error && <p className={ERROR_TEXT}>{step2Error}</p>}
       {submitError && <p className={ERROR_TEXT}>{submitError}</p>}
 
-      {/* Barre du bas — Retour à gauche + Publier à droite. Stack
-          mobile (bouton Publier en haut via flex-col-reverse). */}
+      {/* En mobile, « Publier » passe au-dessus de « Retour ». */}
       <div className="mt-12 flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"

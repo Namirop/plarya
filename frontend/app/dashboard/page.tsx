@@ -7,15 +7,9 @@ import type { Bookmaker, Prono, DashboardExpertStats } from "@/lib/types/dashboa
 import DashboardClient from "./DashboardClient";
 
 /**
- * Server component /dashboard.
- *
- * Réservé aux EXPERT. USER → redirect /. ADMIN → redirect /admin (le
- * panel admin contient ses propres outils, /dashboard est expert-only).
- *
- * Fetch initial : profile expert + ses pronos + bookmakers. Si l'un
- * des 3 endpoints renvoie 404 (cas où user.role=EXPERT mais pas de
- * row Expert créée — anomalie DB), on tombe sur le redirect /
- * par sécurité.
+ * /dashboard, réservé aux experts (ADMIN → /admin, autres → accueil). Profil,
+ * pronos et bookmakers sont chargés côté serveur ; un échec de l'un d'eux
+ * redirige vers l'accueil.
  */
 export default async function DashboardPage() {
   const meRes = await serverFetch("/auth/me");

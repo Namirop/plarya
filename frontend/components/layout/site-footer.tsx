@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// Routes "internes" (app-like) sur lesquelles on ne rend PAS le footer.
-// Convention décidée pour le Dashboard ; à étendre quand l'admin et le
-// compte arriveront.
+// Espaces applicatifs rendus sans footer.
 const HIDDEN_PREFIXES = ["/dashboard", "/admin"];
 
 export function SiteFooter() {

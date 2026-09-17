@@ -16,16 +16,9 @@ import type { AuthUser } from "@/lib/types/auth";
 import AdminClient from "./AdminClient";
 
 /**
- * Server component /admin.
- *
- * Réservé aux ADMIN. Pour USER/EXPERT → redirect /. On parallélise
- * les 7 fetchs initiaux (Promise.all) → temps de rendu = max(fetchs)
- * vs somme séquentielle. Si l'un échoue, on assume une erreur
- * d'autorisation et on redirect au lieu de partir en erreur 500.
- *
- * Le premier batch de pronos est fetché avec limit=50 (page size par
- * défaut). L'AdminClient peut ensuite paginer
- * via /admin/pronos?limit=50&offset=N.
+ * /admin, réservé au rôle ADMIN (redirection vers l'accueil sinon). Les
+ * chargements initiaux partent en parallèle ; un échec redirige aussi vers
+ * l'accueil plutôt que d'afficher une erreur 500.
  */
 const PRONOS_PAGE_SIZE = 50;
 

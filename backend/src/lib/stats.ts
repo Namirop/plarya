@@ -1,8 +1,7 @@
 import { prisma } from "./prisma";
 
-/** Calcule le taux de réussite sur les 10 derniers pronos validés.
- *  Usage interne uniquement (dashboard expert, admin) — JAMAIS affiché
- *  sur les pages publiques. */
+/** Taux de réussite (%) sur les 10 derniers pronos tranchés. Réservé au
+ *  tableau de bord de l'expert (`GET /experts/me`), jamais exposé publiquement. */
 export async function calcWinRate(expertId: string): Promise<number> {
   const recent = await prisma.prono.findMany({
     where: { expertId, result: { not: "PENDING" } },

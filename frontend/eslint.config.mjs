@@ -9,10 +9,7 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    // Règles a11y + propreté imports.
-    // jsx-a11y est déjà chargé par eslint-config-next/core-web-vitals,
-    // on ajoute seulement nos plugins propres et on override les
-    // règles a11y au niveau projet.
+    // jsx-a11y est fourni par core-web-vitals : seuls ses niveaux sont ajustés ici.
     plugins: {
       "unused-imports": unusedImports,
       import: importPlugin,
@@ -31,10 +28,7 @@ const eslintConfig = defineConfig([
       "jsx-a11y/no-noninteractive-element-interactions": "warn",
       "jsx-a11y/role-has-required-aria-props": "error",
 
-      // ── Imports inutilisés (unused-imports) ──────────────────
-      // unused-imports remplace @typescript-eslint/no-unused-vars
-      // pour les imports — on désactive ce dernier pour éviter
-      // les double-detections concurrentes.
+      // ── Imports et variables inutilisés (remplace la règle TS, évite les doublons)
       "@typescript-eslint/no-unused-vars": "off",
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [
@@ -64,13 +58,10 @@ const eslintConfig = defineConfig([
       ],
     },
   },
-  // eslint-config-prettier en DERNIER : désactive toutes les règles
-  // ESLint qui entrent en conflit avec Prettier (indentation, quotes,
-  // semis, etc.) — Prettier reste source of truth sur le format.
+  // En dernier : neutralise les règles de format en conflit avec Prettier.
   prettierConfig,
-  // Override default ignores of eslint-config-next.
   globalIgnores([
-    // Default ignores of eslint-config-next:
+    // Exclusions par défaut d'eslint-config-next, redéclarées ici.
     ".next/**",
     "out/**",
     "build/**",

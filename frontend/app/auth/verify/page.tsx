@@ -14,19 +14,10 @@ import {
 } from "@/lib/form-da";
 import { cn } from "@/lib/utils";
 
-// /auth/verify — page de retour magic-link.
-//
-// Cas couverts :
-//   - error=expired : lien trop vieux ou déjà utilisé
-//   - error=invalid : lien mal formé / token inconnu
-//   - error=deleted : email en cooldown post-suppression
-//   - aucun error  : fallback "connexion en cours…" (le backend a normalement
-//                    posé le cookie et redirigé avant)
-//
-// DA : InfoScreen-style — titre éditorial XL centré (font-display 48-96px),
-// pas de card, contenu unique posé sur le fond. Pour les cas expired/invalid,
-// un mini-formulaire intégré sous le subtitle permet de demander un nouveau
-// lien sans repasser par le LoginModal.
+// Retour d'un magic-link en erreur (l'API redirige ici avec `?error=`) :
+//   - expired / invalid : formulaire pour demander un nouveau lien
+//   - deleted : email en cooldown après suppression du compte
+// Sans paramètre, l'API a déjà posé le cookie et redirigé : état transitoire.
 
 export default function AuthVerifyPage() {
   return (
@@ -75,8 +66,6 @@ function VerifyContent() {
     );
   }
 
-  // Fallback : le backend a normalement posé le cookie + redirigé. Si on
-  // arrive ici sans param, c'est probablement transitoire.
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
       <p className="font-body text-body-16 text-muted-foreground">Connexion en cours…</p>
@@ -84,9 +73,7 @@ function VerifyContent() {
   );
 }
 
-// ────────────────────────────────────────────────────────────────────
-// Écran "demande de nouveau lien" — utilisé pour expired/invalid.
-// ────────────────────────────────────────────────────────────────────
+// Demande d'un nouveau lien (expired / invalid).
 
 interface ResendErrorScreenProps {
   eyebrow: string;
@@ -118,9 +105,6 @@ function ResendErrorScreen({ eyebrow, title, subtitle }: ResendErrorScreenProps)
     }
   }
 
-  // Cas succès : on remplace tout le formulaire par un message de
-  // confirmation centré, sans CTA (le user a juste à aller dans sa
-  // boîte mail).
   if (sent) {
     return (
       <CenteredInfoScreen
@@ -148,8 +132,6 @@ function ResendErrorScreen({ eyebrow, title, subtitle }: ResendErrorScreenProps)
         {subtitle}
       </p>
 
-      {/* Formulaire intégré — pas de card, juste un input + bouton
-          alignés sous le subtitle, max-w restreint pour ne pas crier. */}
       <div className="mt-10 w-full max-w-[400px] text-left">
         <label htmlFor="resend-email" className={formDaLabelCls}>
           Ton email
@@ -188,9 +170,7 @@ function ResendErrorScreen({ eyebrow, title, subtitle }: ResendErrorScreenProps)
   );
 }
 
-// ────────────────────────────────────────────────────────────────────
-// Écran d'info centré simple (compte supprimé, lien envoyé).
-// ────────────────────────────────────────────────────────────────────
+// Écran d'information (compte supprimé, lien envoyé).
 
 interface CenteredInfoScreenProps {
   eyebrow: string;

@@ -14,23 +14,11 @@ import {
 } from "../services/prono-service";
 import { createPronoSchema, pronoIdParamsSchema, updateResultSchema } from "../validators/prono";
 
-/**
- * Routes /pronos — orchestration HTTP uniquement.
- *
- * Convention :
- *  - Extraction des inputs depuis req
- *  - Appel d'un service (cf. services/prono-service.ts)
- *  - Sérialisation HTTP (status + json)
- *  - Gestion d'erreur centralisée via handleError() (mapping
- *    ServiceError → status code, fallback 500 + log structuré)
- *
- * Le pattern routes minces permet de tester la logique métier
- * sans monter Express.
- */
+// Routes /pronos ; logique métier dans services/prono-service.ts.
 
 const router = Router();
 
-// POST /pronos — Expert publishes a prono
+// POST /pronos : publication par un expert.
 router.post(
   "/",
   authMiddleware,
@@ -48,7 +36,7 @@ router.post(
   },
 );
 
-// GET /pronos/mine — Expert's own pronos (must be before /:id)
+// GET /pronos/mine : pronos de l'expert connecté (déclaré avant /:id).
 router.get("/mine", authMiddleware, expertMiddleware, async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   try {
@@ -60,7 +48,7 @@ router.get("/mine", authMiddleware, expertMiddleware, async (req, res) => {
   }
 });
 
-// PATCH /pronos/:id/result — Expert (owner) or admin updates result
+// PATCH /pronos/:id/result : résultat saisi par l'auteur ou un admin.
 router.patch(
   "/:id/result",
   authMiddleware,
@@ -78,7 +66,7 @@ router.patch(
   },
 );
 
-// GET /pronos/:id — Single prono detail (subscription-gated)
+// GET /pronos/:id : détail, réservé aux abonnés (ou auteur/admin).
 router.get("/:id", authMiddleware, validateParams(pronoIdParamsSchema), async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   try {

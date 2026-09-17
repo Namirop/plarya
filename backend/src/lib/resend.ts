@@ -3,38 +3,28 @@ import { logger, maskEmail } from "./logger";
 
 const resend = new Resend(process.env.RESEND_API_KEY!);
 
-// Adresse d'expédition. En prod : domaine vérifié dans Resend (ex
-// "Plarya <noreply@plarya.com>") posé via EMAIL_FROM. En dev/sandbox,
-// fallback sur onboarding@resend.dev (seul "from" autorisé sans domaine
-// vérifié). ⚠️ sans EMAIL_FROM en prod, les emails partent de l'adresse
-// sandbox et ne sont pas délivrables au-delà du compte Resend.
+// EMAIL_FROM doit utiliser un domaine vérifié chez Resend. L'adresse de repli
+// `onboarding@resend.dev` ne délivre qu'au titulaire du compte Resend.
 export const EMAIL_FROM = process.env.EMAIL_FROM || "Plarya <onboarding@resend.dev>";
 
 const RETRY_DELAYS_MS = [1000, 5000, 30000]; // 1s, 5s, 30s
 const MAX_ATTEMPTS = 3;
 
-// Resend SDK return type — `resend.emails.send` retourne
-// { data: { id } | null, error: ErrorResponse | null }. Plutôt que
-// d'importer le type complet (instable selon les versions du SDK),
-// on type le payload via Parameters[0].
+// Type dérivé de la signature du SDK, plus stable qu'un import de ses types internes.
 type SendPayload = Parameters<typeof resend.emails.send>[0];
 
 /**
- * Détecte les erreurs Resend "permanentes" (4xx pour lesquelles un
- * retry est inutile : bad email, missing API key, etc.) vs
- * "transient" (5xx, network, timeout — un retry peut réussir).
+ * Erreur permanente = 4xx hors 408/429 (adresse invalide, clé absente…) :
+ * inutile de réessayer. Sans statusCode (réseau, timeout), on réessaie.
  */
 function isPermanentError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const e = err as { statusCode?: number; name?: string };
-  // statusCode est posé par le SDK Resend sur les erreurs HTTP.
   if (typeof e.statusCode === "number") {
-    // 400-499 = client error = permanent (sauf 408 timeout et 429 rate-limit)
     return (
       e.statusCode >= 400 && e.statusCode < 500 && e.statusCode !== 408 && e.statusCode !== 429
     );
   }
-  // Pas de statusCode → erreur network/timeout → retry.
   return false;
 }
 
@@ -43,16 +33,9 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Envoie un email via Resend avec retry exponentiel.
- * - 3 tentatives max
- * - Backoff : 1s → 5s → 30s
- * - Skip retry sur erreurs permanentes (bad email, etc.)
- * - Logger structuré sur chaque tentative
- *
- * Pattern fire-and-forget côté appelant : si toutes les tentatives
- * échouent, l'erreur est loggée mais NON propagée par défaut
- * (l'envoi d'email ne doit pas faire échouer le webhook qui l'a
- * déclenché). À l'appelant qui veut différencier de gérer.
+ * Envoie un email via Resend : 3 tentatives au plus, sans nouvel essai sur
+ * erreur permanente. L'échec final est journalisé mais jamais propagé, pour
+ * qu'un email ne fasse pas échouer le webhook ou la route appelante.
  */
 export async function sendEmailWithRetry(
   payload: SendPayload,
@@ -64,8 +47,7 @@ export async function sendEmailWithRetry(
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       const result = await resend.emails.send(payload);
-      // Resend retourne { data, error } au lieu de throw.
-      // On normalize en throwing pour la même chaîne de retry.
+      // Le SDK renvoie `{ data, error }` sans lever : on lève pour unifier.
       if (result.error) {
         throw result.error;
       }
@@ -82,7 +64,7 @@ export async function sendEmailWithRetry(
           { err, kind: context.kind, to: maskedTo, attempt, permanent },
           "Email send failed (giving up)",
         );
-        return; // fire-and-forget : on swallow l'erreur finale
+        return;
       }
       const delay = RETRY_DELAYS_MS[attempt - 1];
       logger.warn(

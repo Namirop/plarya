@@ -1,10 +1,6 @@
 import type { UserRole } from "./auth";
 
-/**
- * Profil expert tel que renvoyé par GET /experts/me (vue propriétaire).
- * Subset des champs exposés au propriétaire du profil — ne pas confondre
- * avec PublicExpertProfile (lib/experts.ts, vue publique du profil).
- */
+/** GET /experts/me (champs utilisés), à ne pas confondre avec PublicExpertProfile. */
 export interface OwnExpertProfile {
   id: string;
   pseudo: string;
@@ -12,12 +8,16 @@ export interface OwnExpertProfile {
   dailyNote: string | null;
   dailyNoteDate: string | null;
   sports: string[];
+  subscription: {
+    status: "FREE" | "ACTIVE" | "EXPIRED";
+    active: boolean;
+    expiresAt: string | null;
+    cancelAtPeriodEnd: boolean;
+    canCancel: boolean;
+  };
 }
 
-/**
- * Subscription d'un user avec l'expert lié, telle que renvoyée par
- * GET /subscriptions/me.
- */
+/** Élément de GET /subscriptions/me. */
 export interface SubscriptionWithExpert {
   id: string;
   userId: string;
@@ -26,6 +26,8 @@ export interface SubscriptionWithExpert {
   status: "ACTIVE" | "EXPIRED" | "CANCELLED";
   expiresAt: string;
   createdAt: string;
+  cancelAtPeriodEnd: boolean;
+  canCancel: boolean;
   expert: {
     id: string;
     pseudo: string;
@@ -34,7 +36,5 @@ export interface SubscriptionWithExpert {
   };
 }
 
-// Note : le rôle dans CompteClient se limite à USER ou EXPERT
-// (les ADMIN sont redirigés vers /admin en amont). On ne réutilise donc
-// pas UserRole directement pour le prop `role` de CompteClient.
+// /compte redirige les ADMIN vers /admin : seuls USER et EXPERT y arrivent.
 export type CompteUserRole = Extract<UserRole, "USER" | "EXPERT">;

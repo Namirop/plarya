@@ -3,23 +3,10 @@ import { cookies } from "next/headers";
 import { API_URL } from "./site";
 
 /**
- * Wrapper fetch côté server component pour les endpoints AUTHENTIFIÉS
- * du backend. Forward automatiquement le cookie `session_token` du
- * client vers le backend, et désactive le cache Next (les pages
- * connectées doivent rendre des données fraîches à chaque navigation).
- *
- * Usage typique dans un server component :
- *   const res = await serverFetch("/auth/me");
- *   if (!res.ok) redirect("/");
- *   const user = await res.json();
- *
- * Notes :
- *  - `cookies()` est async depuis Next 15 (compatibilité strict mode).
- *  - `cache: "no-store"` est essentiel : sans ça, deux users différents
- *    pourraient voir les data l'un de l'autre via le cache HTTP de Next.
- *  - On ne lance pas d'exception si la session est absente — le caller
- *    décide quoi faire (souvent : laisser le backend renvoyer 401 et
- *    rediriger).
+ * fetch côté serveur vers une route authentifiée de l'API : transmet le
+ * cookie `session_token` du visiteur. `no-store` est indispensable, la
+ * réponse étant propre à l'utilisateur. Pas d'exception sans session :
+ * l'appelant traite le 401.
  */
 export async function serverFetch(path: string, init?: RequestInit): Promise<Response> {
   const cookieStore = await cookies();
@@ -39,10 +26,7 @@ export async function serverFetch(path: string, init?: RequestInit): Promise<Res
   });
 }
 
-/**
- * Variante typée qui parse la réponse JSON et lance si non-OK. Pour
- * les chemins server où on veut juste les données ou un crash explicite.
- */
+/** Variante qui renvoie le JSON typé et lève si la réponse n'est pas OK. */
 export async function serverFetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await serverFetch(path, init);
   if (!res.ok) {

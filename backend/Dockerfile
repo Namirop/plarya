@@ -1,9 +1,8 @@
 # syntax=docker/dockerfile:1
 #
-# Image backend Plarya (Express + Prisma). Portable : Railway, Render,
-# Fly.io, etc. Process long-running → les crons node-cron in-process
-# (emails J+1, reset minuit, cleanup RGPD) tournent nativement, contrai-
-# rement à un hébergement serverless.
+# Image du backend (Express + Prisma). Process persistant : les tâches
+# node-cron (emails J+1, remise à zéro de minuit, purges RGPD) tournent dans
+# le même process, ce qu'un hébergement serverless ne permettrait pas.
 
 FROM node:22-slim AS build
 WORKDIR /app
@@ -17,9 +16,8 @@ COPY package*.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 
-# `npm ci` installe TOUTES les deps (le CLI `prisma`, devDependency, est
-# nécessaire pour `prisma migrate deploy` au pre-deploy) et déclenche le
-# postinstall (prisma generate).
+# Toutes les dépendances : le CLI `prisma` (devDependency) sert à
+# `prisma migrate deploy` avant le démarrage. Le postinstall lance prisma generate.
 RUN npm ci
 
 # Code source puis build (prisma generate && tsc → dist/).
@@ -27,7 +25,7 @@ COPY . .
 RUN npm run build
 
 ENV NODE_ENV=production
-# Railway/Render injectent PORT ; le serveur lit process.env.PORT.
+# L'hébergeur peut imposer le port via la variable PORT (4000 par défaut).
 EXPOSE 4000
 
 CMD ["node", "dist/server.js"]

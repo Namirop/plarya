@@ -6,21 +6,12 @@ import { CaretDown } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
 
-// Item d'accordéon FAQ. État local (open/closed) ; le parent rend
-// plusieurs FaqItem sans coordination — chaque question gère son
-// propre toggle. Si on veut un comportement "un seul ouvert à la
-// fois", le parent pourra lifter le state via une prop contrôlée.
-//
-// Animation : CSS grid-template-rows 0fr → 1fr pour faire un slide
-// fluide sans connaître la hauteur exacte du contenu à l'avance.
-// Pattern moderne (CSS Grid > scroll-height JS). Fallback prefers-
-// reduced-motion via `motion-safe:` Tailwind.
+// Question de FAQ dépliable, indépendante des autres. L'ouverture anime
+// grid-template-rows (0fr → 1fr), sans mesurer la hauteur du contenu.
 
 export interface FaqItemProps {
   question: string;
   answer: ReactNode;
-  /** Ouvert par défaut au mount (utile pour rendre la 1re question
-   *  ouverte si on veut éviter qu'aucune ne soit visible au load). */
   defaultOpen?: boolean;
 }
 
@@ -44,9 +35,6 @@ export function FaqItem({ question, answer, defaultOpen = false }: FaqItemProps)
           size={18}
           weight="bold"
           className={cn(
-            // Caret neutre — anciennement doré, retiré au 3B
-            // (4 carets dorés alignés = saturation, le state open/closed
-            // est porté par la rotation, pas la couleur).
             "shrink-0 text-muted-foreground transition-transform duration-300 ease-out",
             open && "rotate-180",
           )}
@@ -54,9 +42,7 @@ export function FaqItem({ question, answer, defaultOpen = false }: FaqItemProps)
         />
       </button>
 
-      {/* Container animé via grid-template-rows 0fr → 1fr. L'enfant
-          intérieur a overflow:hidden + min-h:0 pour que le clip
-          fonctionne dans une grid row. Smooth, pas de saut. */}
+      {/* L'enfant en overflow-hidden masque le contenu quand la ligne vaut 0fr. */}
       <div
         id={contentId}
         className={cn(

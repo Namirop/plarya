@@ -1,5 +1,6 @@
 import { Prisma } from "../generated/prisma/client";
 import type { Sport, UserRole } from "../generated/prisma/enums";
+import { activeExpertSubscriptionWhere, isExpertSubscriptionActive } from "../lib/expert-access";
 import { prisma } from "../lib/prisma";
 import { calcWinRate } from "../lib/stats";
 import type { UpdateExpertInput } from "../validators/expert-self";
@@ -13,19 +14,8 @@ import {
 import { bookmakerOddsInclude, type PronoWithBookmakers } from "./prono-service";
 
 /**
- * Service Expert — logique métier autour du profil expert.
- *
- * Le service ne dépend pas d'Express. Il consomme/produit des shapes
- * typées et throw des erreurs métier (cf. ./errors.ts).
- *
- * Notes d'implémentation :
- *  - On garde le helper `todayStart()` local plutôt qu'un util partagé :
- *    seule logique métier d'expert s'en sert pour l'instant. À extraire
- *    dans lib/date si un 3e consommateur apparaît.
- *  - Les méthodes "public" (visiteur anonyme) renvoient des shapes
- *    distinctes des méthodes "self" (expert loggé) — les champs exposés
- *    diffèrent volontairement (pas de winRate en public, pas de
- *    dailyNoteDate côté listings).
+ * Profil expert. Les vues publiques et la vue de l'expert connecté ont des
+ * types distincts : le taux de réussite n'est jamais exposé publiquement.
  */
 
 function todayStart(): Date {
@@ -34,7 +24,7 @@ function todayStart(): Date {
   return d;
 }
 
-// ── Types de retour exportés (contrats consommés par les routes) ─────
+// ── Types de retour ─────────────────────────────────────────────────
 
 export type OwnExpertProfile = {
   id: string;
@@ -49,6 +39,14 @@ export type OwnExpertProfile = {
   warningMessage: string | null;
   winRate: number;
   pronosToday: number;
+  subscription: {
+    status: "FREE" | "ACTIVE" | "EXPIRED";
+    // Peut publier, être listé et vendre (cf. lib/expert-access).
+    active: boolean;
+    expiresAt: Date | null;
+    cancelAtPeriodEnd: boolean;
+    canCancel: boolean;
+  };
 };
 
 export type UpdatedExpertProfile = {
@@ -60,8 +58,7 @@ export type UpdatedExpertProfile = {
   sports: Sport[];
 };
 
-// Prono tel que sélectionné sur le profil public (pick inclus brut —
-// masqué ensuite côté map).
+// Pick lu en base puis masqué pour les pronos en attente.
 type PublicExpertProno = Prisma.PronoGetPayload<{
   select: {
     id: true;
@@ -90,12 +87,14 @@ export type PublicExpertProfile = {
   warningMessage: string | null;
   viewsToday: number;
   pendingDeletion: boolean;
+  // false si l'expert est en suppression ou si son abonnement expert est arrêté.
+  acceptingSubscribers: boolean;
   pronosToday: number;
-  // pick = null sur les pronos PENDING (gating publique), sinon exposé.
+  // pick null tant que le prono est PENDING.
   pronos: (Omit<PublicExpertProno, "pick"> & { pick: string | null })[];
 };
 
-// Prono tel qu'inclus dans le listing homepage (pas de pick du tout).
+// Listing de l'accueil : jamais de pick.
 type PublicExpertListProno = Prisma.PronoGetPayload<{
   select: {
     id: true;
@@ -127,10 +126,8 @@ export type PublicExpertListItem = {
 };
 
 /**
- * GET /experts/me — Profile + stats internes (winRate, pronosToday) de
- * l'expert connecté. Throw ExpertProfileNotFoundError si pas de profile
- * (ou soft-deleted — un compte supprimé ne doit plus accéder à ses
- * anciennes ressources).
+ * GET /experts/me : profil, statistiques et abonnement de l'expert connecté.
+ * ExpertProfileNotFoundError si le profil est absent ou supprimé.
  */
 export async function getOwnExpertProfile(userId: string): Promise<OwnExpertProfile> {
   const expert = await prisma.expert.findUnique({ where: { userId } });
@@ -159,22 +156,20 @@ export async function getOwnExpertProfile(userId: string): Promise<OwnExpertProf
     warningMessage: expert.warningMessage,
     winRate,
     pronosToday,
+    subscription: {
+      status: expert.subStatus,
+      active: isExpertSubscriptionActive(expert),
+      expiresAt: expert.subExpiresAt,
+      cancelAtPeriodEnd: expert.subCancelAtPeriodEnd,
+      canCancel:
+        expert.subStatus === "ACTIVE" && !!expert.stripeSubId && !expert.subCancelAtPeriodEnd,
+    },
   };
 }
 
 /**
- * PATCH /experts/me — Update partiel du profile expert.
- *
- * Règles :
- *  - 404 si le profile n'existe pas
- *  - 400 (PseudoTakenError) si pseudo modifié vers une valeur déjà
- *    utilisée par un autre expert
- *  - dailyNote update bumpe automatiquement dailyNoteDate (le frontend
- *    consomme cette date pour afficher "Note du XX/XX")
- *
- * `Prisma.ExpertUpdateInput` est typé strict — toute typo (ex:
- * `dailyNotes` au lieu de `dailyNote`) crashe tsc plutôt que d'être
- * silently-ignorée par Prisma.
+ * PATCH /experts/me : mise à jour partielle. 404 sans profil, PseudoTakenError
+ * (400) si le pseudo est pris. Modifier dailyNote met à jour dailyNoteDate.
  */
 export async function updateOwnExpertProfile(
   userId: string,
@@ -220,23 +215,14 @@ export async function updateOwnExpertProfile(
 }
 
 /**
- * GET /experts — Liste publique des experts pour la homepage.
- *
- * Optim N+1 : une seule query Prisma avec `include` pronos du jour →
- * pronosToday se calcule côté JS (length de l'array). Avant cette
- * refacto, on faisait 2 queries supplémentaires PAR expert.
- *
- * Filtre `deletedAt: null + pendingDeletionAt: null` : les experts
- * soft-deleted ou en suppression programmée n'apparaissent pas sur la
- * homepage (ils n'acceptent plus de nouveaux abonnés).
- *
- * Le `limit` est appliqué APRÈS la query (slice côté JS) pour
- * simplifier — la table experts reste petite (~dizaines), pas
- * d'optim DB nécessaire ici.
+ * GET /experts : experts de l'accueil, avec leurs pronos du jour en une seule
+ * requête. Sont exclus les experts supprimés, en suppression programmée ou
+ * sans abonnement expert actif. La limite (6, sauf `all`) est appliquée en
+ * mémoire : la table reste petite.
  */
 export async function listPublicExperts(options: { all: boolean }): Promise<PublicExpertListItem[]> {
   const experts = await prisma.expert.findMany({
-    where: { deletedAt: null, pendingDeletionAt: null },
+    where: { deletedAt: null, pendingDeletionAt: null, ...activeExpertSubscriptionWhere() },
     orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }],
     include: {
       pronos: {
@@ -277,17 +263,10 @@ export async function listPublicExperts(options: { all: boolean }): Promise<Publ
 }
 
 /**
- * GET /experts/:id — Profile public d'un expert avec pronos masqués.
- *
- * Le `pick` des pronos PENDING est strippé (pick=null) — gating
- * publique. Le pick des pronos passés (WON/LOST) est exposé comme
- * track-record public.
- *
- * Throw ExpertNotFoundError si l'expert n'existe pas OU est
- * soft-deleted. Note : on ne 404 PAS sur pendingDeletionAt — les
- * abonnés existants doivent pouvoir continuer à accéder à leurs
- * analyses jusqu'à expiration de leur sub. On expose `pendingDeletion:
- * boolean` pour que le frontend désactive les CTA d'achat.
+ * GET /experts/:id : profil public. Le pick n'est visible que pour les pronos
+ * tranchés (historique public). 404 si l'expert est supprimé, mais pas en
+ * suppression programmée : ses abonnés gardent l'accès ; `acceptingSubscribers`
+ * indique au frontend de fermer la vente.
  */
 export async function getPublicExpertProfile(expertId: string): Promise<PublicExpertProfile> {
   const expert = await prisma.expert.findUnique({
@@ -340,19 +319,13 @@ export async function getPublicExpertProfile(expertId: string): Promise<PublicEx
     warningMessage: expert.warningMessage,
     viewsToday: expert.viewsToday,
     pendingDeletion: !!expert.pendingDeletionAt,
+    acceptingSubscribers: !expert.pendingDeletionAt && isExpertSubscriptionActive(expert),
     pronosToday,
     pronos,
   };
 }
 
-/**
- * POST /experts/:id/view — Incrément du compteur viewsToday.
- *
- * Hint sur l'erreur : Prisma renvoie P2025 (Record to update not found)
- * si l'expert n'existe pas → on convertit en ExpertNotFoundError
- * (404). Pour les autres erreurs (DB down, etc.), on laisse remonter
- * pour que le handler logge et renvoie 500.
- */
+/** POST /experts/:id/view. P2025 (enregistrement absent) devient ExpertNotFoundError. */
 export async function incrementViewCounter(expertId: string): Promise<void> {
   try {
     await prisma.expert.update({
@@ -368,16 +341,8 @@ export async function incrementViewCounter(expertId: string): Promise<void> {
 }
 
 /**
- * GET /experts/:id/pronos — Liste complète des pronos d'un expert,
- * gatée derrière une subscription active (ou owner/admin).
- *
- * Règle d'accès :
- *  - propriétaire (l'expert auteur) : accès direct
- *  - ADMIN : accès direct
- *  - autre user : doit avoir une Subscription ACTIVE non-expirée
- *
- * Throw PronoSubscriptionRequiredError (403) si user authentifié sans
- * sub et sans owner/admin status.
+ * GET /experts/:id/pronos : pronos complets, réservés à l'expert lui-même, aux
+ * admins et aux abonnés actifs ; PronoSubscriptionRequiredError (403) sinon.
  */
 export async function getExpertPronosForUser(
   expertId: string,

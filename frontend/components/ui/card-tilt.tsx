@@ -6,39 +6,18 @@ import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
-// Wrapper "tilt 3D" — la card s'incline doucement vers le curseur
-// (rotateX/Y), avec un highlight radial qui suit la souris pour
-// renforcer l'effet de relief. Spring physics pour des transitions
-// fluides au retour.
-//
-// Points clés de l'effet 3D vs une simple rotation :
-//  1. PERSPECTIVE sur le parent (1100px) — sans ça les rotations
-//     paraissent plates (transform 2D). C'est LE détail qui change tout.
-//  2. AMPLITUDE marquée (±12° par défaut) — un tilt à ±6° passe
-//     inaperçu sur les cards de la homepage.
-//  3. GLARE OVERLAY qui suit le curseur — un radial-gradient blanc
-//     ~18% opacity en mix-blend soft-light. C'est ce qui donne le
-//     côté "carte de jeu premium" / hologramme.
-//  4. PRESERVE-3D sur le contenu — permettrait du translateZ sur des
-//     enfants (non utilisé ici, mais l'infra est en place).
-//
-// Désactivé naturellement sur touch devices (pas de mousemove).
-// `prefers-reduced-motion` : motion lib réduit les springs par défaut
-// pour les users ayant l'option système activée.
+// Inclinaison 3D d'une carte vers le curseur, avec un reflet radial qui suit
+// la souris (ressorts motion). Sans effet au toucher (pas de mousemove).
 
 export interface CardTiltProps {
   children: ReactNode;
-  /** Rotation Z statique (degrés) appliquée en base. Permet de garder
-   *  une légère inclinaison artistique pendant que le tilt X/Y du
-   *  curseur s'ajoute par-dessus. Default 0. */
+  /** Rotation Z fixe (degrés), à laquelle s'ajoute l'inclinaison X/Y. */
   baseRotateZ?: number;
-  /** Amplitude max du tilt en degrés (X et Y). Default 12. */
+  /** Inclinaison maximale en degrés. */
   maxTilt?: number;
-  /** Intensité max du glare (0..1). Default 0.5. */
+  /** Opacité maximale du reflet (0..1). */
   glareOpacity?: number;
-  /** Classe utilitaire pour le border-radius du wrapper. Doit matcher
-   *  le radius de la card enfant pour que le glare ne déborde pas dans
-   *  les coins. Default "rounded-2xl". */
+  /** Doit reprendre le rayon de la carte enfant pour que le reflet ne déborde pas. */
   cornerRadius?: string;
   className?: string;
 }
@@ -53,26 +32,20 @@ export function CardTilt({
 }: CardTiltProps) {
   const ref = useRef<HTMLDivElement>(null);
 
-  // Position curseur normalisée [-0.5..0.5] (relative à la taille de
-  // la card → amplitude indépendante du gabarit).
+  // Position du curseur normalisée [-0.5, 0.5], indépendante de la taille.
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
-  // hover state [0..1] → drive l'opacity du glare (fade in/out propre).
   const hover = useMotionValue(0);
 
-  // Mapping rotation : axe Y bouge avec X (et inversement). Les signes
-  // sont choisis pour que la card s'incline VERS le curseur (effet
-  // "elle me regarde") plutôt qu'à l'inverse (effet repoussant).
+  // Signes choisis pour incliner la carte vers le curseur.
   const rotateXRaw = useTransform(mouseY, [-0.5, 0.5], [maxTilt, -maxTilt]);
   const rotateYRaw = useTransform(mouseX, [-0.5, 0.5], [-maxTilt, maxTilt]);
 
-  // Position glare : suit le curseur en % (0 à 100 sur les 2 axes).
   const glareXRaw = useTransform(mouseX, [-0.5, 0.5], [0, 100]);
   const glareYRaw = useTransform(mouseY, [-0.5, 0.5], [0, 100]);
   const glareOpacityRaw = useTransform(hover, [0, 1], [0, glareOpacity]);
 
-  // Springs : transition fluide entre les positions. Le retour à 0 au
-  // mouseLeave est animé via spring, donc pas de snap brutal.
+  // Ressorts : le retour au repos après mouseLeave reste animé.
   const springRot = { stiffness: 260, damping: 22, mass: 0.7 };
   const springGlare = { stiffness: 300, damping: 28 };
   const rotX = useSpring(rotateXRaw, springRot);
@@ -81,8 +54,6 @@ export function CardTilt({
   const glareY = useSpring(glareYRaw, springGlare);
   const glareOp = useSpring(glareOpacityRaw, { stiffness: 200, damping: 30 });
 
-  // Background du glare : radial centré sur le curseur. mix-blend
-  // soft-light (sur la div) intensifie sans cramer.
   const glareBackground = useTransform(
     [glareX, glareY],
     ([x, y]) =>
@@ -107,8 +78,7 @@ export function CardTilt({
   }
 
   return (
-    // Perspective sur le parent : indispensable pour donner du relief
-    // aux rotations X/Y. Sans ça, le tilt paraît plat.
+    // Sans perspective sur le parent, les rotations X/Y paraissent plates.
     <div className={cn("[perspective:1100px]", className)}>
       <motion.div
         ref={ref}
@@ -124,10 +94,7 @@ export function CardTilt({
         className={cn("relative transform-gpu overflow-hidden", cornerRadius)}
       >
         {children}
-        {/* Glare overlay — radial qui suit le curseur, en mix-blend
-            soft-light pour intensifier les highlights sans dominer.
-            Clippé par overflow-hidden + cornerRadius du wrapper pour
-            que le radial ne déborde pas dans les coins arrondis. */}
+        {/* Reflet, découpé par overflow-hidden et cornerRadius. */}
         <motion.div
           aria-hidden
           style={{

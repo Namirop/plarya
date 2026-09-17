@@ -1,10 +1,8 @@
 import type { SubscriptionWithExpert } from "@/lib/types/account";
 
-// Card token partagé (header / cards sub / historique / empty state).
 export const cardCls = "rounded-2xl border border-surface-elevated bg-black/40";
 
-// Divider neutre — séparateur fin entre lignes de l'historique.
-// Anciennement gradient doré, neutralisé (aucun doré sur l'historique).
+// Séparateur entre les lignes de l'historique.
 export const DIVIDER_NEUTRAL_GRADIENT =
   "linear-gradient(to right, transparent 0%, var(--color-surface-elevated) 51%, transparent 100%)";
 

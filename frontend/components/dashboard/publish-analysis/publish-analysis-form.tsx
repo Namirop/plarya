@@ -12,18 +12,10 @@ import { Step1BetDetails } from "./step-1-bet-details";
 import { Step2Analysis } from "./step-2-analysis";
 import { useDraftStorage } from "./use-draft-storage";
 
-// ════════════════════════════════════════════════════════════════════
-// Publish Analysis Form — wizard 2 étapes
-//
-// Étape 1 "Le pari" : data structurée (match, ligue, pick, cote,
-//   teasing, heure, bookmakers, toggle "analyse du jour")
-// Étape 2 "L'analyse" : rédaction argumentaire + preview live
-//
-// Le container gère l'état global du form (un seul objet `draft`
-// persisté en sessionStorage via useDraftStorage), le step courant, la
-// validation (Zod + check heure-future manuel) et le submit POST /pronos.
-// Le JSX de chaque étape vit dans step-1-bet-details / step-2-analysis.
-// ════════════════════════════════════════════════════════════════════
+// Publication d'une analyse en deux étapes : le pari (match, pick, cote,
+// heure, cotes bookmakers…) puis l'argumentaire, sous un récapitulatif.
+// Ce composant porte le brouillon (conservé en sessionStorage), la validation
+// et l'envoi POST /pronos ; chaque étape a son composant.
 
 const INITIAL_DRAFT: DraftState = {
   matchName: "",
@@ -51,8 +43,7 @@ export function PublishAnalysisForm({ bookmakers, onPublished }: PublishAnalysis
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Mutation d'un champ + effacement de son erreur éventuelle (remplace
-  // l'ancien couple onX + onClearError).
+  // Modifier un champ efface son erreur.
   function handleChange<K extends keyof DraftState>(field: K, value: DraftState[K]) {
     setDraft((d) => ({ ...d, [field]: value }));
     setStep1Errors((e) => {
@@ -89,8 +80,7 @@ export function PublishAnalysisForm({ bookmakers, onPublished }: PublishAnalysis
         if (key && !errors[key]) errors[key] = issue.message;
       }
     }
-    // "Heure dans le futur" : time-dépendant → hors schéma Zod. Seulement
-    // si le format est valide (sinon le message de format prime).
+    // Heure future : dépend de l'instant présent, donc hors du schéma Zod.
     if (!errors.timeRaw) {
       const t = parseTimeInput(draft.timeRaw);
       if (t) {
@@ -107,7 +97,6 @@ export function PublishAnalysisForm({ bookmakers, onPublished }: PublishAnalysis
     setSubmitError("");
     if (!validateStep1()) return;
     setStep(2);
-    // Scroll top pour révéler la zone rédaction.
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -131,8 +120,7 @@ export function PublishAnalysisForm({ bookmakers, onPublished }: PublishAnalysis
 
     const t = parseTimeInput(draft.timeRaw);
     if (!t) {
-      // Cas tordu : l'heure a été re-modifiée depuis l'étape 1 (n'arrive
-      // pas via l'UI, mais sécurité). Ramène à l'étape 1.
+      // Garde-fou, non atteignable par l'interface : retour à l'étape 1.
       setStep(1);
       setStep1Errors({ timeRaw: "Format invalide" });
       return;
@@ -169,9 +157,6 @@ export function PublishAnalysisForm({ bookmakers, onPublished }: PublishAnalysis
   }
 
   return (
-    // Conteneur : fond noir neutre 2-3 points au-dessus du body bg.
-    // Pas de border / shadow / gradient — le contraste vient de la
-    // nuance d'élévation. Radius 8px (lg).
     <div className="mx-auto w-full max-w-[1000px] rounded-lg bg-surface-elevated px-5 py-7 md:px-12 md:py-10">
       <Stepper step={step} />
 
@@ -198,7 +183,7 @@ export function PublishAnalysisForm({ bookmakers, onPublished }: PublishAnalysis
   );
 }
 
-// ─── Stepper (1 ─── 2) — éditorial minimaliste ───────────────────────
+// ─── Indicateur d'étape (1 ─── 2) ────────────────────────────────────
 
 function Stepper({ step }: { step: 1 | 2 }) {
   return (

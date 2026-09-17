@@ -3,10 +3,7 @@ import type { MetadataRoute } from "next";
 import { API_URL, SITE_URL } from "@/lib/site";
 import type { ExpertListItem } from "@/lib/types/expert";
 
-// Sitemap généré au build-time. Si le backend est down au build,
-// fallback sur les pages statiques uniquement (try/catch). Pour
-// régénérer à la volée en prod, on pourra passer en ISR (revalidate)
-// — pas nécessaire pour le MVP.
+// Pages statiques + profils experts (liste revalidée toutes les heures).
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
@@ -16,12 +13,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "weekly",
       priority: 1.0,
-    },
-    {
-      url: `${SITE_URL}/experts`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.9,
     },
     {
       url: `${SITE_URL}/devenir-expert`,
@@ -55,14 +46,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Dynamic : pages experts. Si le fetch backend échoue (build hors-
-  // ligne, backend en maintenance), on garde le sitemap fonctionnel
-  // avec juste les pages statiques.
+  // API indisponible : sitemap limité aux pages statiques.
   let expertPages: MetadataRoute.Sitemap = [];
   try {
     const res = await fetch(`${API_URL}/experts?all=true`, {
-      // Cache court côté Next : 1h. Empêche de refetch à chaque
-      // request si plusieurs crawlers hit /sitemap.xml.
       next: { revalidate: 3600 },
     });
     if (res.ok) {
@@ -75,8 +62,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }));
     }
   } catch {
-    // Silent fallback — pas de logging ici car ça polluerait le
-    // build. Si le sitemap est incomplet, le crawler reviendra.
+    // Volontairement silencieux (évite du bruit dans les logs de build).
   }
 
   return [...staticPages, ...expertPages];

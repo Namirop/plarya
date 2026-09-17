@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 import { CARD_GAP, useCarouselScroll } from "./use-carousel-scroll";
 
-/** Carrousel mobile : swipe 1 card/vue (peek de la suivante) + dots. */
+/** Carrousel mobile : une carte par vue, la suivante dépasse légèrement. */
 export function MobileCarousel({ experts }: { experts: (ExpertCardProps & { id: string })[] }) {
   const { scrollerRef, activePage, scrollToPage } = useCarouselScroll({
     gap: CARD_GAP,
@@ -24,8 +24,7 @@ export function MobileCarousel({ experts }: { experts: (ExpertCardProps & { id: 
         )}
       >
         {experts.map((expert) => (
-          // w-[86%] : peek de la card suivante → signale le swipe.
-          // max-w-[322px] : ne dépasse pas la largeur DS de la card.
+          // 86 % : la carte suivante reste visible et invite au swipe.
           <div key={expert.id} className="shrink-0 snap-start w-[86%] max-w-[322px]">
             <ExpertCard
               id={expert.id}
@@ -40,7 +39,6 @@ export function MobileCarousel({ experts }: { experts: (ExpertCardProps & { id: 
         ))}
       </div>
 
-      {/* Dots mobile — un par expert. */}
       {experts.length > 1 && (
         <div className="mt-5 flex justify-center gap-2">
           {experts.map((expert, i) => (

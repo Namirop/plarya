@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 
 import { AccountSectionTitle } from "./account-section-title";
 import { ExpertIdentityHeader } from "./expert-identity-header";
+import { ExpertSubscriptionSection } from "./expert-subscription-section";
 
 const DAILY_NOTE_MAX = 200;
 
@@ -74,7 +75,7 @@ export function ExpertView({ initial }: { initial: OwnExpertProfile }) {
   }
 
   const noteCount = dailyNote.length;
-  // destructive si dépasse, foreground proche de la limite (80 %), muted sinon.
+  // Compteur mis en évidence à partir de 80 % de la limite.
   const noteColorCls =
     noteCount > DAILY_NOTE_MAX
       ? "text-destructive"
@@ -91,7 +92,7 @@ export function ExpertView({ initial }: { initial: OwnExpertProfile }) {
         hasDailyNote={Boolean(initial.dailyNote)}
       />
 
-      {/* ─── Note quotidienne — DA "form publication" ─── */}
+      {/* ─── Note quotidienne ─── */}
       <section className="mt-12 md:mt-16">
         <AccountSectionTitle title="Note quotidienne" />
         <p className="mt-3 font-body text-body-16 text-muted-foreground">
@@ -149,7 +150,7 @@ export function ExpertView({ initial }: { initial: OwnExpertProfile }) {
         </div>
       </section>
 
-      {/* ─── Profil expert — DA "form publication" ─── */}
+      {/* ─── Profil expert ─── */}
       <section className="mt-12 md:mt-16">
         <AccountSectionTitle title="Profil expert" />
         <p className="mt-3 font-body text-body-16 text-muted-foreground">
@@ -186,14 +187,10 @@ export function ExpertView({ initial }: { initial: OwnExpertProfile }) {
             </div>
 
             <div>
-              {/* Surtitre non-label : les "champs" sont des toggle buttons
-                  (chacun avec aria-pressed). Un <label> ne s'attache à
-                  aucun contrôle unique → <span>. */}
+              {/* <span> et non <label> : il s'agit d'un groupe de boutons bascule. */}
               <span className={formDaLabelCls}>
                 Sports couverts <span className="text-muted-foreground">*</span>
               </span>
-              {/* Tags inline éditoriaux — cohérence avec /devenir-expert.
-                  + muted → ✓ accent + underline. */}
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
                 {Object.entries(SPORT_LABELS).map(([key, label]) => {
                   const isActive = sports.includes(key);
@@ -262,6 +259,8 @@ export function ExpertView({ initial }: { initial: OwnExpertProfile }) {
           </div>
         </div>
       </section>
+
+      <ExpertSubscriptionSection profile={initial} />
 
       <ConfidentialitySection />
     </div>

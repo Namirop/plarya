@@ -9,21 +9,13 @@ import {
 } from "../services/billing-service";
 
 /**
- * Routes /webhooks — endpoint Stripe + dispatcher idempotent.
+ * Webhook Stripe : corps brut (requis par la vérification de signature),
+ * 400 si la signature est invalide, 200 immédiat si l'événement est déjà
+ * traité, sinon délégation à billing-service.
  *
- * Responsabilités HTTP uniquement :
- *  1. Body raw (signature Stripe nécessite le payload brut, pas JSON
- *     parsé) — `express.raw({ type: "application/json" })`.
- *  2. Vérification signature → 400 si invalide (Stripe ne retry pas
- *     en 400, un payload truqué ne deviendra pas valide au retry).
- *  3. Lookup idempotence event-level → 200 silencieux si déjà traité.
- *  4. Dispatch sur billing-service.processStripeEvent.
- *
- * PAS de try/catch global autour du processStripeEvent : si la logique
- * métier échoue (DB down, contrainte unique, etc.), on laisse remonter
- * → Express renvoie 500 → Stripe retry (jusqu'à 3 jours par défaut).
- * Les transactions internes garantissent qu'un succès est atomiquement
- * enregistré, ou rien n'est enregistré (et Stripe retentera).
+ * Pas de try/catch autour de processStripeEvent : une erreur produit un 500
+ * et Stripe renvoie l'événement plus tard. Le traitement et l'enregistrement
+ * de l'événement sont transactionnels, un rejeu repart donc d'un état propre.
  */
 
 const router = Router();
@@ -51,9 +43,6 @@ router.post("/stripe", express.raw({ type: "application/json" }), async (req, re
     return;
   }
 
-  // processStripeEvent throw → Express renvoie 500 → Stripe retry.
-  // Pas de catch ici : on veut justement laisser remonter pour
-  // déclencher le retry mechanism.
   await processStripeEvent(event);
 
   res.json({ received: true });

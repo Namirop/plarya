@@ -13,20 +13,16 @@ import type { ExpertListItem } from "@/lib/types/expert";
 import { DesktopCarousel } from "./desktop-carousel";
 import { MobileCarousel } from "./mobile-carousel";
 
-// Avatar fallback lorsqu'un expert n'a pas (encore) de photo.
+// Avatar par défaut d'un expert sans photo.
 const AVATAR_FALLBACK = "/profile.jpg";
 
 export interface ExpertsSectionProps {
-  /** Filtre domaine appliqué aux experts (filtre via
-   *  SPORT_DOMAIN / ESPORT_DOMAIN constants de lib/sports).
-   *  null = pas de filtre, tous les experts affichés. */
+  /** null = tous les experts. */
   filterDomain?: DomainId | null;
 }
 
 export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}) {
-  // `?all=true` → TOUS les experts (triés displayOrder ASC, createdAt
-  // DESC). `loaded` distingue "fetch en cours" (pas d'état vide, évite
-  // un flash) de "fetch terminé, 0 expert" (on affiche l'état vide).
+  // `loaded` distingue le chargement (pas d'état vide affiché) d'une liste vide.
   const [experts, setExperts] = useState<(ExpertCardProps & { id: string })[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -43,10 +39,8 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
             label: p.matchName,
             isPickOfTheDay: p.isFeatured,
           })),
-          // `locked` (= "Terminé pour aujourd'hui") quand toutes les
-          // analyses PENDING du jour ont commencé. allStarted() renvoie
-          // aussi true pour une liste vide → expert sans analyse =
-          // "Terminé".
+          // « Terminé » quand toutes les analyses en attente ont commencé,
+          // ou quand il n'y en a aucune.
           locked: allStarted(t.todayPronos.filter((p) => p.result === "PENDING")),
         }));
         setExperts(mapped);
@@ -55,8 +49,7 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
       .finally(() => setLoaded(true));
   }, []);
 
-  // Filtre par domaine : un expert match si AU MOINS UN de ses sports
-  // appartient au domaine sélectionné.
+  // Un expert est retenu si au moins un de ses sports relève du domaine.
   const filteredExperts = useMemo(() => {
     if (!filterDomain) return experts;
     const domainSports = filterDomain === "SPORT" ? SPORT_DOMAIN : ESPORT_DOMAIN;
@@ -67,13 +60,11 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
   const isEmpty = loaded && !hasExperts;
 
   return (
-    // pt-24 = 96 px (gap depuis Domaines, = section-y-lg de la maquette).
     <section id="experts" className="pt-16 md:pt-24">
       <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
         <MarketingSectionTitle title="Nos experts du jour" />
 
         {isEmpty ? (
-          // ─── État vide : message + CTA, pas de carrousel/dots ───
           <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-surface-elevated bg-black/40 px-6 py-14 text-center">
             <p className="font-body text-body-18 font-bold text-foreground">
               Pas encore d&apos;analyse pour aujourd&apos;hui
@@ -89,8 +80,7 @@ export function ExpertsSection({ filterDomain = null }: ExpertsSectionProps = {}
             <DesktopCarousel experts={filteredExperts} />
           </>
         ) : (
-          // Pendant le fetch initial : placeholder pour limiter le layout
-          // shift (pas de message "vide" tant que loaded === false).
+          // Réserve la hauteur pendant le chargement (limite le décalage de mise en page).
           <div className="min-h-[260px]" aria-hidden />
         )}
       </div>

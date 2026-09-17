@@ -3,8 +3,7 @@ import { Reveal } from "@/components/ui/reveal";
 
 import { SectionHeader } from "./section-header";
 
-// ════════════════ SECTION 4 — FAQ ════════════════
-// 4 accordions <FaqItem>, titre éditorial centré, max-w resserré.
+// Section 4 : questions fréquentes.
 export function FaqSection() {
   return (
     <section className="mx-auto mt-20 mb-20 w-full max-w-[720px] px-4 md:mt-24 md:mb-24 md:px-8">
@@ -22,7 +21,7 @@ export function FaqSection() {
         <Reveal delay={0.08}>
           <FaqItem
             question="Quel pourcentage Plarya prend-elle ?"
-            answer="Tu gardes 80% du chiffre d'affaires généré par tes analyses (day passes à 3,50€ et abonnements à 29€/mois). Plarya conserve 20% pour l'hébergement, les paiements et la mise en avant."
+            answer="Tu gardes 70% du chiffre d'affaires généré par tes analyses (day passes à 3,50€ et abonnements à 29€/mois). Plarya conserve 30% pour l'hébergement, les paiements et la mise en avant."
           />
         </Reveal>
         <Reveal delay={0.16}>

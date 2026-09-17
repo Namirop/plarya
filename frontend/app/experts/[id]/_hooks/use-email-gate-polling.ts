@@ -7,16 +7,9 @@ import { apiGet } from "@/lib/api";
 type GateStatus = "polling" | "ready" | "failed";
 
 /**
- * Polling de /subscriptions/check-stripe-session pour le flow
- * non-loggé (email-gate après Stripe). Démarre quand `enabled` passe à
- * true. Renvoie "ready" dès qu'une Subscription existe pour ce
- * sessionId (= webhook traité). Boucle 15 × 2s = 30s (même rationnel
- * que useCheckoutPolling).
- *
- * Si `sessionId` est null (redirect Stripe manipulé) → "failed"
- * directement, sans poll.
- *
- * `retry()` relance (bouton "Réessayer"). AbortController au cleanup.
+ * Équivalent de useCheckoutPolling pour un acheteur anonyme : "ready" dès que
+ * le webhook a créé l'abonnement lié à `sessionId`. Sans `sessionId` (URL de
+ * retour incomplète ou modifiée) : "failed" immédiatement.
  */
 export function useEmailGatePolling({
   enabled,
@@ -33,9 +26,6 @@ export function useEmailGatePolling({
   useEffect(() => {
     if (!enabled) return;
     if (!sessionId) {
-      // sessionId null = redirect Stripe manipulé/incomplet → échec immédiat
-      // sans poll. Edge déterministe sur un changement de prop, pas une
-      // cascade de renders.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus("failed");
       return;
@@ -59,7 +49,7 @@ export function useEmailGatePolling({
           }
         } catch {
           if (cancelled) return;
-          /* ignore */
+          /* nouvel essai au tour suivant */
         }
         await new Promise((r) => setTimeout(r, 2000));
         if (cancelled) return;

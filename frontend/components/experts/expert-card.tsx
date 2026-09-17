@@ -9,16 +9,10 @@ import { Button } from "@/components/ui/button";
 import { CardTilt } from "@/components/ui/card-tilt";
 import { SportIcon } from "@/lib/sports-icons";
 
-// Token DS accent (#dfb968) appliqué en dur via les props SVG Phosphor
-// pour garantir le rendu doré indépendamment de la propagation de
-// currentColor / des classes Tailwind générées. À factoriser si on en
-// ajoute beaucoup d'autres consommateurs.
-// Couleur doré conservée pour l'ÉTOILE pick-of-the-day uniquement
-// (signal sémantique). La flèche puce de liste est passée en blanc.
+// Doré (--color-accent) passé en props SVG à l'étoile « pick du jour » :
+// rendu indépendant de currentColor.
 const ACCENT_GOLD = "#DFB968";
 
-// Divider neutre — anciennement gradient doré, neutralisé
-// (multiplié par N cards dans le carrousel = saturation).
 const DIVIDER_NEUTRAL_GRADIENT =
   "linear-gradient(to right, transparent 0%, rgba(255,255,255,0.15) 51%, transparent 100%)";
 
@@ -28,10 +22,7 @@ export interface ExpertCardAnalysis {
 }
 
 export interface ExpertCardProps {
-  /** ID du expert pour construire le href `/experts/[id]`. Si omis,
-   *  la card est rendue sans wrapper Link (utile pour les pages de
-   *  test interne `/test-expert-card`, qui montrent la card en mode
-   *  vitrine sans navigation). */
+  /** Sans id, la carte est rendue sans lien vers `/experts/[id]`. */
   id?: string;
   avatar: string;
   pseudo: string;
@@ -52,9 +43,6 @@ export function ExpertCard({
 }: ExpertCardProps) {
   const inner = (
     <div className="w-[322px] rounded-2xl bg-black/40 px-6 py-6">
-      {/* Identity row — paddings verticaux par colonne pour positionner
-          chaque élément aux coordonnées Figma absolues :
-          pseudo @ y=11, EXPERT line @ y=50, cats @ y=12, avatar @ y=0. */}
       <div className="flex items-start gap-4">
         <Image
           src={avatar}
@@ -82,32 +70,22 @@ export function ExpertCard({
         </div>
       </div>
 
-      {/* Divider doré qui s'estompe — gradient inline pour shunter toute
-          dépendance au token Tailwind (rendu garanti). */}
       <div
         aria-hidden
         className="mx-auto mt-[46px] h-px w-[247px] opacity-30"
         style={{ backgroundImage: DIVIDER_NEUTRAL_GRADIENT }}
       />
 
-      {/* Label section : y=162 → 47px après le divider (y=115). mt-12 = 48px, 1px d'écart négligeable. */}
       <p className="mt-12 font-body text-body-16 uppercase text-muted-foreground">
         {analyses.length} {analyses.length === 1 ? "analyse" : "analyses"} du jour
       </p>
 
-      {/* Liste analyses : y=194 → mt-4 (16px) après le label (qui finit à y=178).
-          gap-2 entre items = 8px, ce qui donne row-to-row = 16(lh)+8 = 24px (= Figma).
-          `min-h-[40px]` réserve la hauteur de 2 lignes (16+8+16) même
-          quand il n'y a qu'une seule analyse → toutes les cards du
-          carrousel ont une hauteur identique. `slice(0, 2)` au cas où
-          un expert pousserait 3+ analyses (on en affiche max 2 dans
-          la vitrine homepage). */}
+      {/* Deux analyses au plus ; min-h réserve deux lignes pour que toutes
+          les cartes du carrousel aient la même hauteur. */}
       <ul className="mt-4 flex min-h-[40px] flex-col gap-2">
         {analyses.slice(0, 2).map((a, i) => (
           <li key={i} className="flex items-center gap-4 font-body text-body-16">
-            {/* Flèche longue dorée (custom SVG) — Phosphor ArrowRight
-                est trop carré (ratio 1:1). Ici 28×8 → arrow allongée
-                + tête fine, pattern visuel proche de la maquette. */}
+            {/* Flèche allongée en SVG (ArrowRight de Phosphor est carrée). */}
             <svg
               aria-hidden
               width="28"
@@ -139,17 +117,8 @@ export function ExpertCard({
         ))}
       </ul>
 
-      {/* Bouton : y=314 → mt-20 (80px) après la fin de la 2e ligne (y=234).
-          Pas de flèche sur le bouton "Accéder" : la maquette Figma
-          (mobile + desktop) montre un bouton blanc avec texte seul centré.
-          Taille `default` (text-body-16, padding 16/32) — version compacte
-          demandée pour ne pas dominer la card. */}
-      {/* Boutons rendus en non-interactifs (tabIndex/pointer-events) :
-          la navigation est portée par le Link wrapper, le bouton est
-          purement visuel pour signaler l'état. Sur l'état `locked`,
-          `disabled` ajoute `pointer-events-none` (via le variant
-          button), donc les clics traversent vers le Link wrapper → la
-          card reste cliquable même en "terminé". */}
+      {/* Bouton décoratif, hors tabulation et sans pointer-events : le clic
+          atteint le Link parent, y compris à l'état « Terminé ». */}
       <div className="mt-20 flex justify-center">
         {locked ? (
           <Button variant="white" disabled className="w-[290px]" tabIndex={-1}>
@@ -164,12 +133,9 @@ export function ExpertCard({
     </div>
   );
 
-  // Si pas d'id (vitrine / tests), on rend la card "nue", sans navigation.
   if (!id) return <CardTilt>{inner}</CardTilt>;
 
-  // Wrapper Link sur toute la card — décision UX : la
-  // card entière mène au profil expert, y compris en état `locked`
-  // (l'utilisateur peut vouloir voir les analyses futures de l'expert).
+  // Toute la carte mène au profil, y compris à l'état « Terminé ».
   return (
     <Link
       href={`/experts/${id}`}

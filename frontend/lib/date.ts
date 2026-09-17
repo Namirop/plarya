@@ -1,25 +1,14 @@
-/**
- * Vérifie si un match a déjà commencé.
- */
 export function isStarted(dateStr: string): boolean {
   return new Date(dateStr) <= new Date();
 }
 
-/**
- * Vérifie si toutes les analyses d'une liste ont déjà commencé.
- */
+/** Vrai aussi pour une liste vide. */
 export function allStarted(pronos: { startTime: string }[]): boolean {
   if (pronos.length === 0) return true;
   return pronos.every((p) => isStarted(p.startTime));
 }
 
-/**
- * Formate un startTime en texte lisible français.
- * - Si passé : "Match commencé"
- * - Si aujourd'hui : "Début à 20h45"
- * - Si demain : "Demain à 15h00"
- * - Sinon : "12 avr. à 18h30"
- */
+/** "Match commencé", "Début à 20h45", "Demain à 15h00" ou "12 avr. à 18h30". */
 export function formatStartTime(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();

@@ -24,7 +24,7 @@ export function DevenirExpertClient() {
 
   const checkoutStatus = searchParams.get("checkout");
 
-  // Redirige les non-loggés vers la home.
+  // Page réservée aux utilisateurs connectés.
   useEffect(() => {
     if (!loading && !user) router.push("/");
   }, [user, loading, router]);
@@ -35,10 +35,7 @@ export function DevenirExpertClient() {
   if (checkoutStatus === "success") return <CheckoutSuccessScreen />;
   if (checkoutStatus === "cancel") return <CheckoutCancelScreen />;
 
-  // ── État par défaut : la landing /devenir-expert ─────────────
-  // Architecture 4 sections : Hero éditorial → Stats fortes →
-  // Formulaire + preview live → FAQ. Animations <Reveal> du DS
-  // (fade + slide subtil), même pattern que les sections de la home.
+  // ── Page par défaut : accroche, chiffres, formulaire, FAQ ────
   return (
     <div className="relative">
       <HeroSection />

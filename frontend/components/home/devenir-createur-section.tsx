@@ -17,33 +17,19 @@ export function DevenirCreateurSection() {
   const { user, loading } = useUser();
   const [loginOpen, setLoginOpen] = useState(false);
 
-  // Si user connecté → bouton = Link direct vers /devenir-expert
-  // (comportement avant le fix).
-  // Si user déconnecté → bouton ouvre LoginModal contextualisé qui,
-  // après login, le déposera sur /devenir-expert via le sessionStorage
-  // POST_LOGIN_REDIRECT_KEY consommé dans HeaderAuth.
-  // Pendant le `loading` initial de useUser : on rend comme déconnecté
-  // (l'inverse causerait un flash "click → /devenir-expert → bounce /"
-  // si la session échoue à hydrater).
+  // Connecté : lien direct. Sinon : LoginModal, puis redirection vers
+  // /devenir-expert (POST_LOGIN_REDIRECT_KEY, lu par HeaderAuth). Pendant le
+  // chargement, rendu « déconnecté » pour éviter un aller-retour de redirection.
   const isConnected = !loading && !!user;
 
   return (
-    // pt-16 = 64 px (gap depuis Pourquoi Plarya).
     <section className="pt-20">
       <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
-        {/* Card "outline" : bordure conic-gradient dorée (haut-gauche +
-            bas-droite très visibles, sombre ailleurs), même pattern
-            visuel que le cadre du Hero (cf. GoldenBorderOverlay). PAS
-            de fond — distinct de Pourquoi Plarya qui a `bg-black/40`
-            sans bordure.
-            Mobile : stack vertical (texte + bouton plein largeur).
-            Desktop : row horizontale (texte gauche + bouton droite). */}
+        {/* Carte sans fond, bordée par GoldenBorderOverlay comme le Hero. */}
         <div className="relative flex flex-col items-stretch gap-6 rounded-2xl px-8 py-8 md:flex-row md:items-center md:justify-between md:gap-8 md:px-16">
           <GoldenBorderOverlay />
           <div className="flex flex-col gap-4">
-            {/* h2 = titre de section sur la home (hiérarchie h1 Hero
-                → h2 sections). Le visuel reste text-h4 — c'est juste
-                la sémantique HTML qui change. */}
+            {/* h2 pour la hiérarchie de la page, style h4. */}
             <h2 className="font-body text-h4 text-foreground">
               Partage ton expertise et génère des revenus
             </h2>

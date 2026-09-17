@@ -2,10 +2,8 @@ import { z } from "zod";
 
 import { sportsSchema } from "./shared";
 
-// Bornes prix (centimes). Sans guard, un
-// admin distrait peut set monthlyPrice à 1 et créer une session
-// Stripe à 0,01€. min(100)=1€ floor, max(5000)=50€ ceiling pour
-// dayPass. min(500)=5€, max(50000)=500€ pour mensuel.
+// Bornes de prix en centimes (pass jour 1–50 €, mensuel 5–500 €) : évite une
+// session Stripe à un montant aberrant.
 const dayPassPriceSchema = z.number().int().min(100).max(5000);
 const monthlyPriceSchema = z.number().int().min(500).max(50000);
 
@@ -15,8 +13,8 @@ export const createExpertSchema = z.object({
   bio: z.string().optional(),
   sports: sportsSchema,
   subStatus: z.enum(["FREE", "ACTIVE"]).optional(),
-  // Prix optionnels à la création (Prisma utilise les defaults 350 /
-  // 2900 si omis). Validés pour éviter saisie aberrante.
+  // Limite connue : validés mais non transmis par createExpertAccount, les
+  // valeurs par défaut du schéma Prisma (350 / 2900) s'appliquent.
   dayPassPrice: dayPassPriceSchema.optional(),
   monthlyPrice: monthlyPriceSchema.optional(),
 });
@@ -29,7 +27,7 @@ export const displayOrderSchema = z.object({
   displayOrder: z.number().int().min(0),
 });
 
-// Params route partagés (admin/experts/:id/*, /experts/:id, etc.).
+// Paramètre `:id` des routes expert.
 export const expertIdParamsSchema = z.object({
   id: z.string().cuid("ID expert invalide"),
 });

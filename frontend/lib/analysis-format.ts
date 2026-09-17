@@ -1,22 +1,16 @@
 import { TEASING_LABELS } from "@/lib/constants";
 import type { BookmakerOddsData } from "@/lib/experts";
 
-/**
- * Helpers de présentation partagés par les deux directions de card
- * analyse (ticket + fiche). Logique pure, testable, sans JSX — le
- * rendu vit dans les composants, le format ici.
- */
+// Fonctions de formatage (sans JSX) des cartes d'analyse.
 
-/** Cote "1,45" — virgule décimale FR, toujours 2 décimales. */
+/** Cote "1,45" : virgule décimale, toujours 2 décimales. */
 export function formatOdds(odds: number): string {
   return odds.toFixed(2).replace(".", ",");
 }
 
 /**
- * Numéro pseudo-stable 100–999 dérivé de l'id de l'analyse. Purement
- * cosmétique (header ticket "ANALYSE №142") — ancre l'identité "objet"
- * du ticket sans dépendre d'un vrai compteur en DB. Hash déterministe
- * sur tout l'id (les cuid ne sont pas hex → pas de parseInt base 16).
+ * Numéro décoratif 100–999 (« ANALYSE №142 »), hash déterministe de l'id :
+ * stable d'un rendu à l'autre, sans compteur en base.
  */
 export function analysisNumber(id: string): number {
   let h = 7;
@@ -26,7 +20,7 @@ export function analysisNumber(id: string): number {
   return (h % 900) + 100;
 }
 
-/** Date "12.03.2026" — séparateur point, look "machine" (ticket). */
+/** Date "12.03.2026". */
 export function formatDotDate(dateStr: string): string {
   const d = new Date(dateStr);
   const dd = String(d.getDate()).padStart(2, "0");
@@ -34,16 +28,13 @@ export function formatDotDate(dateStr: string): string {
   return `${dd}.${mm}.${d.getFullYear()}`;
 }
 
-/** Heure seule "21h36" (coup d'envoi). */
+/** Heure "21h36". */
 export function formatTime(dateStr: string): string {
   const d = new Date(dateStr);
   return `${String(d.getHours()).padStart(2, "0")}h${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-/**
- * Teasing en kicker uppercase sans emoji ("🔒 Safe" → "SAFE"). Réutilise
- * le mapping TEASING_LABELS puis strippe l'emoji de tête.
- */
+/** Libellé de teasing sans son emoji de tête, en majuscules ("🔒 Safe" → "SAFE"). */
 export function teasingLabel(teasing: string): string {
   return (TEASING_LABELS[teasing] || teasing).replace(/^\S+\s+/u, "").toUpperCase();
 }
@@ -54,10 +45,8 @@ export interface MatchTeams {
 }
 
 /**
- * Découpe "Toulouse - Racing" / "PSG vs OM" / "Lens — Rennes" en
- * { home, away }. Sépare sur le PREMIER séparateur rencontré (tiret,
- * em/en-dash, ou "vs", insensible à la casse). Si aucun séparateur :
- * away = null (un seul intitulé, ex: course, combat).
+ * "PSG vs OM" / "Lens — Rennes" → { home, away }, coupé au premier séparateur
+ * (tirets ou "vs"). Sans séparateur (course, combat…) : away = null.
  */
 export function splitMatch(name: string): MatchTeams {
   const m = name.match(/^(.*?)\s+(?:—|–|-|vs)\s+(.*)$/i);
@@ -67,7 +56,6 @@ export function splitMatch(name: string): MatchTeams {
   return { home: name.trim(), away: null };
 }
 
-/** Premier lien d'affiliation d'un bookmaker (ou null). */
 export function primaryAffiliate(bo: BookmakerOddsData) {
   return bo.bookmaker.affiliateLinks[0] ?? null;
 }

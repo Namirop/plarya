@@ -7,20 +7,9 @@ import type { AuthUser } from "@/lib/types/auth";
 import CompteClient from "./CompteClient";
 
 /**
- * Server component /compte.
- *
- * Pattern :
- *  1. Resolve session via /auth/me (cookie session_token forwardé).
- *  2. Si non auth (401) → redirect /. Si role=ADMIN → redirect /admin
- *     (admin n'a pas de "mon compte", il gère son user via /admin).
- *  3. Selon le rôle, fetch les data complémentaires :
- *     - USER  → /subscriptions/me (liste abonnements + day-passes)
- *     - EXPERT → /experts/me (profil pseudo/bio/sports/dailyNote)
- *  4. Render CompteClient avec les initial data en props → le HTML
- *     initial sert directement le contenu (pas de spinner client).
- *
- * Pas de fetch dupliqué côté client : CompteClient init ses states
- * depuis les props, useEffect de fetch initial supprimé.
+ * /compte, rendu côté serveur : sans session → accueil, ADMIN → /admin.
+ * Les données du rôle (/experts/me ou /subscriptions/me) sont chargées ici et
+ * passées à CompteClient, sans chargement initial côté client.
  */
 export default async function ComptePage() {
   const meRes = await serverFetch("/auth/me");
@@ -42,7 +31,6 @@ export default async function ComptePage() {
       initialExpertProfile = (await res.json()) as OwnExpertProfile;
     }
   } else {
-    // USER
     const res = await serverFetch("/subscriptions/me");
     if (res.ok) {
       initialSubscriptions = (await res.json()) as SubscriptionWithExpert[];

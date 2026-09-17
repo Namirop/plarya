@@ -11,21 +11,13 @@ import { formDaModalInputCls } from "@/lib/form-da";
 interface DeleteAccountModalProps {
   open: boolean;
   onClose: () => void;
-  /** Email exact requis pour confirmer la suppression (anti-erreur). */
+  /** À ressaisir pour confirmer. */
   userEmail: string;
-  /** Appelé une fois que l'user a tapé son email et confirmé. */
   onConfirm: () => Promise<void>;
-  /**
-   * `immediate` → suppression directe (USER lambda OU EXPERT sans sub
-   * active). Le texte explique que c'est irréversible.
-   * `scheduled` → EXPERT avec subs actives. Le texte explique que la
-   * suppression sera programmée (pendingDeletionAt) et annulable
-   * jusqu'à l'expiration de la dernière sub.
-   */
+  /** `scheduled` : expert avec abonnés actifs, suppression différée et annulable. */
   mode?: "immediate" | "scheduled";
-  /** ISO date — date à laquelle la suppression deviendra effective (mode scheduled). */
+  /** Date ISO de prise d'effet (mode scheduled). */
   lastSubExpiresAt?: string | null;
-  /** Nombre de subs actives bloquantes (mode scheduled). */
   activeSubscriptions?: number;
 }
 
@@ -52,10 +44,7 @@ export function DeleteAccountModal({
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Reset des states quand la modale se ferme. Pattern setState dans
-  // useEffect en réponse à un changement de prop (open : true → false)
-  // — légitime ici (pas de cascade de renders puisqu'on agit
-  // uniquement sur un edge déterministe).
+  // Réinitialisation à la fermeture.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) {
@@ -66,9 +55,6 @@ export function DeleteAccountModal({
   }, [open]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // a11y : scroll-lock body, focus initial (input email), focus trap,
-  // Escape (bloqué pendant submitting), restauration du focus à la
-  // fermeture — cf. useModalA11y.
   const { containerRef } = useModalA11y({
     open,
     onClose,
@@ -86,8 +72,7 @@ export function DeleteAccountModal({
     setError("");
     try {
       await onConfirm();
-      // onConfirm gère la redirection/close — pas de setSubmitting(false)
-      // ici, le composant sera démonté.
+      // onConfirm ferme ou redirige : pas de setSubmitting(false) ici.
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors de la suppression");
       setSubmitting(false);
@@ -101,10 +86,6 @@ export function DeleteAccountModal({
         onClick={submitting ? undefined : onClose}
         aria-hidden
       />
-      {/* Cadre : bordure neutre `surface-elevated` (= autres modales du DS,
-          ConfirmModal, LoginModal). Le rouge alarmant a été retiré du
-          cadre — il ne subsiste que sur le bouton de confirmation, le
-          vrai point focal de l'action. */}
       <div
         ref={containerRef}
         role="dialog"
@@ -122,8 +103,6 @@ export function DeleteAccountModal({
           <X className="size-5" />
         </button>
 
-        {/* Titre : Mona Sans bold blanc (pas rouge — le rouge se mérite
-            sur l'action, pas sur le titre). */}
         <h2
           id="delete-account-title"
           className="font-body text-[22px] font-bold text-foreground md:text-h4"
@@ -183,10 +162,6 @@ export function DeleteAccountModal({
           </p>
         )}
 
-        {/* Boutons : size `md` (= compact mais lisible, ≈44px de haut),
-            même hauteur sur les 2 → harmonisation. flex-1 + gap-3 :
-            les 2 boutons partagent la largeur disponible à parts égales
-            sur desktop (rangée), full-width stack sur mobile. */}
         <div className="mt-7 flex flex-col gap-3 sm:flex-row">
           <Button
             type="button"

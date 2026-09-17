@@ -16,15 +16,13 @@ export const TEASING_OPTIONS = [
   { value: "A_NE_PAS_RATER", label: "👀 À ne pas rater" },
 ] as const;
 
-/** Format cents to display price (e.g. 350 → "3,50", 1900 → "19") */
+/** Centimes → prix affiché (350 → "3,50", 1900 → "19"). */
 export function formatPrice(cents: number): string {
   const euros = cents / 100;
   return euros % 1 === 0 ? euros.toFixed(0) : euros.toFixed(2).replace(".", ",");
 }
 
 // Retire l'emoji de tête d'un label SPORT_LABELS ("⚽ Football" → "Football").
-// Utilisé pour le rendu "tags inline éditoriaux" de /devenir-expert où les
-// emojis renforceraient le côté "chips d'app" et qu'on veut éviter.
 export function stripSportEmoji(label: string): string {
   const idx = label.indexOf(" ");
   return idx === -1 ? label : label.slice(idx + 1);

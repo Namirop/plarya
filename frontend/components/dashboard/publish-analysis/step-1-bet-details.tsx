@@ -27,7 +27,7 @@ import {
 } from "./publish-analysis-tokens";
 import type { DraftState, Step1Errors } from "./schema";
 
-// ─── Toggle iOS-style ────────────────────────────────────────────────
+// ─── Interrupteur ───────────────────────────────────────────────────
 
 interface ToggleProps {
   checked: boolean;
@@ -62,7 +62,7 @@ function Toggle({ checked, onChange, ariaLabel }: ToggleProps) {
   );
 }
 
-// ─── Group wrapper — surtitre + contenu ──────────────────────────────
+// ─── Groupe : surtitre et contenu ────────────────────────────────────
 
 function Group({
   title,
@@ -83,7 +83,7 @@ function Group({
   );
 }
 
-// ─── Step 1 — "Le pari" ──────────────────────────────────────────────
+// ─── Étape 1 : le pari ───────────────────────────────────────────────
 
 interface Step1Props {
   values: DraftState;
@@ -103,8 +103,7 @@ export function Step1BetDetails({ values, errors, bookmakers, onChange, onContin
     [leaguesGrouped],
   );
 
-  // Validation continuelle des champs obligatoires : on en a besoin
-  // pour activer/désactiver le bouton Continuer.
+  // Active « Continuer » dès que les champs obligatoires sont remplis.
   const canContinue =
     values.matchName.trim() &&
     values.pick.trim() &&
@@ -127,8 +126,7 @@ export function Step1BetDetails({ values, errors, bookmakers, onChange, onContin
             className={cn(INPUT_BASE, errors.pick && INPUT_INVALID)}
           />
 
-          {/* Cote : input avec micro-label intégré "COTE" en haut-gauche.
-              Police display Hubot Sans, text-2xl, align right. */}
+          {/* Cote, avec son libellé intégré au champ. */}
           <div className="relative">
             <span
               aria-hidden
@@ -143,8 +141,7 @@ export function Step1BetDetails({ values, errors, bookmakers, onChange, onContin
               placeholder="1.85"
               value={values.odds}
               onChange={(e) =>
-                // Accepter virgule ou point — normaliser au point pour
-                // parseFloat ultérieur.
+                // Virgule acceptée, convertie en point pour parseFloat.
                 onChange("odds", e.target.value.replace(",", "."))
               }
               aria-invalid={!!errors.odds}
@@ -315,7 +312,7 @@ export function Step1BetDetails({ values, errors, bookmakers, onChange, onContin
         </div>
       </div>
 
-      {/* ─── 6. Continuer → — Button primary rectangulaire (DA gold solide) ─── */}
+      {/* ─── 6. Continuer ─── */}
       <div className="mt-4 flex justify-end">
         <Button type="button" variant="primary" size="md" onClick={onContinue} disabled={!canContinue}>
           Continuer

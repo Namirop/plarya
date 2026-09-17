@@ -21,11 +21,9 @@ export function SectionLabel({ children }: { children: ReactNode }) {
 }
 
 /**
- * Enveloppe un contenu gaté : le rend flou + superpose un cadenas centré.
- *  - défaut (`w-fit`) : largeur rétrécie au contenu → cadenas centré SUR
- *    le contenu (pick / cote, courts).
- *  - `fullWidth` : pleine largeur (analyse, ligne pick+cote mobile) →
- *    cadenas centré sur toute la largeur.
+ * Contenu verrouillé (flouté par l'appelant) masqué aux technologies
+ * d'assistance, sous un cadenas centré sur le contenu ou, avec `fullWidth`,
+ * sur toute la largeur.
  */
 export function LockedBlock({
   children,
@@ -42,8 +40,6 @@ export function LockedBlock({
         {children}
       </div>
       <div className="absolute inset-0 flex items-center justify-center">
-        {/* Cadenas = signal de statut métier (contenu gaté), pas une
-            décoration → usage d'icône légitime. */}
         <Lock className="size-6 text-foreground" aria-label="Contenu verrouillé" />
       </div>
     </div>

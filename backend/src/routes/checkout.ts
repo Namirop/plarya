@@ -10,22 +10,17 @@ import { validate } from "../middleware/validate";
 import { createBecomeExpertSession, createCheckoutSession } from "../services/checkout-service";
 import { becomeExpertSchema, createCheckoutSchema } from "../validators/checkout";
 
-/**
- * Routes /checkout — orchestration HTTP. La logique métier (résolution
- * userId/email, vérifs d'état expert, création session Stripe) vit
- * dans services/checkout-service.ts.
- */
+// Routes /checkout ; logique métier dans services/checkout-service.ts.
 
 const router = Router();
 
-// POST /checkout/create-session — Day pass ou subscription mensuelle
+// POST /checkout/create-session : pass jour ou abonnement mensuel, pour un
+// utilisateur connecté ou un acheteur anonyme (caller null).
 router.post(
   "/create-session",
   optionalAuthMiddleware,
   validate(createCheckoutSchema),
   async (req, res) => {
-    // optionalAuthMiddleware peut ou non poser req.user. On passe le
-    // caller (ou null) au service qui gère les deux flows.
     const caller = req.user ? { userId: req.user.userId } : null;
     try {
       const result = await createCheckoutSession(req.body, caller);
@@ -41,7 +36,7 @@ router.post(
   },
 );
 
-// POST /checkout/become-expert — Souscription 39€/trimestre pour devenir Expert
+// POST /checkout/become-expert : abonnement Stripe ouvrant le statut expert.
 router.post("/become-expert", authMiddleware, validate(becomeExpertSchema), async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   try {

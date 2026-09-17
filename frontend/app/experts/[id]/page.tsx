@@ -8,9 +8,7 @@ export default async function ExpertProfilePage({ params }: { params: Promise<{ 
   const { id } = await params;
   const expert = await fetchExpert(id);
 
-  // notFound() rend la page 404 Next (app/not-found.tsx si présent,
-  // sinon le 404 default). Bénéfice SEO : status 404 effectif vs
-  // 200 avec contenu "Expert introuvable" qui pollue l'index Google.
+  // Vrai statut 404 (app/not-found.tsx) plutôt qu'une page 200 indexable.
   if (!expert) {
     notFound();
   }

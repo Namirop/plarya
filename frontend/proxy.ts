@@ -1,19 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Launch protection — verrou HTTP Basic Auth sur tout le site.
- *
- * Masque Plarya au public jusqu'au launch officiel. Desactive par
- * defaut : no-op total tant que LAUNCH_PROTECT_ENABLED !== "true".
- * Quand actif, chaque page renvoie 401 + WWW-Authenticate (popup
- * navigateur) tant qu'un header Basic valide n'est pas presente.
- *
- * Toggle sans redeploy de code : on change la var d'env sur Vercel +
- * redeploy. Au launch -> LAUNCH_PROTECT_ENABLED=false (ou suppression).
- *
- * Perimetre : seul ce frontend (le site visible) est couvert. L'API
- * backend (api.plarya.com) est un service distinct, avec sa propre
- * securite (CSRF, rate-limit, sessions) — non concerne par ce verrou.
+ * Verrou HTTP Basic optionnel sur toutes les pages du frontend, pour un
+ * environnement non public. Inactif sauf si `LAUNCH_PROTECT_ENABLED="true"`.
+ * L'API, service distinct, n'est pas concernée.
  */
 export default function proxy(req: NextRequest): NextResponse {
   const gate = enforceLaunchProtection(req);
@@ -21,14 +11,7 @@ export default function proxy(req: NextRequest): NextResponse {
   return NextResponse.next();
 }
 
-/**
- * - Desactive (LAUNCH_PROTECT_ENABLED !== "true") -> null, site public.
- * - Actif -> 401 + WWW-Authenticate tant qu'un header Basic valide n'est
- *   pas presente.
- *
- * Les assets statiques (/_next, /favicon.ico, *.png, etc.) n'atteignent
- * jamais ce code : ils sont exclus en amont par `config.matcher`.
- */
+/** `null` si l'accès est autorisé, sinon 401 avec demande d'identifiants. */
 function enforceLaunchProtection(req: NextRequest): NextResponse | null {
   if (process.env.LAUNCH_PROTECT_ENABLED !== "true") return null;
 
@@ -44,10 +27,8 @@ function enforceLaunchProtection(req: NextRequest): NextResponse | null {
 }
 
 /**
- * Valide un header `Authorization: Basic base64(user:pass)` contre les
- * creds d'env. Fail-closed : verrou actif mais USERNAME/PASSWORD non
- * configures -> on refuse tout (un site cense etre masque ne doit pas
- * s'ouvrir par simple oubli de config).
+ * Vérifie `Authorization: Basic …` contre les identifiants d'environnement.
+ * Si le verrou est actif sans identifiants configurés, tout est refusé.
  */
 function isValidBasicAuth(authorization: string): boolean {
   const expectedUser = process.env.LAUNCH_PROTECT_USERNAME;
@@ -70,7 +51,7 @@ function isValidBasicAuth(authorization: string): boolean {
     return false;
   }
 
-  // Le mot de passe peut contenir des ":" -> on coupe sur le premier.
+  // Le mot de passe peut contenir « : » : découpe sur le premier.
   const separator = decoded.indexOf(":");
   if (separator === -1) return false;
 
@@ -82,9 +63,7 @@ function isValidBasicAuth(authorization: string): boolean {
 
 export const config = {
   matcher: [
-    // Tout sauf : assets statiques Next, favicon, et fichiers avec
-    // extension (motif `.*\..*`). Le verrou ne s'applique qu'aux pages
-    // "visitables".
+    // Pages uniquement : assets Next, favicon et fichiers à extension exclus.
     "/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)",
   ],
 };

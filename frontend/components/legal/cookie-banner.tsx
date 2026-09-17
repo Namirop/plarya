@@ -7,16 +7,13 @@ import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 
-// Nom du cookie de consentement. Le cookie est posé par cette même
-// bannière donc il est essentiel par nature (pas de consentement
-// requis pour les cookies de consentement eux-mêmes, cf. doctrine
-// CNIL).
+// Cookie mémorisant le choix : strictement nécessaire, il ne requiert pas
+// lui-même de consentement (lignes directrices CNIL).
 const CONSENT_COOKIE = "plarya_cookie_consent";
 const CONSENT_TTL_DAYS = 365;
 
-// Pages où on ne montre pas la bannière (zones internes auth-gated).
-// Le visiteur arrive forcément par la home / une page publique
-// d'abord, où il aura déjà fait son choix.
+// Espaces connectés : on y arrive depuis une page publique où la bannière
+// a déjà été proposée.
 const HIDDEN_PREFIXES = ["/admin", "/dashboard"];
 
 function readConsentCookie(): "accepted" | "refused" | null {
@@ -30,26 +27,18 @@ function readConsentCookie(): "accepted" | "refused" | null {
 function writeConsentCookie(value: "accepted" | "refused"): void {
   if (typeof document === "undefined") return;
   const maxAge = CONSENT_TTL_DAYS * 24 * 60 * 60;
-  // SameSite=Lax + path=/. Pas de Secure flag en dev (HTTP local) ;
-  // en prod (HTTPS), le browser autorise quand même le set même
-  // sans Secure pour les cookies pas spécifiquement marqués sensibles.
+  // Sans attribut Secure : cookie non sensible, utilisable aussi en HTTP local.
   document.cookie = `${CONSENT_COOKIE}=${value}; max-age=${maxAge}; path=/; SameSite=Lax`;
 }
 
 export function CookieBanner() {
   const pathname = usePathname();
-  // visible = ne render PAS sur le premier server-render (SSR ne
-  // connaît pas le cookie côté browser, on attend l'hydratation
-  // pour décider). Évite le flash "bannière qui apparaît puis
-  // disparaît" pour les users qui ont déjà donné leur consentement.
+  // Masquée au rendu serveur, qui ne voit pas le cookie : pas d'apparition
+  // furtive pour qui a déjà fait son choix.
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // Lecture du cookie côté client uniquement (document.cookie n'est
-    // pas dispo côté serveur). Le setState ici est canonique pour
-    // "browser-only data discovered after hydratation" — la règle
-    // react-hooks/set-state-in-effect est trop conservatrice pour
-    // ce cas (cf. React docs sur l'hydratation).
+    // Donnée propre au navigateur, connue seulement après hydratation.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisible(readConsentCookie() === null);
   }, []);
@@ -76,9 +65,6 @@ export function CookieBanner() {
       aria-describedby="cookie-banner-desc"
       className="fixed bottom-5 left-4 right-4 z-50 mx-auto max-w-5xl rounded-2xl border border-surface-elevated bg-background px-6 py-5 md:px-8"
     >
-      {/* Bar large et basse : texte à gauche, actions à droite, le tout
-          vertical-centré (md:items-center) → respire et reste compact en
-          hauteur. Gap horizontal généreux (md:gap-10). */}
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:gap-10">
         <div className="flex-1">
           <h2 id="cookie-banner-title" className="font-body text-h5 font-bold text-foreground">
@@ -97,8 +83,6 @@ export function CookieBanner() {
             .
           </p>
         </div>
-        {/* Actions côte à côte (row) sur tous les breakpoints → bar
-            courte. shrink-0 pour ne pas compresser les boutons. */}
         <div className="flex shrink-0 gap-3">
           <Button
             type="button"

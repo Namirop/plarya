@@ -1,27 +1,16 @@
 import { cn } from "@/lib/utils";
 
-// Mini-bloc "stat fort" — pattern type-driven : un GROS chiffre + label
-// court + petite description. Pas de border, pas de bg — la stat
-// porte tout seule. Utilisé sur /devenir-expert et /dashboard (stats
-// expert).
-//
-// Desktop : grid de 3 cols égales avec divider vertical subtle entre
-// les blocs (`withLeftDivider` sur les blocs 2 et 3). Mobile : stack
-// vertical sans divider.
+// Statistique mise en avant : grand chiffre, libellé et description.
 
 export interface StatBlockProps {
   value: string;
   label: string;
   description: string;
-  /** Quand true, le gros chiffre est en doré (réservé à 1 bloc max
-   *  par grille pour conserver l'effet d'accent). */
+  /** Chiffre en doré (un seul bloc par grille). */
   valueAccent?: boolean;
-  /** Border-left desktop only — séparateur vertical entre blocs. */
+  /** Séparateur vertical à gauche, en desktop uniquement. */
   withLeftDivider?: boolean;
-  /** Variante compacte : gabarit typo + padding réduits. Utilisée
-   *  pour le Dashboard expert où la stat est secondaire au H1
-   *  pseudo placé au-dessus (vs Devenir Expert où la stat est le
-   *  hero de la section). */
+  /** Gabarit réduit, quand la statistique est secondaire. */
   compact?: boolean;
   className?: string;
 }
@@ -39,9 +28,6 @@ export function StatBlock({
     <div
       className={cn(
         "flex flex-col",
-        // Padding : compact réduit le gabarit vertical (~50 %) + mobile
-        // encore plus serré (py-3) pour répondre à la demande "colle
-        // verticalement" sur la version mobile du Dashboard.
         compact ? "px-2 py-3 md:px-6 md:py-6" : "px-2 py-10 md:px-8 md:py-12",
         withLeftDivider && "md:border-l md:border-surface-2",
         className,

@@ -8,16 +8,9 @@ import type { UpdateResultInput } from "../validators/prono";
 import { EmailAlreadyUsedError, ExpertNotFoundError, PronoNotFoundError } from "./errors";
 
 /**
- * Service Admin — opérations privilégiées exposées via /admin/*.
- *
- * Toutes les routes admin sont déjà gatées en amont par
- * `authMiddleware + adminMiddleware` (cf. routes/admin.ts) — les
- * services ici n'ont donc pas à revérifier le rôle.
- *
- * Pagination : la validation + les bornes (cap 200, default 50) vivent
- * désormais côté HTTP via validateQuery(paginationQuerySchema) (cf.
- * validators/admin.ts). Les services reçoivent donc des params déjà
- * coercés et bornés (limit/offset: number, from/to: Date).
+ * Opérations exposées via /admin/*. Le rôle est vérifié par les middlewares
+ * de routes/admin.ts, et les paramètres de pagination/filtre arrivent déjà
+ * validés et convertis (validators/admin.ts).
  */
 
 // ── Types de retour exportés (contrats consommés par les routes) ─────
@@ -109,7 +102,7 @@ export async function listAllUsers(): Promise<AdminUserListItem[]> {
  * nested create). 409 si l'email est déjà pris.
  */
 export async function createExpertAccount(input: CreateExpertInput): Promise<AdminCreatedExpert> {
-  const { email, pseudo, bio, sports, subStatus } = input;
+  const { email, pseudo, bio, sports, subStatus, dayPassPrice, monthlyPrice } = input;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -126,6 +119,8 @@ export async function createExpertAccount(input: CreateExpertInput): Promise<Adm
           bio,
           sports,
           subStatus: subStatus || "FREE",
+          ...(dayPassPrice !== undefined ? { dayPassPrice } : {}),
+          ...(monthlyPrice !== undefined ? { monthlyPrice } : {}),
         },
       },
     },
@@ -234,10 +229,8 @@ export async function getGlobalStats(): Promise<GlobalStats> {
 }
 
 /**
- * CA par jour sur les 30 derniers jours. Pré-remplit les 30 buckets
- * pour avoir une série continue (un jour à 0 ventes apparaît avec
- * revenue=0 / salesCount=0 — sans pré-remplissage, le frontend devrait
- * fabriquer les trous lui-même).
+ * CA par jour sur 30 jours, série continue : les jours sans vente sont
+ * présents à 0 (jours calculés en UTC).
  */
 export async function getRevenueByDay(): Promise<RevenueByDay[]> {
   const thirtyDaysAgo = new Date();
@@ -276,12 +269,7 @@ export async function getRevenueByDay(): Promise<RevenueByDay[]> {
     .map(([date, data]) => ({ date, ...data }));
 }
 
-/**
- * Liste paginée des ventes avec filtres optionnels (from/to/expertId).
- * Le type du filtre `where` est explicitement Prisma.SubscriptionWhereInput
- * via inférence — pas de `Record<string, unknown>` qui éteignait la
- * type-safety dans le code initial.
- */
+/** Ventes paginées, filtrables par période (from/to) et par expert. */
 export async function listSalesPaginated(input: SalesFilterQuery): Promise<PaginatedSales> {
   const { limit, offset, from, to, expertId } = input;
 
@@ -325,9 +313,8 @@ export async function listSalesPaginated(input: SalesFilterQuery): Promise<Pagin
 }
 
 /**
- * Revenus cumulés par expert (toutes les subs de l'historique). Sert
- * à calculer la part 70% à reverser à chaque expert (en V1, virement
- * bancaire mensuel par l'admin).
+ * Revenus cumulés par expert sur tout l'historique, avec la part qui lui
+ * revient (`expertShare`). Montants recalculés au prix actuel de l'expert.
  */
 export async function getRevenueByExpert(): Promise<ExpertRevenue[]> {
   const experts = await prisma.expert.findMany({
@@ -360,10 +347,18 @@ export async function getRevenueByExpert(): Promise<ExpertRevenue[]> {
 }
 
 /**
- * Export CSV des ventes sur une fenêtre `from→to`. Defaults : du 1er
- * du mois courant à maintenant. Le formattage FR (virgule décimale,
- * suffixe €) est intentionnel — le destinataire est un tableur Excel
- * en FR locale pour le reversement comptable.
+ * Cellule CSV : entre guillemets (les montants au format français contiennent
+ * une virgule), guillemets doublés, et préfixe `'` devant = + - @ pour qu'un
+ * tableur n'interprète pas un email ou un pseudo comme une formule.
+ */
+function csvCell(value: string): string {
+  const safe = /^[=+\-@]/.test(value) ? `'${value}` : value;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
+/**
+ * Export CSV des ventes entre `from` et `to` (par défaut : du 1er du mois
+ * courant à maintenant). Montants au format français (virgule décimale, €).
  */
 export async function buildSalesCsv(input: SalesExportQuery): Promise<{
   csv: string;
@@ -392,7 +387,9 @@ export async function buildSalesCsv(input: SalesExportQuery): Promise<{
     const amountStr = (amount / 100).toFixed(2).replace(".", ",");
     const expertShareStr = (expertShare / 100).toFixed(2).replace(".", ",");
     const platformShareStr = (platformShare / 100).toFixed(2).replace(".", ",");
-    return `${date},${s.user.email},${s.expert.pseudo},${s.type},${amountStr}€,${expertShareStr}€,${platformShareStr}€`;
+    return [date, s.user.email, s.expert.pseudo, s.type, `${amountStr}€`, `${expertShareStr}€`, `${platformShareStr}€`]
+      .map(csvCell)
+      .join(",");
   });
 
   const csv = [header, ...rows].join("\n");

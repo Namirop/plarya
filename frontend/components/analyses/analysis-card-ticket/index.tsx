@@ -17,21 +17,12 @@ import { PickCote } from "./pick-cote";
 import { TeasingMeta } from "./teasing-meta";
 
 /**
- * Ticket d'analyse premium.
+ * Carte d'analyse en forme de ticket, même contenu sur deux mises en page :
+ * pile verticale en mobile ; en desktop, corps à gauche, talon (pick et cote)
+ * à droite, bookmakers en pleine largeur dessous.
  *
- * Deux mises en page, MÊME contenu :
- *  - mobile : pile verticale (séparateurs perforés horizontaux).
- *  - desktop : structure "tombola" en deux étages —
- *      • haut, deux colonnes : CORPS éditorial à gauche | TALON
- *        "verdict" à droite (le pick + la cote, agrandis) ;
- *      • bas, pleine largeur : "Meilleures cotes" (bookmakers).
- *
- * Anti-AI : le SEUL élément doré est la cote (signal de valeur unique) ;
- * l'étoile featured est la seconde occurrence dorée, justifiée.
- *
- * Encoches de bord : vraie découpe via `mask` (cf. notch-mask.ts). Si
- * `mask-composite: intersect` n'est pas supporté, la card s'affiche
- * pleine (sans encoches) plutôt que cassée.
+ * Encoches découpées par `mask` (notch-mask.ts) : sans support de
+ * `mask-composite: intersect`, la carte s'affiche simplement sans encoches.
  */
 export function AnalysisCardTicket({
   analysis,
@@ -55,8 +46,6 @@ export function AnalysisCardTicket({
       className={cn(
         "relative mx-auto w-full max-w-[480px] rounded-[6px] border border-white/10 bg-surface-2",
         "px-6 pb-6 pt-5 md:mx-0 md:max-w-none md:px-8 md:pb-8 md:pt-6",
-        // Élévation sobre : hairline clair + ombre douce. Pas de glow
-        // doré (réservé aux CTA).
         "shadow-[0_2px_6px_rgba(0,0,0,0.45),0_24px_48px_-22px_rgba(0,0,0,0.9)]",
         started && !hasAccess && "opacity-60",
       )}

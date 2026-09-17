@@ -2,22 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Clé conservée à l'identique de l'ancienne implémentation pour ne pas
-// invalider les brouillons déjà en cours dans sessionStorage.
+// Changer cette clé ferait perdre les brouillons en cours.
 const DRAFT_KEY = "plarya-analysis-draft";
 
 /**
- * Hook de persistence du brouillon d'analyse dans sessionStorage.
- *
- * Restauration en `useEffect` (pas dans l'initializer de useState) : le
- * composant est SSR-rendu par Next, et lire sessionStorage à l'init
- * provoquerait un mismatch d'hydratation (serveur = valeur initiale,
- * client = valeur stockée). On initialise donc avec `initialValue` sur
- * les deux, puis on restaure côté client après le mount.
- *
- * sessionStorage (et pas localStorage) : le draft survit à un reload
- * accidentel mais disparaît à la fermeture de l'onglet (pas de
- * brouillons abandonnés persistés indéfiniment).
+ * Brouillon conservé en sessionStorage : il survit à un rechargement mais pas
+ * à la fermeture de l'onglet. Restauré dans un effet et non à l'initialisation
+ * du state, pour éviter un écart d'hydratation avec le rendu serveur.
  */
 export function useDraftStorage<T extends object>(initialValue: T): {
   draft: T;
@@ -27,10 +18,7 @@ export function useDraftStorage<T extends object>(initialValue: T): {
   const [draft, setDraft] = useState<T>(initialValue);
   const hydratedRef = useRef(false);
 
-  // Restaure le draft stocké une seule fois, après le mount. Merge avec
-  // initialValue → un draft partiel / d'un ancien format ne laisse pas
-  // de champs `undefined` (robustesse, comme l'ancien code qui ne posait
-  // que les champs présents).
+  // Fusion avec la valeur initiale : un brouillon incomplet ne laisse aucun champ undefined.
   useEffect(() => {
     if (hydratedRef.current) return;
     hydratedRef.current = true;
@@ -38,25 +26,21 @@ export function useDraftStorage<T extends object>(initialValue: T): {
       const raw = sessionStorage.getItem(DRAFT_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw) as Partial<T>;
-      // Restauration browser-only après hydratation (cf. en-tête) : non
-      // dérivable en render sans mismatch SSR. Cas légitime, identique à
-      // cookie-banner.
+      // Donnée propre au navigateur, lue après hydratation.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setDraft((prev) => ({ ...prev, ...parsed }));
     } catch {
-      /* draft corrompu → on ignore */
+      /* brouillon illisible : ignoré */
     }
   }, []);
 
-  // Persiste à chaque mutation, mais seulement après l'hydratation (sinon
-  // on écraserait le draft stocké avec la valeur initiale au 1er render).
+  // Sauvegarde après restauration seulement, pour ne pas écraser le brouillon stocké.
   useEffect(() => {
     if (!hydratedRef.current) return;
     try {
       sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch {
-      // sessionStorage plein ou bloqué → on tolère silencieusement,
-      // le draft n'est pas critique.
+      // Stockage plein ou bloqué : le brouillon n'est simplement pas conservé.
     }
   }, [draft]);
 

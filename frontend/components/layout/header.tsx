@@ -14,28 +14,16 @@ import { cn } from "@/lib/utils";
 export type HeaderRole = UserRole;
 
 export interface HeaderProps {
-  /** "loading" : on n'a pas encore résolu la session (1ʳᵉ frame post
-   *  hydratation). On rend juste le logo, rien à droite — évite le
-   *  flash "guest → connected" visible 50-200 ms au refresh. */
+  /** "loading" : session non résolue, seul le logo est rendu (évite un
+   *  affichage « invité » furtif pour un utilisateur connecté). */
   variant?: "connected" | "guest" | "loading";
-  /** Rôle de l'utilisateur connecté. Pilote les liens de nav affichés
-   *  selon le rôle :
-   *    - USER  : "Mon Compte" (vue acheteur : abonnements + historique)
-   *    - EXPERT : "Dashboard" + "Mon Compte" (éditeur profil expert)
-   *    - ADMIN : "Admin" uniquement
-   *  Ignoré en variant="guest". Défaut USER (safe pour les rôles
-   *  inconnus — affiche le moins de liens). */
+  /** Détermine les liens de navigation (voir navLinksForRole). */
   role?: HeaderRole;
-  /** Position sticky en haut au scroll. Désactivable pour les pages de test. */
   sticky?: boolean;
-  /** Callback déclenché par "Déconnexion" (variant connected). */
   onLogout?: () => void;
-  /** Callback déclenché par "Se connecter" (variant guest). Typiquement ouvre une modale. */
   onSignIn?: () => void;
-  /** Callback déclenché par "Créer un compte" (variant guest). Ouvre la
-   *  même LoginModal magic-link avec un copy contextualisé : créer un
-   *  compte = recevoir un lien par email (le User est créé à la 1ʳᵉ
-   *  vérification du token via auth-service.verifyMagicLink). */
+  /** Même flux magic-link que la connexion : le compte est créé à la
+   *  première vérification du lien. */
   onSignUp?: () => void;
 }
 
@@ -44,8 +32,7 @@ interface NavLink {
   label: string;
 }
 
-// Mapping role → liens de nav. Source unique de vérité, utilisée en
-// desktop ET en mobile (panel dropdown) pour rester cohérent.
+// Liens par rôle, partagés par la nav desktop et le menu mobile.
 function navLinksForRole(role: HeaderRole): NavLink[] {
   switch (role) {
     case "EXPERT":
@@ -63,15 +50,10 @@ function navLinksForRole(role: HeaderRole): NavLink[] {
 
 const navItemClass = "font-body text-body-16 text-foreground transition-opacity hover:opacity-70";
 
-// Topbar desktop — style SOBRE (sans cadre pill doré, retiré car trop
-// présent). Lien de nav (connecté) : pilule transparente, fond blanc 5%
-// au hover pour l'affordance.
 const navLinkCls =
   "inline-flex items-center justify-center rounded-full px-4 py-2 font-body text-body-16 text-foreground transition-colors hover:bg-white/5 cursor-pointer";
-// "Se connecter" (guest) : bouton ghost à bordure neutre discrète.
 const ghostBtnCls =
   "inline-flex items-center justify-center rounded-full border border-white/15 px-5 py-2 font-body text-body-16 text-foreground transition-colors hover:bg-white/5 hover:border-white/25 cursor-pointer";
-// "Créer un compte" (guest) : bouton doré plein = action primaire.
 const goldBtnCls =
   "inline-flex cursor-pointer items-center justify-center rounded-full border border-accent-strong bg-gradient-gold px-5 py-2 font-body text-body-16 text-black shadow-shine transition-all hover:brightness-105";
 
@@ -84,15 +66,10 @@ export function Header({
   onSignUp,
 }: HeaderProps) {
   const navLinks = variant === "connected" ? navLinksForRole(role) : [];
-  // Burger menu mobile : panel dropdown sous le header. Ferme au scroll
-  // et au resize vers desktop (md ≥ 768px) pour éviter un état orphelin
-  // si l'utilisateur passe en desktop avec le menu ouvert.
+  // Menu mobile : fermé au scroll et au passage en desktop (≥ 768 px).
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Tracking scroll : au-dessus de 10 px de scroll, on bascule le
-  // header d'un fond transparent (haut de page, fondu avec le hero) à
-  // un fond sombre + blur (pour cacher le contenu qui défile derrière
-  // en mobile).
+  // En mobile, fond opaque dès 10 px de défilement (transparent en haut de page).
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -126,20 +103,8 @@ export function Header({
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        // Le header pleine largeur (BG full-bleed pour cover le viewport).
-        // Le CONTENU à l'intérieur est contraint à max-w-content + padding
-        // identique aux sections de la home → alignement visuel avec le
-        // contenu de la page (logo collé au même bord que le texte du Hero,
-        // nav à droite collée au même bord que le côté droit des cards).
-        // overflow-visible : le logo (h=160) déborde au-dessus/en dessous
-        // de la barre h=70 pour compenser le padding transparent du PNG.
-        // Mobile : transparent en haut de page (fondu avec le hero),
-        // bg-background/90 + blur dès que `scrolled` passe à true pour
-        // masquer le contenu qui défile derrière (cf. effet "frosted").
-        // Si le menu mobile est ouvert, on force aussi le fond sombre
-        // pour que le header s'aligne avec le panel dropdown (sinon
-        // contraste laid : header transparent + panel dark).
-        // Desktop (md+) : toujours bg-background/90 + backdrop-blur-md.
+        // overflow-visible : l'image du logo, avec ses marges transparentes,
+        // dépasse de la barre. Fond opaque aussi quand le menu mobile est ouvert.
         "relative h-[76px] w-full overflow-visible",
         "transition-colors duration-200 ease-out",
         "md:bg-background/90 md:backdrop-blur-md",
@@ -147,17 +112,10 @@ export function Header({
         sticky && "sticky top-0 z-50",
       )}
     >
-      {/* Wrapper inner — aligne le contenu du header avec le contenu
-          des sections de la home (mx-auto + max-w-content + même
-          padding latéral). */}
+      {/* Même largeur et marges que les sections de la page. */}
       <div className="mx-auto flex h-full w-full max-w-content items-center justify-between px-6 py-2 sm:px-8 lg:px-0">
-        {/* Le PNG du logo (1536×1024, transparent) contient beaucoup de
-          padding autour du glyphe visible (le glyphe occupe ~30 % de la
-          hauteur et est positionné légèrement au-dessus du centre vertical
-          du canvas — d'où le `translate-y-[6px]` qui re-aligne le glyphe
-          avec les boutons d'auth à droite, vertical-centrés sur la barre).
-          Mobile : h-[150px], desktop h-[180px] (proportionnés à la
-          nouvelle topbar h=85). */}
+        {/* Le glyphe n'occupe qu'une partie du PNG : les translate le
+            réalignent sur les boutons de droite. */}
         <Link href="/" className="flex shrink-0 items-center">
           <Image
             src="/full-logo-remove.png"
@@ -169,11 +127,7 @@ export function Header({
           />
         </Link>
 
-        {/* Nav desktop : visible md+. Pattern unifié "pill" — toutes les
-          actions à droite sont enveloppées dans un container rounded-full
-          bordé d'un GoldenBorderOverlay (même technique que le cadre du
-          Hero + de "Devenir créateur"). Pendant variant="loading" : on
-          ne rend RIEN à droite (évite le flash). */}
+        {/* Nav desktop ; rien à droite pendant le chargement de la session. */}
         {variant === "loading" ? (
           <div className="hidden md:block" aria-hidden />
         ) : variant === "connected" ? (
@@ -202,8 +156,6 @@ export function Header({
           </div>
         )}
 
-        {/* Burger mobile : visible <md uniquement. Caché pendant
-          variant="loading" (même raison — évite le flash). */}
         {variant !== "loading" && (
           <button
             type="button"
@@ -216,15 +168,10 @@ export function Header({
           </button>
         )}
       </div>{" "}
-      {/* /inner wrapper */}
       {menuOpen && (
         <div
           className={cn(
-            // Panel dropdown sous le header. bg-background/95 + blur
-            // pour rester lisible sur le gradient doré derrière. Bord
-            // gauche transparent → border-t neutre pour marquer la
-            // séparation avec le header (anciennement doré /15,
-            // retiré dans le ménage doré — décoratif).
+            // Menu mobile déroulé sous le header.
             "md:hidden absolute left-0 right-0 top-full",
             "bg-background/95 backdrop-blur-md",
             "border-t border-surface-elevated",
@@ -233,7 +180,6 @@ export function Header({
         >
           {variant === "connected" ? (
             <>
-              {/* Nav links — simples, gap généreux pour respiration. */}
               <div className="flex flex-col gap-5">
                 {navLinks.map((l) => (
                   <Link
@@ -247,7 +193,6 @@ export function Header({
                 ))}
               </div>
 
-              {/* Séparateur subtil avant l'action de sortie. */}
               <div className="my-5 h-px w-full bg-surface-elevated" />
 
               <button
@@ -262,10 +207,7 @@ export function Header({
               </button>
             </>
           ) : (
-            // Guest : pattern identique aux nav links connectés —
-            // deux liens texte stackés. "Créer un compte" en accent
-            // doré + chevron pour signaler l'action primaire sans le
-            // poids du bouton gradient (qui dominait le panel).
+            // Invité : liens texte ; le chevron signale l'action principale.
             <div className="flex flex-col gap-5">
               <button
                 type="button"

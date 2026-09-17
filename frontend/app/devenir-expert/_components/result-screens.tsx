@@ -10,7 +10,6 @@ import { InfoScreen } from "@/components/ui/info-screen";
 // chargement de session, utilisateur déjà expert, et retours Stripe
 // (succès / annulation). Chacun remplace toute la page.
 
-// PageShell pour l'état de chargement. Layout centré max-w 872.
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto w-full max-w-[872px] px-4 py-10 md:px-8 md:py-16">{children}</div>
@@ -29,7 +28,6 @@ export function LoadingScreen() {
 }
 
 // ── État 2 : utilisateur déjà expert ────────────────────────
-// Pattern InfoScreen : grand titre éditorial centré vh/hz, sans card.
 export function AlreadyExpertScreen() {
   return (
     <InfoScreen

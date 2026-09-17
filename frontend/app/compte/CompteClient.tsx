@@ -11,11 +11,7 @@ interface CompteClientProps {
   initialSubscriptions: SubscriptionWithExpert[] | null;
 }
 
-/**
- * Racine de /compte : aiguille vers la vue EXPERT (profil + note +
- * confidentialité) ou USER (abonnements + historique + confidentialité)
- * selon le rôle. Le state vit dans chaque vue ; ici, simple dispatch.
- */
+/** Choisit la vue expert ou utilisateur selon le rôle ; chaque vue porte son propre état. */
 export default function CompteClient({
   role,
   initialExpertProfile,

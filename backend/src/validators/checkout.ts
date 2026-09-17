@@ -8,11 +8,8 @@ export const createCheckoutSchema = z.object({
   email: z.string().email().optional(),
 });
 
-// `sports` aligné sur sportsSchema (z.nativeEnum +
-// bornes). Avant, become-expert acceptait n'importe quelle string,
-// puis le metadata Stripe JSON était envoyé tel quel → la validation
-// stricte tombait seulement dans le webhook.
-// Désormais on rejette en amont, avant même de créer la session Stripe.
+// Validé avant la création de la session Stripe : le profil transite par les
+// metadata jusqu'au webhook qui crée l'expert.
 export const becomeExpertSchema = z.object({
   pseudo: z.string().min(2, "Le pseudo doit contenir au moins 2 caractères"),
   bio: z.string().max(500).optional(),

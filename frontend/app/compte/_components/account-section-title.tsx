@@ -1,6 +1,3 @@
-// Titre de section du compte. Pas de compteur entre parenthèses
-// (pattern "dashboard IA") : le nombre d'items est déjà visible dans la
-// liste qui suit.
 export function AccountSectionTitle({ title }: { title: string }) {
   return (
     <div className="flex items-baseline gap-3">

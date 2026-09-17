@@ -1,9 +1,4 @@
-/**
- * Types partagés entre les sections admin (extraits de l'ancien
- * `app/admin/page.tsx` monolithique). Centralisés ici pour qu'AdminClient,
- * page.tsx (server) et chaque _components/*Section.tsx puissent typer
- * leur initialData et leurs props sans dupliquer les interfaces.
- */
+// Types des réponses /admin, partagés par page.tsx, AdminClient et les sections.
 
 export interface Stats {
   usersCount: number;
@@ -82,9 +77,7 @@ export interface SalesPage {
   total: number;
 }
 
-/** Shape complète des données initiales injectées par page.tsx (server)
- *  dans <AdminClient>. Permet de lire les valeurs initiales partout
- *  sans avoir à fetch côté client au mount. */
+/** Données chargées côté serveur par page.tsx et transmises à AdminClient. */
 export interface AdminInitialData {
   stats: Stats;
   revenueDays: RevenueDay[];

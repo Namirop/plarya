@@ -9,13 +9,13 @@ desktop.ini
 *.swp
 *.swo
 
-# Refs Figma locales (téléchargées via MCP pour audit, non versionnées)
+# Captures de maquettes locales
 .figma-*.png
 .figma-*.jpg
 
-# Claude Code — config/skills locaux (hors repo de présentation)
+# Configuration locale d'assistant de code
 .claude/
 
-# Docs internes / contexte de travail — gardés en local, hors du repo
+# Notes de travail locales
 CLAUDE.md
 design-system.md

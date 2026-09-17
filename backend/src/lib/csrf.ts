@@ -4,29 +4,10 @@ import type { Request, Response, NextFunction } from "express";
 import { csrfCookieOptions } from "./cookies";
 
 /**
- * CSRF — double-submit cookie pattern.
- *
- * Pourquoi : le cookie session est httpOnly + SameSite=Lax, ce qui
- * bloque déjà la majorité des CSRF (cross-site POST). Mais (a) certains
- * navigateurs / versions ne respectent pas strictement Lax pour les
- * formulaires top-level, et (b) si on déploie un jour avec frontend et
- * backend sur des eTLD+1 différents, l'argument SameSite s'évapore.
- * Le token CSRF est une defense-in-depth indépendante du domaining.
- *
- * Pattern :
- *  1. À la 1re requête sans cookie `csrf_token`, le middleware
- *     `csrfTokenIssuer` génère un token random et le pose comme cookie
- *     NON-httpOnly (le frontend doit pouvoir le lire en JS).
- *  2. Côté frontend (cf. lib/api.ts), avant toute requête mutante
- *     (POST/PATCH/PUT/DELETE), on lit ce cookie et on l'envoie en
- *     header `X-CSRF-Token`.
- *  3. Le middleware `csrfValidator` rejette toute requête mutante où
- *     header ≠ cookie (ou l'un des deux est manquant).
- *
- * Sécurité : un attaquant cross-origin (evil.com) ne peut PAS lire le
- * cookie csrf_token (Same-Origin Policy bloque document.cookie sur un
- * domaine tiers), donc il ne peut pas mettre le bon header. Sa requête
- * mutante échoue avec 403.
+ * CSRF par double soumission : le token du cookie `csrf_token` doit être
+ * renvoyé en header `X-CSRF-Token` sur toute requête mutante. Indispensable
+ * avec `SameSite=None` ; un site tiers ne peut lire ni le cookie ni (CORS)
+ * la réponse de `GET /auth/csrf`.
  */
 const CSRF_COOKIE = "csrf_token";
 const CSRF_HEADER = "x-csrf-token";
@@ -39,17 +20,15 @@ export function csrfTokenIssuer(req: Request, res: Response, next: NextFunction)
   if (!req.cookies?.[CSRF_COOKIE]) {
     const token = generate();
     res.cookie(CSRF_COOKIE, token, csrfCookieOptions());
-    // Hydrate aussi req.cookies pour que csrfValidator voie le token
-    // si jamais il est appliqué dans la même requête (cas d'un POST
-    // qui serait le 1er hit — peu probable mais defensive).
+    // Visible dès cette requête : `GET /auth/csrf` renvoie ainsi le token
+    // qui vient d'être posé.
     req.cookies[CSRF_COOKIE] = token;
   }
   next();
 }
 
 export function csrfValidator(req: Request, res: Response, next: NextFunction): void {
-  // GET/HEAD/OPTIONS : safe methods, pas de CSRF possible (pas de
-  // mutation côté serveur).
+  // Méthodes sans effet de bord : pas de vérification.
   if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") {
     next();
     return;

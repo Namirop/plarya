@@ -30,9 +30,7 @@ const TRUST_ITEMS: TrustItem[] = [
 ];
 
 type TrustRowProps = {
-  // `inline` : rendu à l'intérieur du Hero (rangée, dividers verticaux).
-  // `standalone` : bloc indépendant (mobile only sur la home, cf.
-  // page.tsx — 3 items stackés verticalement).
+  // `inline` : en ligne dans le Hero ; `standalone` : bloc vertical (mobile).
   variant?: "inline" | "standalone";
   className?: string;
 };

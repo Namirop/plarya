@@ -9,24 +9,15 @@ import { useModalA11y } from "@/hooks/use-modal-a11y";
 import { useUser } from "@/hooks/use-user";
 import { formDaModalInputCls } from "@/lib/form-da";
 
-// Clé sessionStorage utilisée pour porter une destination "post-login"
-// entre l'envoi du magic-link (ici) et l'effet de redirection dans
-// HeaderAuth (qui réagit à la transition user null → défini).
-// Exportée pour rester source unique de vérité.
+// Clé sessionStorage de la destination post-connexion, lue par HeaderAuth.
 export const POST_LOGIN_REDIRECT_KEY = "plarya_post_login_redirect";
 
 interface LoginModalProps {
   open: boolean;
   onClose: () => void;
-  /** Titre du modal (défaut "Se connecter"). À surcharger pour rendre
-   *  l'intent contextuel — ex : "Connecte-toi pour devenir créateur". */
   title?: string;
-  /** Description sous le titre (défaut neutre). */
   description?: string;
-  /** Chemin où renvoyer l'utilisateur une fois loggué. Stocké en
-   *  sessionStorage avant l'envoi du magic-link ; HeaderAuth le consomme
-   *  quand le cookie de session est posé et que `useUser` re-fetch
-   *  l'utilisateur connecté. Si omis, retour à l'accueil. */
+  /** Chemin où renvoyer l'utilisateur une fois connecté (voir POST_LOGIN_REDIRECT_KEY). */
   redirectAfterLogin?: string;
 }
 
@@ -45,9 +36,7 @@ export function LoginModal({
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ── Reset states + onClose parent ──
-  // Reset des states : une réouverture future part propre
-  // (form vide, pas d'erreur résiduelle, branche initiale).
+  // Réinitialise le formulaire pour la prochaine ouverture.
   function handleClose() {
     setEmail("");
     setError("");
@@ -55,8 +44,6 @@ export function LoginModal({
     onClose();
   }
 
-  // a11y : scroll-lock body, focus initial (input email), focus trap,
-  // Escape, restauration du focus à la fermeture — cf. useModalA11y.
   const { containerRef } = useModalA11y({
     open,
     onClose: handleClose,
@@ -74,10 +61,8 @@ export function LoginModal({
     }
     setSubmitting(true);
     try {
-      // ── POST_LOGIN_REDIRECT_KEY ──
-      // Posé AVANT l'appel API : si l'utilisateur clique le lien magic-
-      // link depuis le même navigateur, sessionStorage est dispo dès le
-      // retour. Ne PAS déplacer après le `await`.
+      // Enregistré avant l'appel API. Limite connue : sessionStorage est propre
+      // à l'onglet, un lien ouvert dans un nouvel onglet ne redirige pas.
       if (redirectAfterLogin && typeof window !== "undefined") {
         sessionStorage.setItem(POST_LOGIN_REDIRECT_KEY, redirectAfterLogin);
       }
@@ -92,16 +77,12 @@ export function LoginModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Overlay — bg-black/80 backdrop-blur-md. Clic = handleClose. */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
         onClick={handleClose}
         aria-hidden
       />
 
-      {/* DialogContent — bg-background (#000), bordure subtile, radius 16
-          DS, padding 32. max-w 480 px aligné avec EmailCheckoutModal et
-          la modale upsell pour cohérence des modales. */}
       <div
         ref={containerRef}
         role="dialog"
@@ -109,7 +90,6 @@ export function LoginModal({
         aria-labelledby="login-modal-title"
         className="relative z-10 mx-4 w-full max-w-[480px] rounded-2xl border border-surface-elevated bg-surface-1 p-6 sm:p-8"
       >
-        {/* Close X — Phosphor, taille 5 (=20 px). */}
         <button
           type="button"
           onClick={handleClose}

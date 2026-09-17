@@ -2,11 +2,8 @@ import { Suspense } from "react";
 
 import { DevenirExpertClient } from "./DevenirExpert.client";
 
-// page.tsx server component. Pas de fetch SSR initial (toute la
-// logique dépend de la session côté client via useUser). Suspense
-// boundary nécessaire pour useSearchParams() du DevenirExpertClient
-// (Next exige Suspense quand un client component lit des query
-// params à l'intérieur d'un server component).
+// La page dépend de la session côté client. Suspense est requis par Next pour
+// useSearchParams() dans DevenirExpertClient.
 export default function DevenirExpertPage() {
   return (
     <Suspense>

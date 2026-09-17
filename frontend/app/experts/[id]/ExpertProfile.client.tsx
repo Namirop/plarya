@@ -32,37 +32,34 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
   const { user, loading: userLoading } = useUser();
   const id = initialExpert.id;
 
-  // Expert rendu server-side (page.tsx) puis passé en initialExpert →
-  // pas de fetch initial client, pas de spinner au mount.
+  // Chargé côté serveur (page.tsx) : pas de fetch initial ni de spinner.
   const [expert] = useState<PublicExpertProfile>(initialExpert);
   const [error, setError] = useState("");
 
-  // Accès payant (source de vérité après /subscriptions/check ou poll).
+  // Accès payant, confirmé par /subscriptions/check ou par le polling.
   const [subscriptionAccess, setSubscriptionAccess] = useState(false);
   const [fullPronos, setFullPronos] = useState<PronoData[] | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
-  // Retour Stripe — user loggé : upsell + poll /subscriptions/check.
+  // Retour de Stripe, utilisateur connecté : modale de statut + polling.
   const [showUpsell, setShowUpsell] = useState(false);
   const [checkoutPolling, setCheckoutPolling] = useState(false);
-  // Conservé pour /auth/resend-access-unlocked depuis la modale failed
-  // (l'URL `?stripe_session_id=` est purgée juste après l'arrivée).
+  // Conservé pour le renvoi d'email : `?stripe_session_id=` est retiré de l'URL.
   const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
   const [retryResendState, setRetryResendState] = useState<ResendState>("idle");
 
-  // Retour Stripe — user non loggé : email-gate + poll check-stripe-session.
+  // Retour de Stripe, acheteur anonyme : invitation à ouvrir l'email + polling.
   const [showEmailGate, setShowEmailGate] = useState(false);
   const [emailGatePolling, setEmailGatePolling] = useState(false);
   const [emailGateSessionId, setEmailGateSessionId] = useState<string | null>(null);
   const [resendState, setResendState] = useState<ResendState>("idle");
 
-  // Modale email (checkout anonyme : saisie email → Stripe).
+  // Paiement anonyme : saisie de l'email avant Stripe.
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [emailModalType, setEmailModalType] = useState<"DAY_PASS" | "MONTHLY">("DAY_PASS");
 
   const viewTracked = useRef(false);
 
-  // ── Hooks extraits (polling + owner detection, avec AbortController) ──
   const isOwner = useOwnerDetection(user, id);
   const { status: checkoutStatus, retry: retryCheckout } = useCheckoutPolling({
     enabled: checkoutPolling,
@@ -74,11 +71,10 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
     sessionId: emailGateSessionId,
   });
 
-  // ── hasAccess (DÉRIVÉ, source de vérité UI) ──
   const isAdmin = user?.role === "ADMIN";
   const hasAccess = subscriptionAccess || isAdmin || isOwner;
 
-  // Track view (fire-and-forget, une fois par mount).
+  // Comptage de la vue, une fois par montage, sans attendre la réponse.
   useEffect(() => {
     if (!id || viewTracked.current) return;
     viewTracked.current = true;
@@ -87,7 +83,7 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
     return () => controller.abort();
   }, [id]);
 
-  // Check d'accès initial au mount (subscriber qui revient).
+  // Abonné qui revient sur la page.
   useEffect(() => {
     if (!user || !id) return;
     const controller = new AbortController();
@@ -99,7 +95,7 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
     return () => controller.abort();
   }, [user, id]);
 
-  // Fetch des pronos complets (pick visible) dès qu'on a accès.
+  // Pronos complets (pick, argumentaire) une fois l'accès établi.
   useEffect(() => {
     if (!hasAccess || !id) return;
     const controller = new AbortController();
@@ -111,12 +107,11 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
     return () => controller.abort();
   }, [hasAccess, id]);
 
-  // Orchestration du retour Stripe Checkout (?checkout=success).
+  // Retour de Stripe Checkout (?checkout=success).
   useEffect(() => {
     if (searchParams.get("checkout") !== "success" || !id) return;
-    // GUARD : tant que useUser n'a pas résolu la session, `user` vaut
-    // null → la branche "non loggé" matcherait à tort pour un user loggé
-    // pendant les 50-200 ms d'hydratation.
+    // Attendre la session : sinon `user` vaut null et un utilisateur connecté
+    // serait traité comme anonyme.
     if (userLoading) return;
 
     const stripeSessionId = searchParams.get("stripe_session_id");
@@ -147,8 +142,7 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
     }
   }
 
-  // Renvoi d'email depuis la modale upsell "failed" (user loggé) —
-  // distinct de handleResendEmail (flow email-gate non-loggé).
+  // Renvoi d'email depuis CheckoutStatusModal en échec (utilisateur connecté).
   async function handleRetryResend() {
     if (!checkoutSessionId || retryResendState !== "idle") return;
     setRetryResendState("sending");
@@ -192,12 +186,13 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
   const pronos = fullPronos ?? expert.pronos;
   const pendingPronos = pronos.filter((p) => p.result === "PENDING");
   const allAnalysesStarted = allStarted(pendingPronos);
-  const isPendingDeletion = !!expert.pendingDeletion;
+  // Vente fermée : suppression programmée ou abonnement expert inactif.
+  const isPendingDeletion = !!expert.pendingDeletion || expert.acceptingSubscribers === false;
 
   return (
     <>
       <div className="flex min-h-[calc(100vh-4rem)] flex-col">
-        {/* Container 960px. pb-32 pour libérer la zone du sticky CTA. */}
+        {/* pb-32 : espace sous le CTA fixe en bas d'écran. */}
         <div className="mx-auto w-full max-w-[960px] flex-1 px-4 pt-10 pb-32 md:px-6 md:pt-16">
           <ExpertIdentityBlock expert={expert} />
           <AnalysesSection pronos={pendingPronos} hasAccess={hasAccess} />
@@ -214,8 +209,6 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
           onCheckout={handleCheckout}
         />
       </div>
-
-      {/* ════ MODALES ════ */}
 
       <EmailCheckoutModal
         open={emailModalOpen}

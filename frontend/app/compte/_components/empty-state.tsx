@@ -21,8 +21,7 @@ export function EmptyState({
         "relative mt-6 flex flex-col items-center gap-4 overflow-hidden px-6 py-12 text-center",
       )}
     >
-      {/* Glow ambient — même pattern que IdentityHeader. Donne un peu de
-          présence à l'état vide sans crier "ajoute-moi une illustration". */}
+      {/* Halo décoratif, comme dans IdentityHeader. */}
       <div
         aria-hidden
         className="pointer-events-none absolute -bottom-32 left-1/2 size-72 -translate-x-1/2 rounded-full bg-white/[0.03] blur-3xl"

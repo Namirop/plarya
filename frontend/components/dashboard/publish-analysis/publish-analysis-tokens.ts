@@ -1,5 +1,4 @@
-// Tokens visuels partagés entre les 2 étapes du wizard de publication
-// d'analyse.
+// Classes partagées par les deux étapes du formulaire de publication.
 
 import { cn } from "@/lib/utils";
 
@@ -21,9 +20,7 @@ export const SELECT_TRIGGER = cn(
   "h-[46px] data-[size=default]:h-[46px]",
 );
 
-// Popup déroulant : bg surface-3 (un cran au-dessus du form en
-// surface-elevated) pour que le menu flotte sans paraître écrasé. Border
-// et radius matchent les inputs (3px, border-subtle) → cohérence visuelle.
+// Menu déroulant un niveau d'élévation au-dessus du formulaire.
 export const SELECT_CONTENT = cn(
   "rounded-[3px] border border-border-subtle bg-surface-3 text-foreground shadow-xl",
 );
@@ -33,8 +30,7 @@ export const SELECT_ITEM = cn(
   "data-highlighted:bg-white/[0.06] data-highlighted:text-foreground",
 );
 
-// Sur-titre (label de groupe ou de champ) — 11px uppercase tracking
-// 0.15em muted. JAMAIS d'accent doré dessus.
+// Surtitre de groupe ou de champ.
 export const EYEBROW_CLASS = cn(
   "block font-body text-[11px] uppercase tracking-[0.15em] text-muted-foreground",
 );

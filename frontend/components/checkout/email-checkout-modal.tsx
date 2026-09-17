@@ -22,9 +22,7 @@ export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheck
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Reset des states à la fermeture. Pattern aligné sur
-  // DeleteAccountModal / LoginModal / ConfirmModal (homogénéisation
-  // a11y des modales).
+  // Réinitialisation à la fermeture.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) {
@@ -35,10 +33,7 @@ export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheck
   }, [open]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // a11y : scroll-lock body, focus initial (input email), focus trap,
-  // Escape (bloqué pendant le loading Stripe pour éviter une fermeture
-  // entre le submit et le redirect), restauration du focus à la
-  // fermeture — cf. useModalA11y.
+  // Escape désactivé entre l'envoi et la redirection vers Stripe.
   const { containerRef } = useModalA11y({
     open,
     onClose,
@@ -48,8 +43,7 @@ export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheck
 
   if (!open) return null;
 
-  // Validation minimaliste (présence + "@") — l'email
-  // sera revalidé côté backend lors du POST checkout.
+  // Contrôle minimal ; l'API valide l'email.
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -70,17 +64,12 @@ export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheck
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Overlay : bg-black/80 + backdrop-blur DS. Clic = onClose
-          (sauf pendant loading — cf. Escape handler). */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
         onClick={loading ? undefined : onClose}
         aria-hidden
       />
 
-      {/* DialogContent : surface noir/40, bordure subtile, radius 16
-          (= --radius DS), padding 32 px. max-w 480 px pour rester
-          confortable sur petit contenu. */}
       <div
         ref={containerRef}
         role="dialog"
@@ -88,8 +77,6 @@ export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheck
         aria-labelledby="email-checkout-title"
         className="relative z-10 mx-4 w-full max-w-[480px] rounded-2xl border border-surface-elevated bg-surface-1 p-6 sm:p-8"
       >
-        {/* Close X — Phosphor, taille 5 (=20 px), muted → foreground
-            au hover, transitions douces DS. */}
         <button
           type="button"
           onClick={onClose}
@@ -138,8 +125,6 @@ export function EmailCheckoutModal({ open, onClose, expertId, type }: EmailCheck
           >
             {loading ? (
               <span className="inline-flex items-center gap-3">
-                {/* Spinner doré DS — même token que le loading state
-                    de la page profil. */}
                 <span className="size-4 animate-spin rounded-full border-2 border-black/30 border-t-black" />
                 Redirection vers le paiement…
               </span>

@@ -6,21 +6,14 @@ import { apiGet } from "@/lib/api";
 import type { AuthUser } from "@/lib/types/auth";
 
 /**
- * Détecte si l'utilisateur connecté est le PROPRIÉTAIRE de la page
- * profil affichée (bypass paywall). Fetch /experts/me uniquement si
- * l'user est un EXPERT (endpoint gated pour USER/ADMIN → on skip).
- *
- * AbortController : annule le fetch en vol si l'user change ou si le
- * composant unmount (navigation rapide entre profils).
+ * Vrai si l'utilisateur connecté est l'expert de la page (accès sans achat).
+ * /experts/me n'est appelé que pour le rôle EXPERT.
  */
 export function useOwnerDetection(user: AuthUser | null, expertId: string): boolean {
   const [ownExpertId, setOwnExpertId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.role !== "EXPERT") {
-      // Reset synchrone quand l'user n'est pas (ou plus) EXPERT — l'endpoint
-      // /experts/me est gated, donc pas de fetch. Edge déterministe sur le
-      // changement de prop `user`, pas une cascade de renders.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOwnExpertId(null);
       return;

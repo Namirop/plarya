@@ -1,8 +1,4 @@
-/**
- * Item de la liste publique des experts renvoyée par GET /experts.
- * Subset minimal — pour la shape complète des données expert, cf.
- * lib/experts.ts (page profil publique).
- */
+/** Élément de GET /experts (champs utilisés par l'accueil et le sitemap). */
 export interface ExpertListItem {
   id: string;
   pseudo: string;
@@ -17,12 +13,7 @@ export interface ExpertListItem {
   }[];
 }
 
-/**
- * Subset des données expert renvoyé par GET /experts/:id, utilisé pour
- * les metadata SEO (layout.tsx) et la génération de l'OG image
- * (opengraph-image.tsx). L'OG image n'en lit qu'une partie (pseudo +
- * bio) ; le layout utilise tout (JSON-LD Person). Pas exposé au runtime UI.
- */
+/** Champs de GET /experts/:id utilisés pour les métadonnées SEO et l'image Open Graph. */
 export interface ExpertSeo {
   id: string;
   pseudo: string;

@@ -4,22 +4,12 @@ import { API_URL, SITE_NAME } from "@/lib/site";
 import type { ExpertSeo } from "@/lib/types/expert";
 
 /**
- * OG image dynamique par expert (convention Next App Router :
- * `opengraph-image.tsx` est auto-détecté et exposé en
- * `/experts/[id]/opengraph-image`).
+ * Image Open Graph propre à chaque expert (pseudo, bio), avec une image
+ * générique si l'API ne répond pas.
  *
- * Runtime nodejs (et non edge) : en dev sur Windows, fetch undici
- * résout `localhost` en IPv6 (::1) alors que le backend Express
- * écoute en IPv4 (127.0.0.1) → ECONNREFUSED silencieux côté edge.
- * nodejs runtime utilise la résolution DNS classique et reste
- * largement assez performant pour un MVP (cache HTTP Next prend
- * le relais). Quand un crawler social (Twitter, Facebook,
- * LinkedIn, iMessage…) demande l'OG, il reçoit un PNG personnalisé
- * avec le pseudo + bio de l'expert au design DS golden-da.
- *
- * Si le fetch backend échoue (expert introuvable, backend down),
- * on rend un fallback générique "Plarya" plutôt que de planter
- * la génération.
+ * Runtime nodejs plutôt qu'edge : en local sous Windows, le runtime edge
+ * résout `localhost` en IPv6 (::1) alors que l'API écoute en IPv4, d'où un
+ * ECONNREFUSED.
  */
 
 export const runtime = "nodejs";
@@ -30,26 +20,16 @@ export const contentType = "image/png";
 async function fetchExpert(id: string): Promise<ExpertSeo | null> {
   try {
     const res = await fetch(`${API_URL}/experts/${id}`, {
-      // Cache long : l'OG image change rarement (pseudo + bio), donc
-      // on peut servir une version cachée 1h. Les crawlers re-fetchent
-      // de toute façon à intervalles raisonnables.
       next: { revalidate: 3600 },
     });
     if (!res.ok) {
-      // Log explicite pour distinguer "expert 404" d'un vrai problème
-      // (backend down, mauvaise URL). Apparaît dans les logs Next côté
-      // serveur, pas dans la response HTTP.
-      // TODO observabilité : remonter à Sentry/Logflare plutôt que
-      // console.error en production.
+      // Journalisé côté serveur pour distinguer un 404 d'une panne de l'API.
       console.error(`[og-image] fetch ${API_URL}/experts/${id} → HTTP ${res.status}`);
       return null;
     }
     return (await res.json()) as ExpertSeo;
   } catch (err) {
-    // ECONNREFUSED / DNS / timeout : on log la cause exacte pour
-    // débugger en dev sans casser la génération de l'image.
-    // TODO observabilité : remonter à Sentry/Logflare plutôt que
-    // console.error en production.
+    // Erreur réseau : journalisée, l'image générique est rendue.
     console.error(`[og-image] fetch ${API_URL}/experts/${id} threw:`, err);
     return null;
   }
@@ -59,15 +39,13 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
   const { id } = await params;
   const expert = await fetchExpert(id);
 
-  // Tokens couleurs DS golden-da inlinés (CSS @theme pas dispo côté
-  // edge — on hardcode les valeurs canoniques d'app/globals.css).
+  // Couleurs en dur : ImageResponse n'a pas accès aux variables CSS.
   const ACCENT = "#dfb968";
   const BACKGROUND = "#000000";
   const SURFACE = "#141414";
   const TEXT_MUTED = "#a1a1aa";
 
   if (!expert) {
-    // Fallback générique — branding Plarya sans expert spécifique.
     return new ImageResponse(
       <div
         style={{
@@ -92,10 +70,7 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
     );
   }
 
-  // Truncate bio pour rester dans la zone visible (la card mockée
-  // donne ~60ch en hauteur 32px). Évite que des bios verbeuses
-  // débordent et soient coupées sur Twitter/Slack qui affichent
-  // l'OG à différentes tailles.
+  // Bio tronquée pour tenir dans la zone visible de l'image.
   const truncatedBio =
     expert.bio && expert.bio.length > 140 ? `${expert.bio.slice(0, 137)}…` : expert.bio;
 
@@ -111,7 +86,6 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
         padding: 80,
       }}
     >
-      {/* Card centrale style "profil expert" sur fond dark */}
       <div
         style={{
           width: "100%",
@@ -122,7 +96,6 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
           gap: 32,
         }}
       >
-        {/* Petit label "EXPERT" en doré */}
         <div
           style={{
             fontSize: 28,
@@ -134,7 +107,6 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
           EXPERT PLARYA
         </div>
 
-        {/* Pseudo en grand, blanc */}
         <div
           style={{
             fontSize: 96,
@@ -147,7 +119,6 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
           {expert.pseudo}
         </div>
 
-        {/* Bio si dispo, sinon texte fallback */}
         <div
           style={{
             fontSize: 32,
@@ -160,7 +131,6 @@ export default async function OGImage({ params }: { params: Promise<{ id: string
           {truncatedBio ?? "Analyses sportives premium sur Plarya."}
         </div>
 
-        {/* Footer URL */}
         <div
           style={{
             marginTop: 32,

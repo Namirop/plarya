@@ -15,29 +15,17 @@ import {
   updateOwnExpertProfile,
 } from "../services/expert-service";
 import { expertIdParamsSchema } from "../validators/expert";
+import { cancelOwnExpertSubscription } from "../services/subscription-service";
 import { updateExpertSchema } from "../validators/expert-self";
 
-/**
- * Routes /experts — orchestration HTTP uniquement.
- * Logique métier dans services/expert-service.ts. Erreurs métier
- * mappées via handleError() (cf. lib/http-errors.ts).
- */
+// Routes /experts ; logique métier dans services/expert-service.ts.
 
 const router = Router();
 
 const CACHE_PUBLIC_60 = "public, max-age=60, s-maxage=120, stale-while-revalidate=600";
 
-/**
- * Rate-limit pour POST /experts/:id/view — dédoublonnement compteur
- * de vues.
- *
- * Sans ce limiter, un attaquant peut spammer cet endpoint avec une
- * boucle (curl, F5 répété, bot) pour gonfler artificiellement le
- * `viewsToday` d'un expert et fausser la preuve sociale.
- *
- * Clé : IP + expertId. 1 incrément par couple par heure. Reset
- * viewsToday est de toute façon nocturne (cron midnight_reset).
- */
+// Une vue comptée par couple (IP, expert) par heure : le compteur public ne
+// peut pas être gonflé en boucle.
 const viewIncrementLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 1,
@@ -45,20 +33,18 @@ const viewIncrementLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    // ipKeyGenerator normalise l'IP IPv6 vers /64 (sinon un user IPv6
-    // bouge dans son /64 et contourne le limiter). Sans ce helper,
-    // express-rate-limit 8+ refuse de démarrer (ERR_ERL_KEY_GEN_IPV6).
+    // ipKeyGenerator ramène une IPv6 à son /64 (sinon contournement facile) ;
+    // express-rate-limit 8 l'exige pour une clé personnalisée.
     const ip = ipKeyGenerator(req.ip ?? "unknown");
     return `view:${ip}:${req.params.id}`;
   },
-  // Handler custom : 200 (silently throttled) plutôt que 429 — un
-  // utilisateur qui rafraîchit la page ne doit pas voir d'erreur.
+  // 200 plutôt que 429 : recharger la page ne doit pas produire d'erreur.
   handler: (_req, res) => {
     res.json({ ok: true, throttled: true });
   },
 });
 
-// GET /experts/me — Profil + stats internes (must be before /:id)
+// GET /experts/me : profil et statistiques internes (déclaré avant /:id).
 router.get("/me", authMiddleware, expertMiddleware, async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   try {
@@ -69,7 +55,7 @@ router.get("/me", authMiddleware, expertMiddleware, async (req, res) => {
   }
 });
 
-// PATCH /experts/me — Update partiel du profil
+// PATCH /experts/me : mise à jour partielle du profil.
 router.patch(
   "/me",
   authMiddleware,
@@ -86,7 +72,18 @@ router.patch(
   },
 );
 
-// GET /experts — Liste publique homepage
+// POST /experts/me/subscription/cancel : résiliation en fin de période.
+router.post("/me/subscription/cancel", authMiddleware, expertMiddleware, async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  try {
+    const result = await cancelOwnExpertSubscription(authReq.user.userId);
+    res.json(result);
+  } catch (err) {
+    handleError(err, res, "POST /experts/me/subscription/cancel");
+  }
+});
+
+// GET /experts : liste publique (?all=true pour tous).
 router.get("/", async (req, res) => {
   try {
     const experts = await listPublicExperts({ all: req.query.all === "true" });
@@ -97,7 +94,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET /experts/:id — Profile public avec pronos masqués
+// GET /experts/:id : profil public, picks en attente masqués.
 router.get("/:id", validateParams(expertIdParamsSchema), async (req, res) => {
   try {
     const profile = await getPublicExpertProfile(req.params.id);
@@ -108,7 +105,7 @@ router.get("/:id", validateParams(expertIdParamsSchema), async (req, res) => {
   }
 });
 
-// POST /experts/:id/view — Incrément compteur de vues (rate-limité)
+// POST /experts/:id/view : compteur de vues.
 router.post(
   "/:id/view",
   viewIncrementLimiter,
@@ -123,7 +120,7 @@ router.post(
   },
 );
 
-// GET /experts/:id/pronos — Pronos complets gated par subscription
+// GET /experts/:id/pronos : pronos complets, réservés aux abonnés.
 router.get(
   "/:id/pronos",
   authMiddleware,

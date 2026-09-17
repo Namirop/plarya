@@ -9,11 +9,7 @@ interface ExpertIdentityHeaderProps {
   hasDailyNote: boolean;
 }
 
-/**
- * Header de la vue EXPERT : avatar initiale (du pseudo, doré pour
- * signaler le statut) + eyebrow "MON COMPTE EXPERT" + pseudo + email +
- * ligne descriptive.
- */
+/** En-tête de la vue expert : initiale du pseudo, pseudo, email et résumé. */
 export function ExpertIdentityHeader({
   pseudo,
   email,
@@ -39,9 +35,7 @@ export function ExpertIdentityHeader({
       />
 
       <div className="relative flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:text-left md:gap-6">
-        {/* Avatar initiale doré — exception sémantique pour signaler le
-            statut Expert (l'eyebrow MON COMPTE EXPERT remplit le rôle du
-            badge "EXPERT" textuel). */}
+        {/* Initiale en doré : signale le statut expert. */}
         <div className="flex size-14 shrink-0 items-center justify-center rounded-full border border-accent/40 bg-accent/10 font-body text-[24px] font-bold text-accent sm:size-16 sm:text-[28px] md:size-20 md:text-[32px]">
           {initial}
         </div>

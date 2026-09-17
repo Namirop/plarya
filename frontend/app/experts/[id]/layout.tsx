@@ -6,8 +6,7 @@ import type { ExpertSeo } from "@/lib/types/expert";
 async function fetchExpertForSeo(id: string): Promise<ExpertSeo | null> {
   try {
     const res = await fetch(`${API_URL}/experts/${id}`, {
-      // Cache 1h côté Next : équilibre fraîcheur (changement de bio
-      // par l'expert) vs charge backend (crawlers + visiteurs SEO).
+      // Métadonnées SEO : 1 h de cache suffit.
       next: { revalidate: 3600 },
     });
     if (!res.ok) return null;
@@ -25,8 +24,7 @@ export async function generateMetadata({
   const { id } = await params;
   const expert = await fetchExpertForSeo(id);
 
-  // Fallback si le fetch échoue (backend down au build, expert
-  // introuvable, etc.). On garde un titre/description génériques.
+  // API indisponible ou expert introuvable : métadonnées génériques.
   if (!expert) {
     return {
       title: "Profil expert",
@@ -35,8 +33,7 @@ export async function generateMetadata({
   }
 
   const title = `${expert.pseudo} — Analyses sportives`;
-  // Bio peut être longue : on truncate à 120 chars pour rester dans
-  // les limites de description SEO (~155 chars max recommandés).
+  // Bio tronquée à 120 caractères pour limiter la longueur de la description.
   const description = expert.bio
     ? `${expert.pseudo} partage ses analyses sportives sur ${SITE_NAME}. ${expert.bio.slice(0, 120)}`
     : `Découvre les analyses sportives de ${expert.pseudo} sur ${SITE_NAME}.`;
@@ -74,11 +71,8 @@ export default async function ExpertProfileLayout({
   const { id } = await params;
   const expert = await fetchExpertForSeo(id);
 
-  // JSON-LD ProfilePage qui wrap un Person — Google reconnaît mieux
-  // ce type pour les pages de profil utilisateur. Le `mainEntity`
-  // Person reste lisible
-  // par les bots qui ne supportent pas encore ProfilePage. Skip total
-  // si le fetch échoue plutôt que de pousser un schema incomplet.
+  // JSON-LD ProfilePage (mainEntity Person), omis si l'expert n'a pas pu
+  // être chargé plutôt que publié incomplet.
   const profilePageLd = expert
     ? {
         "@context": "https://schema.org",

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, type ComponentType } from "react";
 
 import { useRouter } from "next/navigation";
 
-import { Download, type IconProps, Lock, Trash, WarningCircle } from "@phosphor-icons/react";
+import { Download, type IconProps, Trash, WarningCircle } from "@phosphor-icons/react";
 
 import { DeleteAccountModal } from "@/components/account/delete-account-modal";
 import { Button } from "@/components/ui/button";
@@ -12,15 +12,8 @@ import { useUser } from "@/hooks/use-user";
 import { ApiError, apiBlob, apiFetch, apiGet, apiPost } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-// Section "Confidentialité & données" — remplace l'ex DangerZone. Le
-// rouge agressif (bordure + titre destructive) a été retiré au profit
-// d'un ton muted/neutre cohérent avec le reste du dashboard. Le rouge
-// destructive ne subsiste que sur l'ACTION finale "Supprimer", et de
-// manière contenue (texte + bordure du bouton uniquement).
-//
-// Logique métier (export RGPD, suppression immédiate vs scheduled,
-// annulation de scheduled) reprise verbatim de l'ancienne DangerZone —
-// seul le rendu visuel change.
+// Section « Confidentialité & données » : export RGPD, suppression de compte
+// (immédiate ou programmée) et annulation d'une suppression programmée.
 
 interface DeletionStatus {
   canDelete: boolean;
@@ -54,8 +47,7 @@ export function ConfidentialitySection() {
       const data = await apiGet<DeletionStatus>("/auth/me/deletion-status");
       setDeletionStatus(data);
     } catch {
-      // Fallback safe : si la query échoue (réseau, 5xx), on assume
-      // canDelete=true plutôt que de bloquer l'UI sur un état inconnu.
+      // Statut inconnu : l'UI reste utilisable, l'API tranche à la suppression.
       setDeletionStatus({ canDelete: true });
     }
   }, []);
@@ -99,7 +91,7 @@ export function ConfidentialitySection() {
         const body = JSON.parse(text) as { error?: string };
         if (body.error) message = body.error;
       } catch {
-        // pas du JSON — on garde le code HTTP
+        // Corps non JSON : message basé sur le statut HTTP.
       }
       throw new Error(message);
     }
@@ -134,9 +126,6 @@ export function ConfidentialitySection() {
   return (
     <>
       <section className="mt-16 md:mt-20">
-        {/* Header section — pattern cohérent avec les autres sections
-            (gold bar à gauche). Ton muted-foreground (pas destructive)
-            pour ne pas crier "danger". */}
         <div className="flex items-center gap-3">
           <span aria-hidden className="block h-7 w-px bg-muted-foreground/50" />
           <h2 className="font-body text-[22px] font-bold text-foreground md:text-[24px]">
@@ -148,8 +137,7 @@ export function ConfidentialitySection() {
           données de facturation sont conservées séparément, selon les obligations légales.
         </p>
 
-        {/* Banner scheduled — affiché à la place des tuiles quand une
-            suppression est déjà programmée. */}
+        {/* Suppression déjà programmée : bandeau à la place des tuiles. */}
         {isScheduled ? (
           <div className="mt-6 rounded-2xl border border-surface-elevated bg-black/40 p-6 md:p-8">
             <div className="flex items-start gap-3">
@@ -184,8 +172,6 @@ export function ConfidentialitySection() {
             </div>
           </div>
         ) : (
-          // 2 tuiles côte-à-côte : Export RGPD + Supprimer compte. À md
-          // empilement vertical pour rester confortable sur mobile.
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <SettingsTile
               icon={Download}
@@ -273,12 +259,7 @@ export function ConfidentialitySection() {
   );
 }
 
-// ────────────────────────────────────────────────────────────────────
-// SettingsTile — pattern interne (réutilisable, pas exporté).
-// Tone "default" : neutre. Tone "alert" : ajoute un trait latéral
-// gauche destructive (subtil, pas une bordure complète qui crierait
-// danger). L'action elle-même porte le rouge.
-// ────────────────────────────────────────────────────────────────────
+// Tuile de réglage ; `alert` ajoute un filet rouge à gauche.
 
 interface SettingsTileProps {
   icon: ComponentType<IconProps>;
@@ -325,6 +306,3 @@ function SettingsTile({
   );
 }
 
-// Lock icon réexporté pour usage externe (header section optionnel —
-// laissé sous le coude si on veut un icon au-dessus du titre plus tard).
-export { Lock };

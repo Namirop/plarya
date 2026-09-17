@@ -1,9 +1,6 @@
 import type { MetadataRoute } from "next";
 
-// Web app manifest généré par Next.js à /manifest.webmanifest.
-// Remplace le site.webmanifest static (generic "MyWebSite") du pack
-// realfavicongenerator. Les icons 192/512 restent dans public/favicon/
-// pour ne pas dupliquer les fichiers.
+// Manifest servi à /manifest.webmanifest ; icônes dans public/favicon/.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Plarya — Analyses sportives par des experts",

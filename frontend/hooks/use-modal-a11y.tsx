@@ -28,19 +28,10 @@ interface UseModalA11yResult {
 }
 
 /**
- * Hook qui regroupe les comportements a11y d'une modale :
- *  1. Scroll-lock du body pendant l'ouverture
- *  2. Escape pour fermer (optionnel via disableEscape)
- *  3. Focus initial à l'ouverture (50 ms timer pour laisser le screen
- *     reader annoncer le dialog avant de voler le focus)
- *  4. Focus trap (Tab / Shift+Tab cyclent dans le container)
- *  5. Restauration du focus sur l'élément trigger à la fermeture
- *
- * Le caller reste responsable de :
- *  - Rendre le markup avec role="dialog" aria-modal aria-labelledby
- *  - Gérer le clic sur l'overlay (généralement onClick={onClose})
- *  - Désactiver onClose pendant les actions async (passer disableEscape
- *    + désactiver onClick overlay côté caller)
+ * Comportements d'accessibilité d'une modale : blocage du scroll, Escape,
+ * focus initial (après 50 ms, le temps que le lecteur d'écran annonce le
+ * dialogue), piège à focus et restauration du focus à la fermeture.
+ * L'appelant fournit le markup `role="dialog"` et gère le clic sur l'overlay.
  */
 export function useModalA11y({
   open,
@@ -51,7 +42,7 @@ export function useModalA11y({
   const containerRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  // 1. Scroll-lock body + 5. Memoize element to restore focus on close
+  // Blocage du scroll et mémorisation de l'élément à refocaliser.
   useEffect(() => {
     if (!open) return;
     previousFocusRef.current = document.activeElement as HTMLElement | null;
@@ -59,14 +50,11 @@ export function useModalA11y({
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prevOverflow;
-      // Restaure le focus sur l'élément qui a déclenché l'ouverture
-      // (pattern WAI-ARIA dialog). Si l'élément a été démonté entre-temps,
-      // .focus() est no-op silencieux.
+      // Sans effet si l'élément a été démonté entre-temps.
       previousFocusRef.current?.focus();
     };
   }, [open]);
 
-  // 3. Focus initial à l'ouverture (timer 50 ms pour annonce screen reader)
   useEffect(() => {
     if (!open) return;
     const timer = setTimeout(() => {
@@ -74,7 +62,6 @@ export function useModalA11y({
         initialFocusRef.current.focus();
         return;
       }
-      // Fallback : premier focusable du container
       const root = containerRef.current;
       if (!root) return;
       const first = root.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
@@ -83,7 +70,7 @@ export function useModalA11y({
     return () => clearTimeout(timer);
   }, [open, initialFocusRef]);
 
-  // 2. Escape + 4. Focus trap (un seul listener pour les 2)
+  // Escape et piège à focus (Tab / Shift+Tab).
   useEffect(() => {
     if (!open) return;
     const root = containerRef.current;
@@ -100,7 +87,7 @@ export function useModalA11y({
 
       const focusables = Array.from(
         root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-      ).filter((el) => el.offsetParent !== null); // visible only
+      ).filter((el) => el.offsetParent !== null); // éléments visibles
 
       if (focusables.length === 0) return;
       const first = focusables[0];

@@ -5,59 +5,39 @@ import { Sport } from "../generated/prisma/enums";
 import { sendAccessUnlockedEmail } from "../lib/emails";
 import { logger, maskEmail } from "../lib/logger";
 import { createMagicLink } from "../lib/magic-link";
+import { isExpertSubscriptionActive } from "../lib/expert-access";
 import { prisma } from "../lib/prisma";
 import { stripe, STRIPE_APP_TAG } from "../lib/stripe";
 
 /**
- * Service Billing — handlers Stripe webhook + idempotence event-level.
+ * Traitement des webhooks Stripe, indépendant d'Express (la route vérifie la
+ * signature et l'idempotence, puis délègue ici).
  *
- * Le service ne dépend pas d'Express : il prend des StripeEvent typés
- * et opère sur la DB. La route /webhooks/stripe se charge uniquement
- * de :
- *  1. Vérifier la signature Stripe (rejette 400 si invalide)
- *  2. Vérifier l'idempotence event-level (skip si déjà traité)
- *  3. Dispatcher sur le bon handler service par event.type
- *  4. Répondre 200
- *
- * Convention transactions : chaque handler exécute la mutation métier
- * + markEventProcessed dans la MÊME transaction. Si la mutation
- * échoue, l'event n'est pas marqué processed → Stripe retentera (TTL
- * jusqu'à 3 jours par défaut).
+ * Chaque handler écrit sa mutation et markEventProcessed dans la même
+ * transaction : en cas d'échec, l'événement n'est pas marqué et Stripe le
+ * renverra.
  */
 
-// Zod parse de `sports` désérialisé du metadata
-// Stripe. Un payload corrompu (Dashboard manipulé, retry sur event avec
-// metadata altérée) ferait passer des strings invalides dans l'enum
-// Sport de Prisma → 500. Zod garantit que ce qui arrive en DB est
-// strictement une valeur de l'enum.
+// Les metadata Stripe sont revalidées : une valeur hors enum ferait échouer Prisma.
 const sportsArraySchema = z.array(z.nativeEnum(Sport)).min(1);
 
 const webhookLogger = logger.child({ context: "webhook" });
 
-// Type de l'event Stripe — inféré depuis `constructEvent` plutôt que
-// d'importer le namespace Stripe (qui n'est pas exposé proprement par
-// le SDK stripe-node 22 — l'entrée CJS n'exporte que le constructor).
-// Évite le faux positif TS2694 "Namespace 'StripeConstructor' has no
-// exported member 'Event'".
+// Inféré de `constructEvent` : l'entrée CJS de stripe-node 22 n'exporte pas le
+// namespace de types (erreur TS2694 sur `Stripe.Event`).
 export type StripeEvent = ReturnType<typeof stripe.webhooks.constructEvent>;
 
 const DAY = 24 * 60 * 60 * 1000;
 const MONTH = 30 * DAY;
 const QUARTER = 90 * DAY;
 
-// Slash final retiré → pas de `//auth/verify` dans le magic-link.
+// Slash final retiré pour éviter `//auth/verify` dans le magic-link.
 const BACKEND_URL = (process.env.BACKEND_URL || "http://localhost:4000").replace(/\/+$/, "");
 
-// Client accepté par markEventProcessed : soit prisma global, soit un
-// client de transaction Prisma — les deux exposent la même API pour
-// stripeWebhookEvent.create.
+// Client Prisma global ou client de transaction.
 type EventStoreClient = Pick<typeof prisma, "stripeWebhookEvent">;
 
-/**
- * Log l'event Stripe comme traité (idempotence event-level). Le payload
- * est conservé ≥ 90j pour la fenêtre de dispute Stripe — sert d'audit
- * trail si un litige nécessite de retrouver les données exactes.
- */
+/** Marque l'événement comme traité ; le payload est conservé pour l'audit (litiges). */
 export async function markEventProcessed(
   client: EventStoreClient,
   event: StripeEvent,
@@ -71,11 +51,7 @@ export async function markEventProcessed(
   });
 }
 
-/**
- * Lookup idempotence : true si l'event a déjà été traité auparavant.
- * Stripe peut retenter le même event ; on skip et on répond 200 pour
- * stopper les retries.
- */
+/** Vrai si Stripe renvoie un événement déjà traité : la route répond 200 sans rejouer. */
 export async function isEventAlreadyProcessed(eventId: string): Promise<boolean> {
   const existing = await prisma.stripeWebhookEvent.findUnique({
     where: { id: eventId },
@@ -83,11 +59,7 @@ export async function isEventAlreadyProcessed(eventId: string): Promise<boolean>
   return !!existing;
 }
 
-/**
- * Dispatch principal — chaque handler implémente la logique métier pour
- * un type d'event. Les events non gérés sont marqués processed pour
- * éviter le retry storm.
- */
+/** Aiguillage par type d'événement ; les types non gérés sont simplement marqués traités. */
 export async function processStripeEvent(event: StripeEvent): Promise<void> {
   switch (event.type) {
     case "checkout.session.completed":
@@ -114,9 +86,7 @@ export async function processStripeEvent(event: StripeEvent): Promise<void> {
 // ── checkout.session.completed ─────────────────────────────────────
 
 async function handleCheckoutSessionCompleted(event: StripeEvent): Promise<void> {
-  // Le type réel est Stripe.Checkout.Session, mais le namespace n'est
-  // pas exposé proprement — on lit les champs nécessaires via cast
-  // ciblé.
+  // Stripe.Checkout.Session, réduit aux champs lus (voir StripeEvent).
   const session = event.data.object as {
     id: string;
     metadata: Record<string, string> | null;
@@ -126,10 +96,8 @@ async function handleCheckoutSessionCompleted(event: StripeEvent): Promise<void>
   };
   const metadata = (session.metadata ?? {}) as Record<string, string>;
 
-  // Filtre multi-projets : compte Stripe partagé avec un autre produit
-  // (cf. STRIPE_APP_TAG). On ne traite QUE les sessions taguées Plarya ;
-  // les autres sont ack 200 (sinon Stripe retry 3 jours) puis ignorées.
-  // Garde-fou aussi contre une session sans metadata (null → {}).
+  // Session d'une autre application du compte (voir STRIPE_APP_TAG) ou sans
+  // metadata : acquittée sans traitement, sinon Stripe la renverrait.
   if (metadata.app !== STRIPE_APP_TAG) {
     webhookLogger.info(
       { eventId: event.id, eventType: event.type, app: metadata.app ?? null },
@@ -141,16 +109,13 @@ async function handleCheckoutSessionCompleted(event: StripeEvent): Promise<void>
 
   const { userId, purpose } = metadata;
 
-  // Branche "become expert"
-  // Accept both new and legacy `purpose` for backward-compat during le
-  // rollout tipster→expert. Anciennes sessions Stripe créées avant le
-  // rename portent encore "become_tipster".
+  // Abonnement expert (`become_tipster` : alias de l'ancien nommage).
   if (purpose === "become_expert" || purpose === "become_tipster") {
     await processBecomeExpertSession(event, session, metadata, userId);
     return;
   }
 
-  // Branche "user subscription" (day pass / monthly)
+  // Achat d'un pass jour ou d'un abonnement mensuel.
   await processUserSubscriptionSession(event, session, metadata);
 }
 
@@ -162,9 +127,8 @@ async function processBecomeExpertSession(
 ): Promise<void> {
   const { pseudo, bio, sports: sportsJson } = metadata;
 
-  // Validation stricte du metadata. Si payload corrompu, on log + mark
-  // processed (évite retry storm) → admin peut ré-attribuer le sub
-  // manuellement.
+  // Metadata invalides : erreur journalisée et événement marqué traité (un
+  // renvoi échouerait de la même façon) ; correction manuelle nécessaire.
   let sportsRaw: unknown;
   try {
     sportsRaw = JSON.parse(sportsJson);
@@ -204,10 +168,22 @@ async function processBecomeExpertSession(
   const stripeSubId = session.subscription;
 
   await prisma.$transaction(async (tx) => {
-    // Application-level idempotence (defense in depth — event table
-    // couvre déjà le replay Stripe).
+    // Idempotence applicative, en plus de la table des événements.
     const existingExpert = await tx.expert.findUnique({ where: { userId } });
     if (existingExpert) {
+      // Réactivation d'un abonnement expert arrêté : même fiche, nouvel
+      // abonnement Stripe.
+      if (!existingExpert.deletedAt && !isExpertSubscriptionActive(existingExpert)) {
+        await tx.expert.update({
+          where: { id: existingExpert.id },
+          data: {
+            subStatus: "ACTIVE",
+            subExpiresAt: new Date(Date.now() + QUARTER),
+            stripeSubId,
+            subCancelAtPeriodEnd: false,
+          },
+        });
+      }
       await markEventProcessed(tx, event);
       return;
     }
@@ -246,16 +222,11 @@ async function processUserSubscriptionSession(
   },
   metadata: Record<string, string>,
 ): Promise<void> {
-  // expertId : nouveau nom de clé. Backward-compat avec tipsterId pour
-  // les sessions Stripe pending pré-rename.
+  // `tipsterId` : alias de l'ancien nommage.
   const expertId = metadata.expertId || metadata.tipsterId;
   const { type } = metadata;
 
-  // Defense-in-depth : une session sans expertId/type n'est pas un achat
-  // Plarya valide. Normalement déjà filtrée par le tag `app` en amont,
-  // mais on s'arrête AVANT de créer un User (sinon on polluerait la table
-  // users avec l'email d'un acheteur d'un autre produit + retry storm sur
-  // le subscription.create qui échouerait sur expertId/type manquants).
+  // Session incomplète : arrêt avant toute création d'utilisateur.
   if (!expertId || !type) {
     webhookLogger.error(
       { eventId: event.id, eventType: event.type },
@@ -265,18 +236,14 @@ async function processUserSubscriptionSession(
     return;
   }
 
-  // Resolve userId AVANT la transaction. User.email a une contrainte
-  // unique → re-trying un user-create par email est idempotent.
+  // Utilisateur résolu avant la transaction (acheteur anonyme : par email).
   let resolvedUserId = metadata.userId;
   const email = metadata.email || session.customer_details?.email;
 
   if (!resolvedUserId && email) {
     const normalizedEmail = email.toLowerCase();
-    // Upsert atomique : élimine la race find-then-create si deux
-    // webhooks arrivent simultanément pour le même email (User.email
-    // a une contrainte unique). L'`update` backfill aussi
-    // stripeCustomerId si le User existait déjà sans Customer lié —
-    // ce qui rend l'ancien bloc updateMany de backfill redondant.
+    // Upsert sur l'email unique : pas de doublon si deux webhooks arrivent en
+    // même temps ; renseigne aussi stripeCustomerId sur un compte existant.
     const user = await prisma.user.upsert({
       where: { email: normalizedEmail },
       update: session.customer ? { stripeCustomerId: session.customer } : {},
@@ -286,8 +253,6 @@ async function processUserSubscriptionSession(
       },
     });
     resolvedUserId = user.id;
-    // Le log "User auto-created" devient moins précis (upsert peut être
-    // update), on log l'événement sans distinguer create/update :
     webhookLogger.info(
       { eventId: event.id, eventType: event.type, email: maskEmail(normalizedEmail) },
       "User resolved via upsert",
@@ -295,7 +260,7 @@ async function processUserSubscriptionSession(
   }
 
   if (!resolvedUserId) {
-    // État non-récupérable — mark processed pour éviter retry storm.
+    // Irrécupérable : marqué traité pour que Stripe ne le renvoie pas.
     webhookLogger.error(
       { eventId: event.id, eventType: event.type },
       "No userId/email in event metadata",
@@ -346,17 +311,14 @@ async function processUserSubscriptionSession(
     "Subscription created",
   );
 
-  // Fire-and-forget email POST-transaction. Si l'envoi échoue, l'erreur
-  // est loggée dans sendAccessUnlockedEmail mais on ne rollback PAS la
-  // subscription (l'admin peut renvoyer le lien manuellement plus tard).
+  // Email envoyé après la transaction : un échec d'envoi n'annule pas
+  // l'abonnement (renvoi possible via POST /auth/resend-access-unlocked).
   await sendAccessEmailForSubscription(resolvedUserId, expertId);
 }
 
 /**
- * Envoie l'email "accès débloqué" avec un magic-link pointant vers le
- * profile de l'expert acheté. Crucial depuis la suppression de
- * /auth/session-from-checkout — le magic-link est désormais la SEULE
- * voie pour poser une session à un buyer pas encore loggé.
+ * Email « Accès débloqué » avec un magic-link vers la page de l'expert :
+ * seule voie de connexion pour un acheteur non connecté.
  */
 async function sendAccessEmailForSubscription(userId: string, expertId: string): Promise<void> {
   const [buyer, expertRecord] = await Promise.all([
@@ -380,11 +342,9 @@ async function sendAccessEmailForSubscription(userId: string, expertId: string):
 // ── invoice.paid ────────────────────────────────────────────────────
 
 async function handleInvoicePaid(event: StripeEvent): Promise<void> {
-  // Le champ `invoice.subscription` est présent en runtime sur les
-  // events Stripe API 2024+ mais retiré du type officiel à partir de
-  // 2026-03-25.dahlia (déplacé vers
-  // `invoice.parent.subscription_details.subscription`). On lit en
-  // best-effort via une shape minimale.
+  // Selon la version d'API, l'abonnement est dans `invoice.subscription` ou,
+  // depuis 2026-03-25.dahlia, dans `invoice.parent.subscription_details` :
+  // les deux emplacements sont lus.
   type LegacyInvoiceShape = {
     subscription?: string | { id: string } | null;
     parent?: {
@@ -402,13 +362,13 @@ async function handleInvoicePaid(event: StripeEvent): Promise<void> {
         : newRef;
 
   if (!subscriptionId) {
-    // Invoice non liée à un abonnement (paiement one-shot, etc.).
+    // Facture sans abonnement (paiement unique).
     await markEventProcessed(prisma, event);
     return;
   }
 
   await prisma.$transaction(async (tx) => {
-    // Expert quarterly renewal ?
+    // Renouvellement trimestriel d'un expert…
     const expert = await tx.expert.findFirst({
       where: { stripeSubId: subscriptionId },
     });
@@ -428,7 +388,7 @@ async function handleInvoicePaid(event: StripeEvent): Promise<void> {
       return;
     }
 
-    // Sinon user subscription renewal
+    // … ou d'un abonnement mensuel d'utilisateur.
     const sub = await tx.subscription.findFirst({
       where: { stripeSubId: subscriptionId },
     });
@@ -485,17 +445,9 @@ async function handleSubscriptionDeleted(event: StripeEvent): Promise<void> {
 // ── payment_intent.payment_failed ──────────────────────────────────
 
 /**
- * Paiement échoué après checkout (3DS abandon, fonds insuffisants,
- * fraude détectée, etc.).
- *
- * Pour Plarya en l'état, on ne crée une Subscription qu'à
- * checkout.session.completed (paiement déjà confirmé). Donc
- * payment_failed arrive AVANT qu'on ait quoi que ce soit en DB — pas
- * d'état à rollback. On log en warn (signal pour alerting éventuel)
- * et on marque comme processed.
- *
- * Si plus tard on crée des Subscription en PENDING pré-paiement, ce
- * handler devra les passer en EXPIRED ici.
+ * Paiement échoué (3DS abandonné, fonds insuffisants…). Les abonnements
+ * n'étant créés qu'après paiement confirmé, rien n'est à annuler : simple
+ * avertissement journalisé.
  */
 async function handlePaymentFailed(event: StripeEvent): Promise<void> {
   const intent = event.data.object as {
@@ -519,16 +471,9 @@ async function handlePaymentFailed(event: StripeEvent): Promise<void> {
 // ── charge.dispute.created ─────────────────────────────────────────
 
 /**
- * Chargeback initié par l'acheteur.
- *
- * Logué en error : en prod, Sentry/Datadog peut alerter dessus pour
- * qu'un humain regarde manuellement (gestion du litige côté Stripe
- * Dashboard).
- *
- * Action métier (V2) : retrouver la Subscription via le PaymentIntent
- * Stripe, la passer en CANCELLED. Pour l'instant on log + mark
- * processed ; la Subscription concernée sera identifiée manuellement
- * via le Dashboard.
+ * Litige (chargeback) ouvert par un acheteur, journalisé en erreur.
+ * Limite connue : l'abonnement concerné n'est pas annulé automatiquement,
+ * le litige se traite depuis le Dashboard Stripe.
  */
 async function handleDisputeCreated(event: StripeEvent): Promise<void> {
   const dispute = event.data.object as {

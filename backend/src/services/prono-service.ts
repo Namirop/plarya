@@ -1,37 +1,21 @@
 import { Prisma, type Prono } from "../generated/prisma/client";
 import type { UserRole } from "../generated/prisma/enums";
+import { isExpertSubscriptionActive } from "../lib/expert-access";
 import { prisma } from "../lib/prisma";
 import type { CreatePronoInput, UpdateResultInput } from "../validators/prono";
 
 import {
   ExpertProfileNotFoundError,
+  ExpertSubscriptionInactiveError,
   NotPronoOwnerError,
   PronoNotFoundError,
   SubscriptionRequiredError,
 } from "./errors";
 
-/**
- * Service Prono — toute la logique métier relative aux pronos est ici.
- *
- * Le service ne connaît pas Express : il prend des paramètres typés et
- * retourne des données ou throw des erreurs métier (cf. ./errors.ts).
- * Les routes orchestrent la traduction HTTP en mappant ces erreurs sur
- * des status codes (cf. routes/pronos.ts).
- *
- * Avantages :
- *  - testable isolément (pas de mock req/res)
- *  - réutilisable depuis un cron, un job, ou un autre service
- *  - les routes restent minces et lisibles
- *  - les transactions DB et règles métier (auto-deflag, etc.) sont
- *    centralisées, plus dispersées dans plusieurs handlers
- */
+// Logique métier des pronos, indépendante d'Express (erreurs typées de ./errors.ts).
 
-/**
- * Include réutilisable pour récupérer bookmakerOdds + bookmaker +
- * affiliateLinks en une seule query Prisma. Le `as const` préserve
- * l'inférence Prisma (sans lui, Prisma type le résultat comme
- * "Prono sans relations").
- */
+// Cotes par bookmaker et liens d'affiliation en une requête. `as const` est
+// nécessaire pour que Prisma infère les relations incluses.
 export const bookmakerOddsInclude = {
   bookmakerOdds: {
     include: {
@@ -40,26 +24,13 @@ export const bookmakerOddsInclude = {
   },
 } as const;
 
-/**
- * Type de retour pour les services qui renvoient un Prono avec ses
- * cotes bookmaker (publishProno, listPronosByExpertId). Généré via
- * `Prisma.PronoGetPayload<{ include: ... }>` — type exact incluant
- * toutes les relations imbriquées, exporté comme contrat consommable
- * par les routes et autres services.
- */
 export type PronoWithBookmakers = Prisma.PronoGetPayload<{
   include: typeof bookmakerOddsInclude;
 }>;
 
 /**
- * Type de retour pour getPronoDetailForUser — include enrichi avec
- * expert.userId + expert.pseudo (pour les checks d'autorisation et
- * l'affichage) + expert.subscriptions (gating sub active du caller,
- * filtrée à 0 ou 1 row au runtime via le where dynamique).
- *
- * Le `subscriptions: { select: { id: true } }` ci-dessous décrit la
- * SHAPE des rows retournées, pas le WHERE — le filtre runtime est
- * appliqué dans la query.
+ * Résultat de getPronoDetailForUser. `subscriptions` ne décrit que la forme :
+ * la requête la filtre sur l'abonnement actif de l'appelant (0 ou 1 ligne).
  */
 export type PronoDetailPayload = Prisma.PronoGetPayload<{
   include: {
@@ -78,17 +49,7 @@ export type PronoDetailPayload = Prisma.PronoGetPayload<{
   };
 }>;
 
-/**
- * Récupère l'Expert lié à un userId.
- *
- * Throw ExpertProfileNotFoundError si :
- *  - l'user n'a pas (encore) de profile expert créé
- *  - le profile est soft-deleted (cohérence RGPD : un compte supprimé
- *    ne doit plus pouvoir agir sur ses anciennes ressources)
- *
- * Sélectionne uniquement `id` par défaut — la majorité des callers
- * n'ont besoin que de l'expertId pour passer aux queries suivantes.
- */
+/** Id de l'expert d'un utilisateur ; ExpertProfileNotFoundError si absent ou supprimé. */
 export async function getExpertByUserIdOrThrow(userId: string): Promise<{ id: string }> {
   const expert = await prisma.expert.findUnique({
     where: { userId },
@@ -103,23 +64,26 @@ export async function getExpertByUserIdOrThrow(userId: string): Promise<{ id: st
 }
 
 /**
- * Crée un prono pour un expert.
- *
- * Règle métier "analyse du jour unique" : si l'input demande
- * `isFeatured: true`, on de-flag toute autre analyse featured du même
- * expert créée aujourd'hui avant l'insert. Sans ça, un expert qui
- * republie une "analyse du jour" verrait l'ancienne et la nouvelle
- * cohabiter avec le badge — l'UI suppose qu'il y en a au plus une.
- *
- * Note : on ne fait PAS de transaction stricte autour du updateMany +
- * create. Le pire cas (interruption entre les deux) laisse un état
- * cohérent : ancienne analyse défoglée + nouvelle non créée. L'expert
- * reposte → on retombe sur ses pieds.
+ * Publie un prono (abonnement expert actif requis, sinon
+ * ExpertSubscriptionInactiveError). Une seule « analyse du jour » par expert :
+ * publier la nouvelle retire le badge des précédentes du jour. Sans
+ * transaction, une interruption laisse au pire aucune analyse du jour.
  */
 export async function publishProno(
   expertId: string,
   data: CreatePronoInput,
 ): Promise<PronoWithBookmakers> {
+  const expert = await prisma.expert.findUnique({
+    where: { id: expertId },
+    select: { subStatus: true, subExpiresAt: true },
+  });
+  if (!expert) {
+    throw new ExpertProfileNotFoundError();
+  }
+  if (!isExpertSubscriptionActive(expert)) {
+    throw new ExpertSubscriptionInactiveError();
+  }
+
   if (data.isFeatured) {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -149,11 +113,7 @@ export async function publishProno(
   });
 }
 
-/**
- * Liste tous les pronos d'un expert (handler /pronos/mine).
- * Inclut bookmakerOdds pour permettre l'affichage cotes dans le
- * dashboard expert sans round-trip supplémentaire.
- */
+/** Pronos de l'expert connecté (/pronos/mine), cotes comprises. */
 export async function listPronosByExpertId(expertId: string): Promise<PronoWithBookmakers[]> {
   return prisma.prono.findMany({
     where: { expertId },
@@ -163,17 +123,8 @@ export async function listPronosByExpertId(expertId: string): Promise<PronoWithB
 }
 
 /**
- * Met à jour le résultat d'un prono (WON/LOST).
- *
- * Règle d'autorisation :
- *  - le propriétaire (l'expert qui l'a publié) peut updater
- *  - les ADMIN peuvent override
- *  - tout autre user → ForbiddenError
- *
- * On fait 2 queries (findUnique + update) plutôt qu'un update direct
- * avec WHERE composite. Raison : on veut distinguer "prono inexistant"
- * (404) de "interdit" (403), ce qu'un update direct ne permet pas
- * (un updateMany count=0 est ambigu).
+ * Résultat (WON/LOST), modifiable par l'auteur ou un admin. Lecture puis mise
+ * à jour, pour distinguer un prono inexistant (404) d'un accès refusé (403).
  */
 export async function updatePronoResult(
   pronoId: string,
@@ -202,24 +153,9 @@ export async function updatePronoResult(
 }
 
 /**
- * Récupère le détail d'un prono pour un user authentifié.
- *
- * Règle d'accès :
- *  - propriétaire (l'expert auteur) : accès direct
- *  - ADMIN : accès direct
- *  - autres users : doivent avoir une Subscription ACTIVE non-expirée
- *    sur l'expert auteur
- *
- * Optim : 1 seul round-trip DB. On inclut directement
- * `expert.subscriptions` filtrée sur le caller (where + take: 1).
- * Si la liste retournée est vide, le caller n'a pas de sub active.
- * Avant : 2 queries séparées (findUnique prono + findFirst
- * subscription) — gain net en latence sur le cas le plus chaud
- * (utilisateur abonné qui consulte une analyse).
- *
- * Throw PronoNotFoundError si l'ID n'existe pas (404), ou
- * SubscriptionRequiredError si l'user n'est ni owner ni admin ni
- * abonné (403).
+ * Détail d'un prono pour l'auteur, un admin ou un abonné actif
+ * (SubscriptionRequiredError, 403, sinon ; PronoNotFoundError, 404). L'abonnement
+ * de l'appelant est lu dans la même requête.
  */
 export async function getPronoDetailForUser(
   pronoId: string,
@@ -232,9 +168,7 @@ export async function getPronoDetailForUser(
         select: {
           userId: true,
           pseudo: true,
-          // Sub active du caller filtrée DANS la query principale.
-          // take: 1 : on n'a besoin que de connaître l'existence
-          // (le contenu de la sub n'est pas exposé au caller).
+          // Seule l'existence d'un abonnement actif compte.
           subscriptions: {
             where: {
               userId: caller.userId,

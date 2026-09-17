@@ -16,8 +16,6 @@ export function MatchBlock({
           <span>{teams.away}</span>
         </>
       )}
-      {/* Étoile "analyse du jour" — statut métier, juste à droite du
-          match. Seule autre occurrence dorée tolérée avec la cote. */}
       {featured && (
         <Star
           weight="fill"

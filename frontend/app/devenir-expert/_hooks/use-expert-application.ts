@@ -2,11 +2,8 @@ import { useState, type FormEvent } from "react";
 
 import { createExpertCheckout } from "@/lib/stripe";
 
-// State + logique de soumission du formulaire de candidature expert.
-// Encapsule pseudo/bio/sports + la validation et la redirection Stripe.
-// Le state est entièrement local à la Section 3 (form + preview) — rien
-// au-dessus n'en dépend, donc le hook est appelé directement par
-// <ApplicationFormSection>.
+// État et soumission du formulaire de candidature : validation, puis
+// redirection vers Stripe Checkout.
 export function useExpertApplication() {
   const [pseudo, setPseudo] = useState("");
   const [bio, setBio] = useState("");

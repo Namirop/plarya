@@ -8,30 +8,18 @@ import { DomainCard } from "@/components/domains/domain-card";
 import { MarketingSectionTitle } from "@/components/ui/section-title";
 import { cn } from "@/lib/utils";
 
-// Reveal d'entrée : fondu + légère montée (PAS de scale). Le scale
-// d'entrée (ancien pop-in bouncy) posait deux problèmes en prod :
-//  1. animer le scale d'une DomainCard re-rasterise son image masquée
-//     (mask-image) à chaque frame → freeze au scroll (pire à mesure
-//     que les cards s'accumulent) ;
-//  2. le scale décalait horizontalement les voisines pendant l'anim →
-//     le "peek" de la 2e card disparaissait au tout premier affichage.
-// Une montée verticale ne touche pas la position horizontale → le peek
-// reste correct dès le départ, et l'opacity/translateY sont composités
-// (pas de repaint coûteux).
+// Entrée par fondu et montée, sans scale : animer le scale forcerait à
+// re-rastériser l'image masquée à chaque frame et décalerait la carte voisine
+// visible en bord d'écran. Opacité et translateY restent composités.
 const RISE_IN_VARIANTS: Variants = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0 },
 };
 const RISE_IN_TRANSITION = { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const };
 
-// Domaines disponibles pour le filtre in-page : `activeDomain` state,
-// scroll vers #experts, useMemo filteredExperts sur
-// SPORT_DOMAIN / ESPORT_DOMAIN.
+// Domaines filtrables dans la section experts (voir SPORT_DOMAIN / ESPORT_DOMAIN).
 export type DomainId = "SPORT" | "ESPORT";
 
-// 3 cards selon la maquette.
-// Pas de lien "Voir tous les domaines" : la liste reste contenue à la
-// home (décision produit — pas de sens avec seulement 3 domaines).
 const DOMAINS = [
   {
     id: "SPORT" as DomainId,
@@ -48,7 +36,7 @@ const DOMAINS = [
     state: "active" as const,
   },
   {
-    // Hippique = coming-soon, pas filtrable. id placeholder ignoré.
+    // Domaine annoncé, non filtrable.
     id: null,
     title: "HIPPIQUE",
     subtitle: "Saut d'obstacles, Horseball",
@@ -57,28 +45,22 @@ const DOMAINS = [
   },
 ];
 
-// Width d'une card mobile + gap. Doit matcher les valeurs CSS de
-// DomainCard mobile (w-[272px]) + le gap appliqué sur le scroller.
-// Gap court (4 px) pour que les cards voisines collent presque à la
-// card centrale (cf. ref Figma — gap quasi nul entre les 3 cards).
+// Doivent correspondre à la largeur mobile de DomainCard (w-[272px]) et au
+// gap du carrousel (gap-1).
 const MOBILE_CARD_GAP = 4;
 const MOBILE_CARD_WIDTH = 272;
 const MOBILE_CARD_STEP = MOBILE_CARD_WIDTH + MOBILE_CARD_GAP;
 
 export interface DomainsSectionProps {
-  /** Domaine actuellement sélectionné comme filtre (state contrôlé par
-   *  le parent — la page d'accueil). null = pas de filtre actif. */
+  /** Filtre contrôlé par la page ; null = aucun filtre. */
   activeDomain?: DomainId | null;
-  /** Callback déclenché au clic sur une DomainCard active. Le parent
-   *  applique la toggle logic (re-cliquer sur le domaine actif le
-   *  désélectionne) et le scroll vers la section experts. */
+  /** Le parent gère la bascule (re-clic = désélection) et le défilement. */
   onDomainSelect?: (domain: DomainId) => void;
 }
 
 export function DomainsSection({ activeDomain = null, onDomainSelect }: DomainsSectionProps = {}) {
   const scrollerRef = useRef<HTMLDivElement>(null);
-  // Index de la card "centrée" dans le carrousel mobile. Sert à
-  // appliquer l'opacity 50 % aux voisines (effet focus + fade Figma).
+  // Carte centrée du carrousel mobile ; les voisines sont atténuées.
   const [activeIndex, setActiveIndex] = useState(0);
 
   const updateActive = useCallback(() => {
@@ -99,27 +81,20 @@ export function DomainsSection({ activeDomain = null, onDomainSelect }: DomainsS
         <MarketingSectionTitle title="Explore les domaines" />
       </div>
 
-      {/* Mobile/tablette/lg : carrousel snap-center full-bleed — les
-          cards voisines doivent être coupées par le bord naturel de
-          l'écran (pas par une ligne imaginaire intérieure), donc on
-          sort de la grille max-w-content et on centre via 50vw.
-          Desktop (xl ≥ 1280) : grille 3-en-ligne dans max-w-content.
-          On bascule au xl (et pas lg) car 3 cards × 360 + 2 gaps × 32
-          = 1144px ne tient pas à coup sûr dans les viewports 1024-1175. */}
+      {/* Sous xl : carrousel pleine largeur, centré via 50vw, coupé par le
+          bord de l'écran. À partir de xl : 3 cartes en ligne (1144 px ne
+          tiennent pas toujours entre 1024 et 1175 px). */}
       <div className="mx-auto w-full xl:max-w-content xl:px-0">
         <div
           ref={scrollerRef}
           onScroll={updateActive}
           className={cn(
             "mt-6 md:mt-10",
-            // pt-2 : réserve la place du glow doré (shadow-shine-soft)
-            // quand la card est sélectionnée — sinon clipped en haut
-            // par l'overflow-x du scroller.
+            // pt-2 : place pour le halo de la carte sélectionnée, sinon
+            // rogné par l'overflow du carrousel.
             "flex gap-1 overflow-x-auto snap-x snap-mandatory scroll-smooth pt-2 pb-4",
             "px-[calc(50vw-136px)]",
             "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
-            // xl : annule overflow + snap + padding. Gap mobile (4px) →
-            // desktop (32px) : les 3 cards respirent en grille horizontale.
             "xl:gap-8 xl:flex-nowrap xl:items-center xl:justify-center xl:overflow-visible xl:pb-0 xl:px-0 xl:[scroll-snap-type:none]",
           )}
         >
@@ -133,17 +108,10 @@ export function DomainsSection({ activeDomain = null, onDomainSelect }: DomainsS
               transition={{ ...RISE_IN_TRANSITION, delay: i * 0.1 }}
               className="shrink-0 snap-center"
             >
-              {/* Focus mobile : voisines réduites (scale) + atténuées —
-                  le scale recrée l'espacement et la "petite carte de côté"
-                  voulus. Clé anti-freeze : on promeut l'élément sur sa
-                  propre couche GPU (transform-gpu + will-change-transform)
-                  pour que scaler l'image masquée des DomainCard se fasse
-                  par transformation de texture (GPU) au lieu de re-
-                  rastériser le masque à chaque frame (cause du freeze au
-                  scroll). Élément interne distinct du motion.div pour ne
-                  pas entrer en conflit avec le transform/opacity inline de
-                  l'anim d'entrée. Desktop (xl) : grille 3-en-ligne, tout à
-                  pleine taille/opacité. */}
+              {/* Voisines réduites et atténuées en mobile. Couche GPU dédiée
+                  (will-change-transform) : le scale de l'image masquée reste
+                  fluide au scroll. Élément distinct du motion.div pour ne pas
+                  entrer en conflit avec l'animation d'entrée. */}
               <div
                 className={cn(
                   "origin-center transform-gpu transition-[transform,opacity] duration-300 ease-out will-change-transform",
@@ -168,8 +136,7 @@ export function DomainsSection({ activeDomain = null, onDomainSelect }: DomainsS
       </div>
 
       <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
-        {/* Dots de pagination — mobile only, sous le carrousel.
-            Le user peut cliquer pour scroller à la card correspondante. */}
+        {/* Pagination cliquable du carrousel. */}
         <div className="lg:hidden mt-4 flex justify-center gap-2">
           {DOMAINS.map((_, i) => (
             <button

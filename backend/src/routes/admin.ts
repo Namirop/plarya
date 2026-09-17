@@ -38,15 +38,8 @@ import {
 } from "../validators/expert";
 import { pronoIdParamsSchema, updateResultSchema } from "../validators/prono";
 
-/**
- * Routes /admin — orchestration HTTP uniquement.
- *
- * Toutes les routes sont gatées par authMiddleware + adminMiddleware
- * appliqués au niveau du router (cf. `router.use` ci-dessous). Pas
- * besoin de les répéter sur chaque route.
- *
- * Logique métier : services/admin-service.ts.
- */
+// Routes /admin, toutes protégées par authMiddleware + adminMiddleware au
+// niveau du routeur. Logique métier dans services/admin-service.ts.
 
 const router = Router();
 

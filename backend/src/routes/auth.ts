@@ -24,47 +24,35 @@ import {
 import { magicLinkRequestSchema, resendAccessUnlockedSchema } from "../validators/auth";
 
 /**
- * Routes /auth — orchestration HTTP. Logique métier répartie sur
- * deux services :
- *  - auth-service     : magic-link, sessions, fallback Stripe
- *  - account-service  : profil, suppression compte, export RGPD
- *
- * Cette route reste responsable de :
- *  - Cookies (set / clear session_token)
- *  - Redirects HTTP (verify magic-link)
- *  - Rate-limiters
- *  - Réponses 200 génériques anti-énumération
+ * Routes /auth : cookies, redirections, limiteurs et réponses génériques
+ * anti-énumération. La logique métier est dans auth-service (magic-link,
+ * sessions) et account-service (profil, suppression, export RGPD).
  */
 
 const router = Router();
 
-// Limiteur ciblé : 5 demandes d'envoi de magic-link par IP / 15 min.
-// Anti-spam d'emails. Ne couvre PAS /verify (cliqué depuis l'email) ni
-// /me / /logout (utilisés en boucle par le hook useUser).
+// Anti-spam d'emails ; /verify, /me et /logout ne sont pas concernés.
 const magicLinkRequestLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: { error: "Trop de demandes de connexion, réessayez dans quelques minutes" },
 });
 
-// /resend-access-unlocked plus restrictif : ce flow ne devrait être
-// utilisé qu'en cas de non-réception d'email post-checkout (cas rare).
+// Renvoi de l'email post-paiement : usage exceptionnel, limite plus basse.
 const resendAccessLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 3,
   message: { error: "Trop de demandes, réessayez dans quelques minutes" },
 });
 
-// /me/export : 1/24h/IP. RGPD permet l'export à la demande mais sans
-// cap c'est un vecteur DOS (user avec 10k pronos = JSON lourd).
+// L'export RGPD peut être lourd : un par IP toutes les 24 h.
 const exportLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000,
   max: 1,
   message: { error: "Un seul export par 24h. Réessaie demain." },
 });
 
-// /demo-login : hygiène anti-bruteforce du secret. Déjà gated par flag +
-// secret, ce limiteur est une ceinture supplémentaire (20/min/IP).
+// Freine le brute-force du secret de connexion démo.
 const demoLoginLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 20,
@@ -74,20 +62,13 @@ const demoLoginLimiter = rateLimit({
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
 /**
- * Valide qu'un param `redirect` est sûr à concaténer après FRONTEND_URL :
- *  - DOIT commencer par "/" (chemin relatif au domaine frontend)
- *  - NE DOIT PAS commencer par "//" (URL protocol-relative qui
- *    permettrait `//evil.com` → `https://evil.com` après normalisation
- *    browser → phishing post-magic-link)
- *  - NE DOIT PAS contenir un schéma absolu type "javascript:" / "data:"
- *
- * Tout redirect invalide tombe vers "/" + log warn.
+ * Anti open-redirect : seul un chemin relatif au frontend est accepté.
+ * `//evil.com` ou `/\evil.com` seraient interprétés comme un autre domaine.
  */
 function isSafeRedirect(target: string): boolean {
   if (typeof target !== "string" || target.length === 0) return false;
   if (!target.startsWith("/")) return false;
   if (target.startsWith("//")) return false;
-  // \ peut être interprété comme / par certains browsers
   if (target.startsWith("/\\") || target.startsWith("\\")) return false;
   return true;
 }
@@ -96,14 +77,8 @@ function setSessionCookie(res: Response, token: string): void {
   res.cookie("session_token", token, sessionCookieOptions());
 }
 
-/**
- * GET /auth/csrf
- *
- * Endpoint utilitaire pour forcer le set du cookie csrf_token au cas
- * où aucune requête n'a encore été faite à l'API. Le middleware
- * csrfTokenIssuer pose le cookie si absent, on renvoie juste le token
- * en JSON pour confirmation côté caller.
- */
+// GET /auth/csrf : renvoie le token dans le corps, car un frontend hébergé sur
+// un autre domaine ne peut pas lire le cookie `csrf_token` de l'API.
 router.get("/csrf", (req, res) => {
   res.json({ token: req.cookies?.csrf_token ?? null });
 });
@@ -116,7 +91,7 @@ router.post(
   async (req, res) => {
     try {
       await requestMagicLink(req.body.email, { ip: req.ip });
-      // 200 générique anti-énumération — même réponse si cooldown actif
+      // Réponse identique quel que soit l'état du compte (anti-énumération).
       res.json({
         message: "Si un compte existe avec cet email, un lien de connexion a été envoyé.",
       });
@@ -156,24 +131,16 @@ router.get("/verify", async (req, res) => {
         return;
     }
   } catch (err) {
-    // En cas d'erreur inattendue (DB down), redirect vers la page
-    // d'erreur frontend plutôt qu'une 500 nue — l'utilisateur a cliqué
-    // depuis un email, on doit l'envoyer quelque part de visible.
+    // Lien ouvert depuis un email : page d'erreur du frontend plutôt qu'un 500 brut.
     logger.error({ err }, "Magic link verify error");
     res.redirect(`${FRONTEND_URL}/auth/verify?error=invalid`);
   }
 });
 
-// GET /auth/demo-login?role=expert|user&key=<secret>
-//
-// ⚠️ Connexion démo 1-clic pour démonstrations / présentations (cf.
-// lib/demo-login.ts). Réservée aux espaces EXPERT et USER ; ne donne
-// JAMAIS l'ADMIN (compte permanent → magic-link sur contact@plarya.com).
-// À couper en production : ENABLE_DEMO_LOGIN=false.
+// GET /auth/demo-login?role=expert|user&key=<secret> (voir lib/demo-login.ts)
 router.get("/demo-login", demoLoginLimiter, async (req, res) => {
   try {
-    // Désactivé ou clé invalide → 404 nu : on ne révèle pas l'existence
-    // de la route (elle n'apparaît dans aucune UI).
+    // 404 si désactivée ou clé invalide : la route ne révèle pas son existence.
     if (!isDemoLoginEnabled() || !isValidDemoKey(req.query.key as string | undefined)) {
       res.status(404).json({ error: "Not found" });
       return;
@@ -255,8 +222,7 @@ router.delete("/me", authMiddleware, async (req, res) => {
       return;
     }
 
-    // status === "deleted" : on clear le cookie immédiatement (le
-    // service a déjà wipé les sessions DB-side).
+    // Suppression immédiate : les sessions sont déjà effacées en base.
     res.clearCookie("session_token", clearCookieOptions());
     res.json({ message: "Compte supprimé" });
   } catch (err) {
@@ -292,13 +258,9 @@ router.get("/me/export", exportLimiter, authMiddleware, async (req, res) => {
   }
 });
 
-// NB : l'ancien endpoint GET /auth/session-from-checkout a été retiré.
-// Il posait un cookie session basé sur un
-// `stripe_session_id` visible en URL → vecteur d'élévation si l'URL
-// fuitait (logs, screenshare). Le nouveau flow exige le magic-link
-// envoyé par email — cf. frontend/app/experts/[id]/page.tsx.
-
-// POST /auth/resend-access-unlocked — Fallback email post-checkout
+// POST /auth/resend-access-unlocked : renvoie l'email post-paiement. Aucune
+// session n'est posée à partir du `stripe_session_id` (visible dans l'URL,
+// donc susceptible de fuiter) : la connexion passe par le magic-link.
 router.post(
   "/resend-access-unlocked",
   resendAccessLimiter,
@@ -306,7 +268,7 @@ router.post(
   async (req, res) => {
     try {
       await resendAccessUnlocked(req.body.stripeSessionId);
-      // Toujours 200 anti-énumération
+      // Toujours 200 (anti-énumération).
       res.json({
         message: "Si un paiement a été enregistré, un nouvel email a été envoyé.",
       });

@@ -2,6 +2,7 @@ import { Prisma } from "../generated/prisma/client";
 import type { UserRole } from "../generated/prisma/enums";
 import { logger } from "../lib/logger";
 import { prisma } from "../lib/prisma";
+import { cancelSubscriptionAtPeriodEnd, cancelSubscriptionNow } from "../lib/stripe-subscriptions";
 
 import {
   DeletionAlreadyScheduledError,
@@ -11,11 +12,10 @@ import {
 } from "./errors";
 
 /**
- * Service Account — opérations de gestion du compte utilisateur :
- * lecture profil, statut de suppression, suppression RGPD avec deux
- * branches (immédiate vs programmée), annulation, export des données.
+ * Compte utilisateur : profil, suppression RGPD (immédiate ou programmée),
+ * annulation, export des données.
  *
- * État machine de la suppression d'un compte EXPERT :
+ * Suppression d'un compte EXPERT :
  *
  *      ┌────────────┐  pas de sub active   ┌──────────┐
  *      │  ACTIVE    │ ────────────────────▶│ DELETED  │  (soft)
@@ -30,12 +30,9 @@ import {
  *            │ │  user clique "Annuler"
  *            └─┘
  *
- * Pour les USER (non-expert) : suppression immédiate toujours. Pas
- * d'état PENDING (rien à protéger côté abonnés).
- *
- * RGPD : on conserve les FK Subscriptions (obligation comptable 10 ans
- * en France). Stripe Customer reste lié à l'ancien email côté Stripe
- * — info conservée pour audit Stripe Dashboard, normal.
+ * Un compte USER est toujours supprimé immédiatement. Les Subscriptions sont
+ * conservées (obligations comptables) ; le Customer Stripe garde l'email
+ * d'origine.
  */
 
 const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
@@ -56,10 +53,7 @@ export type DeletionStatusResult =
       lastSubExpiresAt: Date | null;
     };
 
-/**
- * Renvoie l'état actuel de la suppression de compte pour pilotage UI
- * (Zone dangereuse de /compte).
- */
+/** État de suppression du compte, affiché dans la section « Confidentialité & données » de /compte. */
 export async function getDeletionStatus(userId: string): Promise<DeletionStatusResult> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -82,9 +76,7 @@ export async function getDeletionStatus(userId: string): Promise<DeletionStatusR
 
   const expertId = user.expert.id;
 
-  // 1 seule query au lieu de findFirst + count en parallèle : on
-  // récupère les subs actives triées par expiration décroissante,
-  // count = length, dernière sub = [0].
+  // Tri par échéance décroissante : [0] est la dernière à expirer.
   const activeSubs = await prisma.subscription.findMany({
     where: {
       expertId,
@@ -125,17 +117,12 @@ export type DeleteAccountResult =
   | { status: "scheduled"; pendingDeletionAt: Date; lastSubExpiresAt: Date };
 
 /**
- * Suppression de compte RGPD avec deux branches selon le contexte :
- *
- *  - USER lambda OU EXPERT sans sub active → soft delete immédiat
- *    (anonymisation email + wipe sessions + cooldown 7j sur l'email).
- *  - EXPERT avec ≥1 sub ACTIVE en cours → suppression PROGRAMMÉE
- *    (Expert.pendingDeletionAt posé, le profile sort des listings, les
- *    nouveaux paiements sont refusés ; cron 03:15 finalise quand la
- *    dernière sub a expiré).
- *
- * Throw DeletionAlreadyScheduledError si une suppression est déjà
- * programmée (pas de double-flag).
+ * Suppression RGPD :
+ *  - utilisateur, ou expert sans abonné actif : soft delete immédiat
+ *    (email anonymisé, sessions supprimées, cooldown de 7 jours) ;
+ *  - expert avec abonnés actifs : suppression programmée, finalisée par le
+ *    cron après la dernière échéance.
+ * DeletionAlreadyScheduledError si une suppression est déjà programmée.
  */
 export async function deleteAccount(userId: string): Promise<DeleteAccountResult> {
   const user = await prisma.user.findUnique({
@@ -156,7 +143,7 @@ export async function deleteAccount(userId: string): Promise<DeleteAccountResult
 
   const now = new Date();
 
-  // Branche EXPERT : programmer si subs actives, sinon delete immédiat
+  // Expert avec abonnés actifs : suppression programmée.
   if (user.role === "EXPERT" && user.expert) {
     if (user.expert.pendingDeletionAt) {
       throw new DeletionAlreadyScheduledError();
@@ -173,6 +160,29 @@ export async function deleteAccount(userId: string): Promise<DeleteAccountResult
     });
 
     if (lastActiveSub) {
+      // Les abonnements mensuels de ses abonnés ne doivent plus se
+      // renouveler : sinon Stripe continuerait à prélever pour un expert qui
+      // part, et la suppression ne serait jamais finalisée.
+      const recurringSubs = await prisma.subscription.findMany({
+        where: {
+          expertId: user.expert.id,
+          type: "MONTHLY",
+          status: "ACTIVE",
+          cancelAtPeriodEnd: false,
+          stripeSubId: { not: null },
+        },
+        select: { id: true, stripeSubId: true },
+      });
+      for (const sub of recurringSubs) {
+        await cancelSubscriptionAtPeriodEnd(sub.stripeSubId as string);
+      }
+      if (recurringSubs.length > 0) {
+        await prisma.subscription.updateMany({
+          where: { id: { in: recurringSubs.map((s) => s.id) } },
+          data: { cancelAtPeriodEnd: true },
+        });
+      }
+
       await prisma.expert.update({
         where: { id: user.expert.id },
         data: { pendingDeletionAt: now },
@@ -195,7 +205,7 @@ export async function deleteAccount(userId: string): Promise<DeleteAccountResult
     }
   }
 
-  // Branche soft delete immédiat
+  // Sinon : suppression immédiate.
   await softDeleteUserNow({
     userId,
     email: user.email,
@@ -209,16 +219,10 @@ export async function deleteAccount(userId: string): Promise<DeleteAccountResult
 }
 
 /**
- * Exécute le soft delete réel d'un user (et son expert s'il y a) en
- * une transaction atomique :
- *  - Expert.deletedAt (+ reset pendingDeletionAt si posé)
- *  - User.deletedAt + anonymisation email
- *  - DeletedEmailCooldown create
- *  - magicLink + session wipe
- *
- * Exporté pour permettre la réutilisation depuis le cron
- * auto_delete_pending_experts (cf. lib/cron.ts) — le cron consomme la
- * MÊME logique que le delete immédiat, garantie de cohérence.
+ * Soft delete d'un utilisateur (et de son profil expert) : abonnements Stripe
+ * récurrents arrêtés, puis en une transaction deletedAt, email anonymisé,
+ * cooldown, magic-links et sessions supprimés. Partagé avec le cron de
+ * finalisation des suppressions programmées (lib/cron.ts).
  */
 export async function softDeleteUserNow(input: {
   userId: string;
@@ -230,11 +234,38 @@ export async function softDeleteUserNow(input: {
   const anonymizedEmail = `deleted-${userId}@plarya.local`;
   const cooldownExpiresAt = new Date(now.getTime() + COOLDOWN_MS);
 
+  // Arrêter la facturation AVANT de supprimer : un échec Stripe laisse le
+  // compte intact (l'utilisateur peut réessayer) au lieu d'un compte supprimé
+  // qui continuerait à être prélevé.
+  const ownRecurringSubs = await prisma.subscription.findMany({
+    where: { userId, type: "MONTHLY", status: "ACTIVE", stripeSubId: { not: null } },
+    select: { id: true, stripeSubId: true },
+  });
+  for (const sub of ownRecurringSubs) {
+    await cancelSubscriptionNow(sub.stripeSubId as string);
+  }
+  const expertSub = expertId
+    ? await prisma.expert.findUnique({ where: { id: expertId }, select: { stripeSubId: true } })
+    : null;
+  if (expertSub?.stripeSubId) {
+    await cancelSubscriptionNow(expertSub.stripeSubId);
+  }
+
   await prisma.$transaction(async (tx) => {
+    if (ownRecurringSubs.length > 0) {
+      await tx.subscription.updateMany({
+        where: { id: { in: ownRecurringSubs.map((s) => s.id) } },
+        data: { status: "CANCELLED" },
+      });
+    }
     if (expertId) {
       await tx.expert.update({
         where: { id: expertId },
-        data: { deletedAt: now, pendingDeletionAt: null },
+        data: {
+          deletedAt: now,
+          pendingDeletionAt: null,
+          ...(expertSub?.stripeSubId ? { subStatus: "EXPIRED" as const } : {}),
+        },
       });
     }
     await tx.user.update({
@@ -244,19 +275,13 @@ export async function softDeleteUserNow(input: {
     await tx.deletedEmailCooldown.create({
       data: { email, deletedAt: now, expiresAt: cooldownExpiresAt },
     });
-    // Invalide les magic-links pending pour cet email (un lien créé
-    // juste avant la suppression resterait valide 15 min sinon).
+    // Un lien émis juste avant resterait sinon valide 15 minutes.
     await tx.magicLink.deleteMany({ where: { email } });
-    // Invalide toutes les sessions du user (cookies orphelins → rejet
-    // au prochain authMiddleware).
     await tx.session.deleteMany({ where: { userId } });
   });
 }
 
-/**
- * Annule une suppression programmée. Échec si rien à annuler ou si
- * le cron a déjà finalisé la suppression.
- */
+/** Échoue si aucune suppression n'est programmée ou si elle est déjà finalisée. */
 export async function cancelScheduledDeletion(userId: string): Promise<void> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -285,11 +310,7 @@ export async function cancelScheduledDeletion(userId: string): Promise<void> {
   logger.info({ userId, expertId: user.expert.id }, "Expert account deletion cancelled");
 }
 
-/**
- * Récupère un user actif pour /auth/me — throw UserNotFoundError si
- * soft-deleted (defense in depth, normalement les sessions sont
- * wipées à la suppression).
- */
+/** Utilisateur de /auth/me ; UserNotFoundError s'il est supprimé (en plus de l'effacement des sessions). */
 export type ActiveUser = { id: string; email: string; role: UserRole };
 
 export async function getActiveUser(userId: string): Promise<ActiveUser> {
@@ -305,18 +326,8 @@ export async function getActiveUser(userId: string): Promise<ActiveUser> {
   return { id: user.id, email: user.email, role: user.role };
 }
 
-/**
- * Export RGPD complet du compte. Renvoie un payload JSON sérialisable
- * (la route se charge de définir les headers Content-Disposition).
- *
- * Si pas de user trouvé ou soft-deleted : throw UserNotFoundError
- * (cohérence avec /auth/me).
- */
-// Select de l'export RGPD extrait en const + `as const` : préserve les
-// littéraux `true` (un `satisfies`/inférence simple les élargirait en
-// boolean), ce qui permet de dériver le type exact du payload via
-// `Prisma.UserGetPayload<{ select: typeof exportUserSelect }>` — même
-// pattern que `bookmakerOddsInclude` dans prono-service.
+// Export RGPD. `as const` garde les littéraux `true`, nécessaires pour
+// dériver le type exact via Prisma.UserGetPayload.
 const exportUserSelect = {
   id: true,
   email: true,

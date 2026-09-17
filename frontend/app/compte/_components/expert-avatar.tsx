@@ -3,10 +3,7 @@ import Image from "next/image";
 import type { SubscriptionWithExpert } from "@/lib/types/account";
 import { cn } from "@/lib/utils";
 
-/**
- * Avatar d'un expert (photo ou initiale fallback). Réutilisé par
- * ActiveSubscriptionCard et HistoryRow.
- */
+/** Photo de l'expert, ou son initiale à défaut. */
 export function ExpertAvatar({
   expert,
   size = "md",
@@ -27,9 +24,6 @@ export function ExpertAvatar({
       />
     );
   }
-  // Avatar fallback neutre — ex `ring-accent/40 text-accent` retiré
-  // (anti-pattern : 10 avatars en série historique = série dorée
-  // verticale, doré purement décoratif sans signal métier).
   return (
     <div
       className={cn(

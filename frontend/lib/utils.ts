@@ -1,10 +1,8 @@
 import { clsx, type ClassValue } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 
-// Étend tailwind-merge avec les font-size tokens custom du DS Plarya.
-// Sans ça, twMerge confond `text-h5` / `text-body-16` avec une utilité de
-// couleur `text-*` et drop `text-black` du même bucket — résultat : le
-// texte des Buttons primary/white passe en blanc hérité.
+// Déclare les tailles de police personnalisées : sinon tailwind-merge prend
+// `text-body-16` pour une couleur et supprime `text-black` à côté.
 const twMerge = extendTailwindMerge({
   extend: {
     classGroups: {

@@ -11,14 +11,12 @@ import {
   Trophy,
 } from "@phosphor-icons/react";
 
-// Mapping sport → composant Phosphor. Phosphor n'a pas d'icône hockey
-// dédiée à ce jour ; on fallback sur Trophy (acceptable visuellement
-// — hockey reste minoritaire en France de toute façon).
+// Phosphor n'a pas d'icône de hockey : Trophy sert d'icône générique.
 const SPORT_ICONS: Record<string, ComponentType<IconProps>> = {
   FOOTBALL: SoccerBall,
   TENNIS: TennisBall,
   BASKETBALL: Basketball,
-  RUGBY: Football, // Football américain Phosphor = forme ovale rugby
+  RUGBY: Football, // ballon ovale (football américain)
   HOCKEY: Trophy,
   MMA: BoxingGlove,
   BOXE: BoxingGlove,

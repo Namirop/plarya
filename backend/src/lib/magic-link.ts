@@ -4,7 +4,7 @@ import type { UserRole } from "../generated/prisma/enums";
 import { prisma } from "./prisma";
 
 const MAGIC_LINK_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
-const SESSION_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const SESSION_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 jours
 
 export function generateToken(): string {
   return crypto.randomBytes(32).toString("hex");
@@ -57,12 +57,10 @@ export async function verifySession(
 
   if (!session) return null;
   if (session.expiresAt < new Date()) {
-    // Clean up expired session. Le `.catch` est intentionnel : on est
-    // dans un GET ; on ne veut pas faire échouer la requête si la
-    // suppression rate (race condition, contention). Au pire un cron
-    // ramasse les sessions expirées ; ici on log juste en debug.
+    // Nettoyage opportuniste : un échec (suppression concurrente) est ignoré,
+    // le cron de purge quotidien rattrape les sessions expirées.
     await prisma.session.delete({ where: { id: session.id } }).catch(() => {
-      /* swallow — best-effort cleanup */
+      /* ignoré volontairement */
     });
     return null;
   }

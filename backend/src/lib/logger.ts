@@ -3,17 +3,9 @@ import pino from "pino";
 const isProd = process.env.NODE_ENV === "production";
 const logLevel = process.env.LOG_LEVEL || (isProd ? "info" : "debug");
 
-// En dev : pino-pretty pour output lisible coloré dans la console.
-// En prod : JSON brut une-ligne-par-event pour ingestion par
-// Datadog / Logflare / etc. (chaque champ devient une dimension
-// requêtable côté agrégateur).
-//
-// Logger structuré : préférer logger.info({ field1, field2 }, "message")
-// plutôt que logger.info(`message ${field1} ${field2}`) pour que les
-// champs soient interrogeables séparément.
-//
-// PII : NE JAMAIS logger d'email/token bruts. Utiliser maskEmail()
-// pour les identifiants utilisateur loggés à des fins de debug.
+// JSON une ligne par événement en production, pino-pretty en développement.
+// Passer les données en champs (`logger.info({ id }, "msg")`) et ne jamais
+// logger d'email ou de token en clair (voir maskEmail).
 export const logger = pino({
   level: logLevel,
   ...(isProd

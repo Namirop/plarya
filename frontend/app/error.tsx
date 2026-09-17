@@ -6,16 +6,8 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 
-// Page d'erreur globale — déclenchée par Next quand une erreur runtime
-// non-catchée remonte jusqu'à la racine. DA identique à app/not-found.tsx :
-// gros code d'erreur en gradient doré, titre éditorial, message court,
-// 2 CTAs. Le composant est obligatoirement "use client" (cf. Next App
-// Router : error.tsx doit être un Client Component pour exposer le
-// callback `reset()`).
-//
-// Note : ce fichier capture les erreurs RUNTIME (côté client/serveur)
-// dans la route tree. Pour les vraies "500" SSR, Next sert ce composant
-// si l'erreur n'est pas catchée plus haut.
+// Page d'erreur des routes, même présentation que not-found.tsx. Composant
+// client, imposé par Next pour exposer `reset()`.
 
 interface ErrorPageProps {
   error: Error & { digest?: string };
@@ -23,21 +15,15 @@ interface ErrorPageProps {
 }
 
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
-  // Log côté client en dev pour faciliter le debug. En prod le digest
-  // suffit (associé à un log côté serveur via la stack Next).
+  // Console en développement ; en production, le digest renvoie aux logs serveur.
   useEffect(() => {
     if (process.env.NODE_ENV !== "production") {
-      // TODO observabilité : ce console reste dev-only (en prod, l'erreur
-      // est tracée via le digest Next + les logs serveur). À router vers
-      // Sentry/Logflare le jour où on veut de l'alerting.
       console.error("[ErrorPage]", error);
     }
   }, [error]);
 
   return (
     <div className="flex min-h-[80vh] w-full flex-col items-center justify-center px-6 py-16 text-center">
-      {/* "500" jumbo — pattern identique au 404 : font-display, gradient
-          doré, leading 0.85 pour densifier le numéro. */}
       <p
         aria-hidden
         className="bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 bg-clip-text font-display leading-[0.85] text-transparent text-[120px] sm:text-[160px] md:text-[200px] lg:text-[240px]"
@@ -54,8 +40,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
         l&apos;accueil. Si le problème persiste, contacte-nous.
       </p>
 
-      {/* Digest visible en muted très subtil — utile pour reporter
-          l'incident au support. Affiché uniquement quand fourni. */}
+      {/* Référence à communiquer au support. */}
       {error.digest && (
         <p className="mt-4 font-mono text-[12px] text-muted-foreground/50">
           Réf. {error.digest}

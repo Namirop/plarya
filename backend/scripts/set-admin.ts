@@ -4,25 +4,12 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
 /**
- * Promeut (ou crée) le compte ADMIN réel — par défaut contact@plarya.com.
+ * Promeut (ou crée) le compte ADMIN permanent, indépendant des données du seed.
+ * Idempotent ; à relancer après `npm run db:seed:reset`, qui vide la base.
+ * Connexion ensuite par magic-link, sans mot de passe.
  *
- * Pourquoi un script dédié (et pas le seed) : c'est l'admin PERMANENT
- * de la plateforme, il ne doit pas dépendre du cycle de vie des fausses
- * données.
- *  - Idempotent : ré-exécutable sans risque.
- *  - Survit à `npm run db:seed` (le seed soft ne touche que ses propres
- *    emails de test, cf. SEEDED_EMAILS).
- *  - ⚠️ `npm run db:seed:reset` (--reset) vide TOUTE la base : re-lancer
- *    ce script après un reset.
- *
- * Auth : aucun mot de passe. L'admin se connecte via le flow magic-link
- * normal en saisissant son email dans la modale « Se connecter » — le
- * lien part dans sa boîte (qu'il contrôle), ce qui prouve son identité
- * (même modèle de confiance que « mot de passe oublié »). Session 30j.
- *
- * Usage :
- *   npm run db:set-admin                  # contact@plarya.com
- *   npm run db:set-admin -- autre@x.com   # autre email
+ * Usage : `npm run db:set-admin` (adresse par défaut ci-dessous)
+ *         `npm run db:set-admin -- autre@example.com`
  */
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {

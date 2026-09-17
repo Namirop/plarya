@@ -2,20 +2,14 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 
-// Mesures DS : card desktop 322 px + gap 16 px → step 338 px. On scroll
-// le carrousel desktop par pages de 3 cards.
+// Carrousel desktop : cartes de 322 px espacées de 16 px, par pages de 3.
 export const CARD_WIDTH = 322;
 export const CARD_GAP = 16;
 export const CARDS_PER_PAGE = 3;
 
 /**
- * Tracking du scroll d'un carrousel horizontal (snap). Factorise la
- * logique commune aux carrousels desktop (3 cards/page, largeur fixe)
- * et mobile (1 card/vue, largeur variable 86%).
- *
- * Le "step" est MESURÉ depuis le DOM (offsetWidth du 1er enfant + gap)
- * plutôt que pris en paramètre fixe → fonctionne aussi bien pour les
- * cards à largeur fixe que variable.
+ * Suivi de la page active d'un carrousel horizontal. Le pas est mesuré dans
+ * le DOM (largeur du premier enfant + gap) : cartes à largeur fixe ou variable.
  */
 export function useCarouselScroll({
   gap,
@@ -36,8 +30,6 @@ export function useCarouselScroll({
   const [activePage, setActivePage] = useState(0);
   const [isAtEnd, setIsAtEnd] = useState(false);
 
-  // Minimum 1 pour éviter un render à 0 dots quand la liste est encore
-  // vide (fetch initial).
   const totalPages = Math.max(1, Math.ceil(totalItems / cardsPerPage));
 
   const measureStep = useCallback(() => {
@@ -54,7 +46,7 @@ export function useCarouselScroll({
     const pageWidth = measureStep() * cardsPerPage;
     const page = pageWidth > 0 ? Math.round(scrollLeft / pageWidth) : 0;
     setActivePage(Math.min(page, totalPages - 1));
-    // Marge de 2 px pour absorber le subpixel rounding du scroll-snap.
+    // Tolérance de 2 px pour les arrondis sous-pixel du scroll-snap.
     setIsAtEnd(scrollLeft >= maxScroll - 2);
   }, [measureStep, cardsPerPage, totalPages]);
 
@@ -67,7 +59,6 @@ export function useCarouselScroll({
     [measureStep, cardsPerPage],
   );
 
-  // Listener scroll natif (passif).
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -75,8 +66,7 @@ export function useCarouselScroll({
     return () => el.removeEventListener("scroll", updateState);
   }, [updateState]);
 
-  // Recompute quand le contenu change (fetch API). useLayoutEffect :
-  // on mesure le DOM avant le paint → pas de flash "flèche disabled".
+  // Mesure avant l'affichage quand la liste change : pas d'état transitoire visible.
   useLayoutEffect(() => {
     if (totalItems === 0) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect

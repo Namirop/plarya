@@ -19,11 +19,7 @@ export interface League {
   name: string;
   shortName: string;
   sport: string;
-  /**
-   * URL du badge SportsDB pour cette ligue (cf. lib/league-logo.ts).
-   * `null` quand SportsDB ne référence pas la ligue (tennis grand slams,
-   * MMA, F1, esport) → l'UI doit fallback sur le SportIcon générique.
-   */
+  /** Badge TheSportsDB (lib/league-logo.ts) ; `null` → afficher SportIcon. */
   logo: string | null;
   country: string;
 }
@@ -115,8 +111,7 @@ const LEAGUES_META: LeagueMeta[] = [
   { id: "cs2", name: "CS2", shortName: "CS2", sport: "ESPORT", country: "🌍" },
 ];
 
-// LEAGUES enrichi à l'import avec les badges SportsDB. Pas de fetch
-// live — tout est résolu en synchrone depuis le mapping hardcoded.
+// Badges résolus au chargement du module, sans appel réseau.
 export const LEAGUES: League[] = LEAGUES_META.map((m) => ({
   ...m,
   logo: LEAGUE_BADGES[m.id] ?? null,

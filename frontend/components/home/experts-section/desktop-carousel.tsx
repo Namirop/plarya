@@ -45,8 +45,7 @@ export function DesktopCarousel({ experts }: { experts: (ExpertCardProps & { id:
         ))}
       </div>
 
-      {/* Next button — overlay top-right, vertical-centré sur les cards.
-          Masqué quand tout tient déjà (1 page). */}
+      {/* Bouton « suivant », masqué s'il n'y a qu'une page. */}
       {totalPages > 1 && (
         <button
           type="button"
@@ -65,7 +64,6 @@ export function DesktopCarousel({ experts }: { experts: (ExpertCardProps & { id:
         </button>
       )}
 
-      {/* Dots — centrés, sous les cards. Affichés s'il y a > 1 page. */}
       {totalPages > 1 && (
         <div className="flex mt-[27px] justify-center gap-2">
           {Array.from({ length: totalPages }).map((_, i) => (

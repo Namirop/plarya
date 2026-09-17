@@ -12,15 +12,8 @@ import { TrustRow } from "@/components/home/trust-row";
 import { Reveal } from "@/components/ui/reveal";
 import { SectionSeparator } from "@/components/ui/section-separator";
 
-// HomePage côté client. Wrapper de la coordination scroll/filtre
-// entre <DomainsSection> et <ExpertsSection>. Le state activeDomain
-// est partagé entre les deux composants ; le scroll vers #experts
-// est déclenché uniquement quand on ACTIVE un filtre.
-//
-// La page.tsx parent reste server component pour permettre une
-// future migration de fetch SSR (ExpertsSection fetch encore
-// client-side ; à server-ifier quand on aura un
-// endpoint qui inclut la liste pré-filtrée).
+// Partage le filtre de domaine entre DomainsSection et ExpertsSection ;
+// défile vers #experts seulement quand un filtre est activé.
 export function HomePageClient() {
   const [activeDomain, setActiveDomain] = useState<DomainId | null>(null);
 
@@ -34,16 +27,13 @@ export function HomePageClient() {
 
   return (
     <div className="relative overflow-hidden">
-      {/* Hero pas dans <Reveal> : doit être visible au load sans
-          animation d'entrée (au-dessus du fold). */}
+      {/* Au-dessus de la ligne de flottaison : pas d'animation d'entrée. */}
       <Hero />
-      {/* TrustRow standalone — mobile-only (3 cards stackées). En desktop
-          la même TrustRow est rendue à l'intérieur du Hero. */}
+      {/* Version mobile ; en desktop, TrustRow est rendue dans le Hero. */}
       <Reveal>
         <TrustRow variant="standalone" className="md:hidden" />
       </Reveal>
-      {/* Pas de Reveal autour de DomainsSection : le composant gère son
-          propre stagger pop-in sur chaque DomainCard (cf. v1 .scroll-pop). */}
+      {/* DomainsSection anime elle-même l'apparition de ses cartes. */}
       <DomainsSection activeDomain={activeDomain} onDomainSelect={handleDomainSelect} />
       <Reveal>
         <ExpertsSection filterDomain={activeDomain} />
@@ -54,9 +44,7 @@ export function HomePageClient() {
       <Reveal>
         <DevenirCreateurSection />
       </Reveal>
-      {/* Seul séparateur conservé : entre Devenir créateur et la zone
-          légale (disclaimer). Marque visuellement la fin de la LP
-          "commerciale" et l'entrée dans la zone légale. */}
+      {/* Sépare le contenu de la page de la mention légale. */}
       <SectionSeparator />
       <Disclaimer />
     </div>

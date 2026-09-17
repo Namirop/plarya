@@ -11,23 +11,15 @@ import { cn } from "@/lib/utils";
 
 export interface WarningModalProps {
   open: boolean;
-  /** Pseudo de l'expert concerné (affiché dans le titre). */
   expertPseudo: string;
-  /** Avertissement actuel (vide si aucun) — pré-rempli dans le textarea. */
+  /** Avertissement actuel, vide si aucun. */
   initialValue: string;
   onClose: () => void;
-  /** Persiste l'avertissement. Peut être async — le bouton affiche un
-   *  spinner pendant l'await. Laisser vide retire l'avertissement.
-   *  Si la promesse rejette, la modale reste ouverte. */
+  /** Message vide = avertissement retiré. En cas de rejet, la modale reste ouverte. */
   onSave: (message: string) => Promise<void> | void;
 }
 
-/**
- * Modale d'avertissement expert (admin). Remplace l'édition inline dans
- * le tableau : un textarea pour rédiger le message + Enregistrer/Annuler.
- * Même pattern DS que ConfirmModal (overlay blur, focus trap, Escape,
- * scroll lock).
- */
+/** Saisie de l'avertissement affiché sur le profil public d'un expert (admin). */
 export function WarningModal({
   open,
   expertPseudo,
@@ -39,8 +31,7 @@ export function WarningModal({
   const [submitting, setSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Réinitialise le contenu à chaque ouverture (l'expert ciblé change).
-  // Le focus initial du textarea est géré par useModalA11y.
+  // Réinitialisé à chaque ouverture : l'expert ciblé peut changer.
   useEffect(() => {
     if (open) setValue(initialValue);
   }, [open, initialValue]);
@@ -55,17 +46,14 @@ export function WarningModal({
     setSubmitting(true);
     try {
       await onSave(value.trim());
-      // onSave ferme la modale en cas de succès (via setWarningTarget(null)).
+      // En cas de succès, l'appelant ferme la modale.
     } catch {
-      // L'appelant gère l'erreur (toast) ; on garde la modale ouverte.
+      // L'appelant affiche l'erreur ; la modale reste ouverte.
     } finally {
       setSubmitting(false);
     }
   }
 
-  // a11y : scroll-lock body, focus initial (textarea), focus trap,
-  // Escape, restauration du focus à la fermeture — cf. useModalA11y.
-  // handleClose bloque déjà la fermeture pendant submitting.
   const { containerRef } = useModalA11y({
     open,
     onClose: handleClose,

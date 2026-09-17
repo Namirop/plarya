@@ -68,16 +68,13 @@ enum Sport {
 model User {
   id                String   @id @default(cuid())
   email             String   @unique
-  // Stripe Customer ID (cus_xxx). Persisté au premier paiement pour
-  // que les achats suivants réutilisent le même Customer côté Stripe
-  // (évite les doublons, facilite le support + dashboard).
+  // Customer Stripe (cus_…) enregistré au premier paiement et réutilisé
+  // ensuite, pour éviter les doublons côté Stripe.
   stripeCustomerId  String?  @unique
   role              UserRole @default(USER)
-  // Soft delete RGPD : null = compte actif. Quand un user demande
-  // la suppression de son compte (cf. DELETE /auth/me), on pose
-  // deletedAt + anonymise email = `deleted-${id}@plarya.local`. Le
-  // row reste en DB pour conserver les FK des Subscriptions (oblig.
-  // comptable). Tous les endpoints publics filtrent deletedAt IS NULL.
+  // Soft delete RGPD : à la suppression, deletedAt est posé et l'email
+  // anonymisé (`deleted-{id}@plarya.local`). La ligne est conservée pour
+  // l'historique comptable des Subscriptions.
   deletedAt         DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -90,25 +87,11 @@ model User {
   @@map("users")
 }
 
-// Cooldown anti re-login après suppression de compte.
-//
-// Quand un user supprime son compte (cf. DELETE /auth/me, branche
-// immediate, ET le cron auto_delete_pending_experts), on anonymise
-// `User.email = deleted-{id}@plarya.local` → impossible de retrouver
-// l'email original depuis User. Sans contre-mesure, l'user (ou pire,
-// quelqu'un d'autre avec accès à sa boîte mail) peut tout de suite
-// re-demander un magic-link sur l'email original → /auth/verify
-// trouve aucun User → en crée un nouveau → "re-login" magique.
-//
-// Cette table garde un cooldown explicite : on insère `email` (en
-// clair, l'original) au moment du soft delete, avec un `expiresAt`
-// (now + 7 jours par défaut). Pendant cette fenêtre, le
-// request-magic-link sur cet email est silencieusement refusé (200
-// sans envoi d'email, comme un email inconnu — anti-énumération).
-//
-// Purge : cron quotidien à 03:00 supprime les rows expiresAt < now
-// (cf. lib/cron.ts) → on ne garde pas l'email indéfiniment, conforme
-// à l'esprit du droit à l'oubli RGPD.
+// Cooldown après suppression de compte. L'email du User étant anonymisé, un
+// nouveau magic-link sur l'adresse d'origine recréerait aussitôt un compte.
+// L'adresse est donc conservée ici 7 jours : pendant ce délai, aucun magic-link
+// n'est envoyé (réponse HTTP inchangée) ni accepté. Les lignes expirées sont
+// purgées chaque nuit (lib/cron.ts).
 model DeletedEmailCooldown {
   id        String   @id @default(cuid())
   email     String
@@ -159,26 +142,23 @@ model Expert {
   monthlyPrice    Int             @default(2900) // centimes (29€)
   subStatus       ExpertSubStatus @default(FREE)
   subExpiresAt    DateTime?
-  stripeSubId     String?         // Stripe subscription for expert quarterly plan
+  stripeSubId     String?         // abonnement Stripe trimestriel de l'expert
+  // Résiliation demandée : l'abonnement Stripe s'arrête à la fin de la
+  // période payée (le webhook customer.subscription.deleted passe alors
+  // subStatus à EXPIRED).
+  subCancelAtPeriodEnd Boolean   @default(false)
   warningMessage  String?
   dailyNote       String?
   dailyNoteDate   DateTime?
   displayOrder    Int             @default(0)
   viewsToday      Int             @default(0)
-  // Soft delete RGPD (cf. User.deletedAt). Profile expert masqué
-  // publiquement quand non-null mais conservé pour l'historique
-  // Subscriptions / audit Stripe.
+  // Soft delete RGPD (voir User.deletedAt) : profil masqué publiquement,
+  // conservé pour l'historique des Subscriptions.
   deletedAt       DateTime?
-  // Suppression programmée. Quand un expert demande à supprimer son
-  // compte alors qu'il a des Subscriptions ACTIVE en cours, on ne
-  // peut pas supprimer immédiatement (l'acheteur a payé pour X jours
-  // d'accès). On flag pendingDeletionAt = now et :
-  //   - le profile est retiré des listings publics
-  //   - les nouveaux paiements sont bloqués (création de sub refusée)
-  //   - les subs existantes continuent à fonctionner jusqu'à expiresAt
-  //   - un cron quotidien check les experts pending : quand la dernière
-  //     sub active a expiré → soft delete automatique (deletedAt set).
-  // L'expert peut annuler tant que deletedAt n'est pas posé.
+  // Suppression programmée tant que des Subscriptions ACTIVE courent : profil
+  // retiré des listings, nouveaux paiements refusés, accès existants maintenus.
+  // Un cron finalise la suppression après la dernière échéance ; l'expert
+  // peut annuler d'ici là.
   pendingDeletionAt DateTime?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
@@ -225,6 +205,8 @@ model Subscription {
   stripeSessionId       String?            @unique
   stripeSubId           String?
   checkoutSessionUsed   Boolean            @default(false)
+  // Résiliation demandée : pas de renouvellement, accès jusqu'à expiresAt.
+  cancelAtPeriodEnd     Boolean            @default(false)
   expiresAt             DateTime
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
@@ -263,16 +245,10 @@ model AffiliateLink {
   @@map("affiliate_links")
 }
 
-// Table d'idempotence event-level pour les webhooks Stripe.
-// Chaque event Stripe est identifié par son `id` (evt_xxx) ; on log
-// l'event UNE FOIS qu'on l'a traité avec succès (dans la même
-// transaction que la logique business). Si Stripe re-livre le même
-// event (timeout réseau, retry après 5xx), on skip via le `findUnique`
-// au début du handler — cf. webhooks.ts.
-//
-// `payload` stocké en Json pour audit/debug en cas de litige Stripe
-// (durée prévue : >= 90 jours pour matcher la fenêtre de dispute).
-// On reverra cette politique en V2 si la table grossit trop.
+// Idempotence des webhooks Stripe : un événement (evt_…) est enregistré dans
+// la même transaction que son traitement ; une nouvelle livraison du même
+// événement est ignorée (routes/webhooks.ts). `payload` est conservé pour
+// l'audit ; aucune purge automatique n'est en place.
 model StripeWebhookEvent {
   id          String   @id  // evt_xxx fourni par Stripe
   eventType   String

@@ -1,11 +1,7 @@
 import { AnalysisCardTicket } from "@/components/analyses/analysis-card-ticket";
 import type { PronoData } from "@/lib/experts";
 
-/**
- * Section "Analyses du jour" : titre + liste des tickets. `pronos` est
- * déjà filtré sur les analyses PENDING par le container. Rien rendu si
- * la liste est vide.
- */
+/** Analyses du jour ; `pronos` arrive déjà filtré sur les analyses PENDING. */
 export function AnalysesSection({
   pronos,
   hasAccess,
@@ -17,8 +13,6 @@ export function AnalysesSection({
 
   return (
     <section className="mt-12">
-      {/* Titre fort en display (Hubot Sans) — porte la page, le reste
-          de la hiérarchie suit la card-ticket. */}
       <h2 className="mb-8 font-display text-3xl font-normal text-foreground md:text-5xl">
         {pronos.length === 1 ? "Analyses du jour" : `${pronos.length} analyses du jour`}
       </h2>

@@ -25,30 +25,9 @@ const PORT = process.env.PORT || 4000;
 // les rate limiters partageraient un seul compteur pour tout le site.
 app.set("trust proxy", 1);
 
-// Security headers + CSP strict.
-//
-// On configure helmet manuellement plutôt qu'en defaults pour pouvoir
-// définir une Content-Security-Policy adaptée au projet. NB : ce
-// process Express ne sert quasi-exclusivement que du JSON (+ /health en
-// texte, export CSV) — Next ne tourne PAS ici (front séparé). Une CSP
-// n'est appliquée par le navigateur que sur des contextes "document",
-// donc elle n'a aucun effet runtime sur nos réponses API. On la garde
-// néanmoins en defense-in-depth / signal d'intention sécu, et on la
-// resserre au maximum puisqu'on ne sert pas de HTML inline :
-//  - script-src 'self' (pas de 'unsafe-inline' : aucun script inline
-//    servi par ce backend).
-//  - style-src 'self' (idem, pas de style inline servi ici).
-//  - img-src 'self' + data: + SportsDB (badges ligues) + hôtes
-//    images whitelistés (cf. next.config.ts remotePatterns).
-//  - connect-src 'self' + api.stripe.com (Stripe.js fetch) + r.stripe.com
-//    (Stripe Radar) + api.resend.com (envoi mails).
-//  - frame-src js.stripe.com + hooks.stripe.com : Stripe Checkout
-//    embed iframe.
-//  - frame-ancestors 'none' : empêche le clickjacking (iframe Plarya
-//    depuis un autre site).
-//  - object-src 'none' : pas de Flash/applets.
-//  - upgrade-insecure-requests : force https si headers passent en
-//    prod.
+// En-têtes de sécurité. L'API ne sert que du JSON et un export CSV : la CSP
+// n'agit que sur des documents, elle est gardée stricte en défense en
+// profondeur (frame-ancestors 'none' contre le clickjacking).
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -79,14 +58,12 @@ app.use(
         formAction: ["'self'"],
       },
     },
-    // crossOriginEmbedderPolicy par défaut "require-corp" casse le
-    // chargement des badges SportsDB qui n'exposent pas CORP. On
-    // désactive — la CSP img-src couvre déjà le risque.
+    // "require-corp" bloquerait les images tierces sans en-tête CORP.
     crossOriginEmbedderPolicy: false,
   }),
 );
 
-// CORS — restrict to allowed origins
+// CORS limité aux origines déclarées, avec cookies.
 const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000").split(",");
 app.use(
   cors({
@@ -95,24 +72,18 @@ app.use(
   }),
 );
 
-// Webhook route MUST be before express.json() (needs raw body for signature verification)
+// Monté avant express.json() : la vérification de signature Stripe exige le
+// corps brut. Il échappe aussi au contrôle CSRF (requêtes signées par Stripe).
 app.use("/webhooks", webhookRoutes);
 
 app.use(express.json());
 app.use(cookieParser());
 
-// CSRF — double-submit cookie pattern (cf. lib/csrf.ts). Issuer pose le
-// cookie csrf_token si absent ; validator bloque les requêtes mutantes
-// sans header X-CSRF-Token correspondant. Monté APRÈS cookieParser
-// (requis pour lire le cookie) et APRÈS le mount /webhooks (Stripe ne
-// connaît évidemment pas notre token — il signe ses requêtes via le
-// secret webhook).
+// CSRF (voir lib/csrf.ts), après cookieParser.
 app.use(csrfTokenIssuer);
 app.use(csrfValidator);
 
-// --- Rate limiters ---
-
-// Global: 100 req/min per IP
+// Limiteurs de débit par IP. Ceux propres à /auth sont dans routes/auth.ts.
 const globalLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 100,
@@ -120,42 +91,29 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
-// Auth : le rate limit pour /auth/request-magic-link est défini dans
-// routes/auth.ts et appliqué uniquement à cette route (anti-spam emails).
-// /verify, /me, /logout ne doivent PAS être rate-limités au niveau auth.
-
-// Checkout: 5 req/min
 const checkoutLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 5,
   message: { error: "Trop de requêtes, réessayez dans une minute" },
 });
 
-// Admin: 100 req/min — un admin légitime enchaîne facilement plusieurs
-// actions (PATCH override résultat → refetch stats → refetch listes) ;
-// 20/min était sous-dimensionné (cap hit en ~6 actions normales).
+// Une action admin déclenche plusieurs rechargements (stats, listes).
 const adminLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 100,
   message: { error: "Trop de requêtes, réessayez dans une minute" },
 });
 
-// Health check
 app.get("/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: "ok", db: "connected" });
   } catch (err) {
-    // Log explicite : un health check qui flap est un signal opérationnel
-    // (DB down, pool épuisé, etc.) qu'on ne veut pas perdre. Le `err`
-    // typé `unknown` est passé tel quel à pino qui sérialise via son
-    // err-serializer intégré (stack + name + message).
     logger.error({ err }, "Health check failed: DB unreachable");
     res.status(500).json({ status: "error", db: "disconnected" });
   }
 });
 
-// Routes
 app.use("/auth", authRoutes);
 app.use("/experts", expertRoutes);
 app.use("/pronos", pronoRoutes);
@@ -164,19 +122,13 @@ app.use("/admin", adminLimiter, adminRoutes);
 app.use("/checkout", checkoutLimiter, checkoutRoutes);
 app.use("/bookmakers", bookmakerRoutes);
 
-// Backward-compat : anciennes URLs /tipsters/* → /experts/* en 301.
-// Couvre les magic-links générés avant le renommage produit. À retirer
-// après 6 mois si aucun hit sur ces routes.
+// Alias permanent /tipsters/* → /experts/*.
 app.use("/tipsters", (req, res) => {
   res.redirect(301, "/experts" + req.url);
 });
 
-// Catch-all des erreurs non-handled remontées via next(err) ou par les
-// routes qui auraient oublié leur try/catch. Sans ce handler, Express
-// renvoie son HTML par défaut → vilain côté API JSON.
-//
-// Signature à 4 args obligatoire : c'est ce qui signale à Express que
-// c'est un error-handling middleware (et non un handler normal).
+// Filet final : erreur JSON plutôt que la page HTML d'Express. Les 4
+// paramètres sont requis pour qu'Express le traite en gestionnaire d'erreurs.
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   logger.error({ err, method: req.method, path: req.path }, "Unhandled error reached global handler");
   if (res.headersSent) return;

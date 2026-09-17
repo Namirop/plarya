@@ -20,13 +20,9 @@ export default function DashboardClient({
   initialPronos,
   initialBookmakers,
 }: DashboardClientProps) {
-  // States initialisés depuis les data server — pas de fetch initial
-  // côté client, pas de spinner au mount.
+  // Données chargées côté serveur : pas de chargement initial côté client.
   const [profile, setProfile] = useState<DashboardExpertStats>(initialProfile);
   const [pronos, setPronos] = useState<Prono[]>(initialPronos);
-  // Bookmakers : peu utiles à muter (set au mount, jamais re-fetché)
-  // mais on garde un state pour pouvoir le rafraîchir si on en ajoute
-  // un patch admin → dashboard plus tard.
   const [bookmakers] = useState<Bookmaker[]>(initialBookmakers);
 
   async function handleResult(pronoId: string, result: "WON" | "LOST") {
@@ -35,11 +31,11 @@ export default function DashboardClient({
         result,
       });
       setPronos((prev) => prev.map((p) => (p.id === pronoId ? updated : p)));
-      // Refresh winRate qui dépend de l'override.
+      // Le taux de réussite dépend du résultat saisi.
       const profileData = await apiGet<DashboardExpertStats>("/experts/me");
       setProfile(profileData);
     } catch {
-      /* silent — échec non-bloquant, on garde l'état courant */
+      /* échec silencieux : l'état affiché est conservé */
     }
   }
 
@@ -48,7 +44,6 @@ export default function DashboardClient({
     setProfile(updatedProfile);
   }
 
-  // Stats computées côté client à partir de `pronos`.
   const now = new Date();
   const pronosThisMonth = pronos.filter((p) => {
     const d = new Date(p.createdAt);
@@ -58,15 +53,11 @@ export default function DashboardClient({
   return (
     <div className="mx-auto max-w-[872px] px-4 py-6 md:px-6 md:py-8">
       <div className="mb-8 md:mb-16">
-        {/* Pseudo en H1 — gabarit poussé (32 → 56px) pour qu'il
-            domine clairement la zone stats qui suit. C'est l'identité
-            de l'expert sur sa page d'admin, ça doit être affirmé. */}
         <h1 className="font-body text-[32px] font-bold leading-tight text-foreground md:text-[56px]">
           {profile.pseudo}
         </h1>
 
-        {/* Stats : variante compact du StatBlock (gabarit + padding
-            réduits). Win rate en doré. Dividers verticaux desktop. */}
+        {/* Taux de réussite mis en avant en doré. */}
         <div className="mt-4 grid grid-cols-1 md:mt-6 md:grid-cols-3">
           <StatBlock
             compact

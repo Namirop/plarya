@@ -6,13 +6,8 @@ import { motion, type Variants } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
-// Wrapper d'animation d'entrée au scroll : fade + slide-up.
-// Joue une seule fois (viewport.once) quand l'élément entre dans le
-// viewport avec une marge de -80px (= déclenche un peu avant que le
-// haut de l'élément touche le bas de la fenêtre — anim visible).
-//
-// Utilisé sur les sections de la home pour donner un flow plus vivant
-// au scroll. `delay` permet de stagger plusieurs Reveal voisins.
+// Apparition au scroll (fondu + glissement), jouée une seule fois quand
+// l'élément est entré de 80 px dans la fenêtre.
 const variants: Variants = {
   hidden: { opacity: 0, y: 24 },
   visible: { opacity: 1, y: 0 },
@@ -21,11 +16,10 @@ const variants: Variants = {
 export interface RevealProps {
   children: ReactNode;
   className?: string;
-  /** Delai (s) avant le start de l'anim. Utile pour stagger. */
+  /** Délai en secondes, pour décaler des éléments voisins. */
   delay?: number;
-  /** Durée de l'anim (s). Défaut 0.6. */
+  /** Durée en secondes. */
   duration?: number;
-  /** Forcer un autre élément que `div` (ex: "section"). */
   as?: "div" | "section";
 }
 

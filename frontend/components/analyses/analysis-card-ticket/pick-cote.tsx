@@ -2,11 +2,7 @@ import { formatOdds } from "@/lib/analysis-format";
 
 import { LockedBlock, MiniLabel } from "./primitives";
 
-/**
- * LE PICK / LA COTE — cote en doré (unique accent de valeur).
- *  - `stacked` (talon desktop) : empilé, agrandi, occupe la colonne.
- *  - défaut (mobile) : deux colonnes (labels alignés, valeurs en gros).
- */
+/** Pick et cote : empilés et agrandis avec `stacked` (talon desktop), côte à côte sinon. */
 export function PickCote({
   hasAccess,
   pick,

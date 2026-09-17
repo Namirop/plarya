@@ -4,78 +4,36 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  // Base : transitions douces 200ms, focus-visible accent, disabled opacity-50.
-  // rounded-2xl = 16px (DS).
-  // [&_svg]:translate-y-px : correction optique — les icônes Phosphor en
-  // items-center sont géométriquement centrées mais paraissent "hautes"
-  // par rapport à l'optical center du texte (l'œil place le centre du
-  // texte légèrement sous le centre géométrique du line-box, à cause de
-  // la masse visuelle concentrée dans la zone x-height + cap-height).
-  // Nudge de 1px vers le bas → icône réalignée avec l'optical center.
+  // [&_svg]:translate-y-px : correction optique, une icône centrée
+  // géométriquement paraît trop haute à côté du texte.
   "group/button inline-flex shrink-0 items-center justify-center gap-4 rounded-2xl whitespace-nowrap font-body transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none select-none cursor-pointer focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:translate-y-px [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        // ──────────── Plarya DS variants ────────────
-
-        // CTA principal : "Découvrir les experts", "Devenir créateur",
-        // "Publier l'analyse", etc. Gradient doré + bordure Golden
-        // Stroke + glow doré.
-        // - rounded-lg : léger arrondi (8px, override le rounded-2xl du
-        //   base) — adoucit l'ancien carré (rounded-[3px]) tout en gardant
-        //   l'autorité du CTA gold (pas de pill soft).
-        // - shadow-shine-soft : glow doré atténué (7px blur 100 % accent)
-        //   vs shadow-shine (15px 70 % orange saturé) — moins criard mais
-        //   le doré reste perceptible.
+        // CTA principal : dégradé doré.
         primary:
           "rounded-lg bg-gradient-gold text-black border border-accent-strong shadow-shine-soft hover:brightness-105",
 
-        // CTA secondaire : transparent avec bordure NEUTRE
-        // (anciennement bordure dorée — retirée car utilisée partout,
-        // ça multipliait le doré sur tout le site sans raison).
-        // Hover : léger fond blanc + bordure plus claire.
-        //
-        // Si on a besoin du look "bordure dorée" pour un CTA marketing
-        // secondaire spécifique (rare), override sur la consumer via
-        // className="border-accent-strong hover:border-accent" — c'est
-        // l'exception, plus la règle.
+        // CTA secondaire à bordure neutre, pour limiter le doré aux CTA principaux.
         secondary:
           "bg-transparent text-foreground border border-surface-elevated hover:bg-white/[0.04] hover:border-foreground/30",
 
-        // Lien doré : "Voir tous les experts" (top-right des sections).
-        // Pas de bordure, pas de fond.
         ghost:
           "bg-transparent text-accent border border-transparent hover:underline underline-offset-4",
 
-        // CTA "Accéder (3,50€)" — bouton blanc sur card analyse.
-        // Disabled = bouton gris "Terminé" (bg #181818, texte #898181).
-        // disabled:opacity-100 annule l'opacity-50 de la base.
+        // Achat sur une carte d'analyse ; désactivé, il devient un état
+        // « Terminé » gris (opacity-100 annule l'opacité de base).
         white:
           "bg-white text-black hover:bg-white/90 disabled:opacity-100 disabled:bg-surface-elevated disabled:text-muted-foreground disabled:hover:bg-surface-elevated",
 
-        // Action destructive : suppression compte, annulation
-        // abonnement, etc. Solid red plein, texte blanc, hover plus
-        // foncé. PAS de bordure dorée (collision esthétique avec le
-        // rouge). Focus ring rouge (cohérent avec l'intention).
         destructive:
           "bg-destructive text-white border border-destructive hover:bg-destructive/90 focus-visible:ring-destructive/40",
       },
       size: {
-        // DS CTA standard : padding 16/32, text-body-16 → h ≈ 48px
-        // (= "Voir les analyses" Domain card, 225×48)
         default: "px-8 py-4 text-body-16",
-
-        // Version Medium 20 : padding 16/32, text-h5 → h ≈ 55px
-        // (= "Découvrir les experts" Hero 304×55, "Devenir créateur" 258×55)
-        // font-weight Medium porté par le token text-h5 (cf. globals.css).
         lg: "px-8 py-4 text-h5",
-
-        // Modale : compact mais lisible. h ≈ 44px. Utiliser pour les
-        // CTAs intra-modale (delete-account, confirm-modal, etc.) où
-        // `lg` est trop massif et `sm` un peu trop chétif vu l'enjeu.
+        // Boutons de modale.
         md: "px-5 py-3 text-body-16",
-
-        // Bouton inline plus petit
         sm: "px-4 py-2 text-body-16",
       },
     },
@@ -94,10 +52,7 @@ function Button({
   nativeButton,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
-  // Quand on passe un `render` (typiquement `<Link>` pour rendre le
-  // bouton en tant que <a>), Base UI exige `nativeButton: false` pour
-  // ne pas réclamer un <button> natif. On détecte la présence de
-  // `render` et on défaut `nativeButton` à false automatiquement.
+  // Avec `render` (ex. <Link>), Base UI exige `nativeButton: false`.
   const resolvedNativeButton = nativeButton ?? render === undefined;
   return (
     <ButtonPrimitive

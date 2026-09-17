@@ -16,9 +16,9 @@ interface ExpertSeed {
   pseudo: string;
   bio: string;
   sports: string[];
-  /** Historical pronos: [matchName, league, pick, odds, teasing, result, daysAgo] */
+  /** Pronos passés : [matchName, league, pick, odds, teasing, result, daysAgo] */
   history: [string, string, string, number, string, string, number][];
-  /** Today's pronos: [matchName, league, pick, odds, teasing] */
+  /** Pronos du jour : [matchName, league, pick, odds, teasing] */
   today: [string, string, string, number, string][];
 }
 
@@ -158,7 +158,7 @@ function photoUrl(expertIdx: number): string {
 
 async function createTestMagicLink(email: string): Promise<string> {
   const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h for test links
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 h pour les liens de test
 
   await prisma.magicLink.create({
     data: { token, email, expiresAt },
@@ -167,21 +167,15 @@ async function createTestMagicLink(email: string): Promise<string> {
   return token;
 }
 
-// Liste des emails contrôlés par le seed. Toutes les opérations de
-// nettoyage en mode "soft" (default) sont scopées à ces emails →
-// les comptes réels (ex : créés via un paiement Stripe) ne
-// sont JAMAIS effacés par `npm run db:seed`.
+// Emails gérés par le seed : sans --reset, le nettoyage se limite à ces
+// comptes et ne touche jamais aux comptes réels.
 const SEEDED_EMAILS = ["admin@test.com", "user@test.com", ...EXPERTS.map((e) => e.email)];
 
-// Flag --reset : wipe COMPLET de la DB avant re-seed. Pour repartir
-// 100 % from scratch (utile quand les schemas ont divergé, ou pour
-// reset un environnement de test pollué).
-// Usage : `npm run db:seed:reset`
+// --reset (`npm run db:seed:reset`) : vide toute la base avant le seed.
 const RESET_DB = process.argv.includes("--reset");
 
 async function wipeAll(): Promise<void> {
-  // Ordre FK-aware : enfants → parents (les FK Cascade gèreraient
-  // mais on est explicite pour la lisibilité).
+  // Enfants avant parents, explicitement (sans compter sur les cascades).
   await prisma.stripeWebhookEvent.deleteMany({});
   await prisma.pronoBookmakerOdds.deleteMany({});
   await prisma.affiliateLink.deleteMany({});
@@ -206,17 +200,15 @@ async function main() {
   const now = Date.now();
   const testLinks: { email: string; role: string; url: string }[] = [];
 
-  // Construit un Date = aujourd'hui à HH:MM en heure LOCALE du process
-  // (TZ=Europe/Paris sur le cron de prod). Sert à caler les coups
-  // d'envoi des analyses du jour sur des horaires fixes de la journée,
-  // INDÉPENDAMMENT de l'heure à laquelle le seed tourne.
+  // Aujourd'hui à HH:MM, heure locale du process : les coups d'envoi du jour
+  // ne dépendent pas de l'heure d'exécution du seed.
   const todayAt = (hour: number, minute: number): Date => {
     const d = new Date(now);
     d.setHours(hour, minute, 0, 0);
     return d;
   };
 
-  // Admin user
+  // Administrateur de test
   await prisma.user.upsert({
     where: { email: "admin@test.com" },
     update: { role: "ADMIN" },
@@ -232,7 +224,7 @@ async function main() {
     url: `${BACKEND_URL}/auth/verify?token=${adminToken}`,
   });
 
-  // Regular test user
+  // Utilisateur de test
   await prisma.user.upsert({
     where: { email: "user@test.com" },
     update: {},
@@ -246,7 +238,6 @@ async function main() {
   });
 
   for (const [expertIdx, e] of EXPERTS.entries()) {
-    // Upsert user
     const user = await prisma.user.upsert({
       where: { email: e.email },
       update: {},
@@ -256,7 +247,6 @@ async function main() {
       },
     });
 
-    // Create test magic link
     const token = await createTestMagicLink(e.email);
     testLinks.push({
       email: e.email,
@@ -264,7 +254,6 @@ async function main() {
       url: `${BACKEND_URL}/auth/verify?token=${token}`,
     });
 
-    // Upsert expert profile
     const expert = await prisma.expert.upsert({
       where: { userId: user.id },
       // Pseudo, bio et sports suivent le seed : renommer un expert de démo ici
@@ -288,10 +277,10 @@ async function main() {
       },
     });
 
-    // Delete existing pronos and recreate with fresh dates
+    // Pronos recréés à chaque exécution pour des dates toujours récentes.
     await prisma.prono.deleteMany({ where: { expertId: expert.id } });
 
-    // Historical pronos — startTime = createdAt (already past)
+    // Pronos passés : startTime = createdAt.
     const historyData = e.history.map(
       ([matchName, league, pick, odds, teasing, result, daysAgo]) => {
         const createdAt = new Date(now - daysAgo * DAY);
@@ -316,31 +305,22 @@ async function main() {
       },
     );
 
-    // Today's pronos — startTime ÉTALÉS sur la journée (heures Paris),
-    // indépendamment de l'heure du seed. Objectif démo : le site reste
-    // "vivant" quelle que soit l'heure de consultation. Invariant : la
-    // dernière analyse de chaque expert part en soirée (dernier slot)
-    // → un expert n'affiche jamais "toutes les analyses terminées"
-    // pendant la journée. Les analyses plus tôt basculent en "match
-    // commencé" au fil des heures (rendu opacity-50) pour le réalisme.
-    const DAY_SLOTS = [13, 15, 18, 20, 21]; // coups d'envoi (Europe/Paris)
+    // Pronos du jour étalés sur la journée. Invariant : le dernier de chaque
+    // expert est toujours sur le créneau du soir, pour qu'aucun expert
+    // n'apparaisse « terminé » en journée.
+    const DAY_SLOTS = [13, 15, 18, 20, 21]; // coups d'envoi (heure locale)
     const n = e.today.length;
-    // Décalage de quelques minutes par expert → évite des horaires
-    // strictement identiques sur toutes les cards.
+    // Minutes décalées par expert pour éviter des horaires identiques.
     const slotMinute = (expertIdx % 5) * 9;
     const startTimes = e.today.map((_, i) => {
-      // i de 0..n-1 réparti sur DAY_SLOTS, en terminant TOUJOURS au
-      // dernier créneau (soirée) pour préserver l'invariant.
       const slotIdx =
         n <= 1 ? DAY_SLOTS.length - 1 : Math.round((i * (DAY_SLOTS.length - 1)) / (n - 1));
       return todayAt(DAY_SLOTS[slotIdx], slotMinute);
     });
 
-    // Garde-fou : si on lance le seed entre minuit et X heures du
-    // matin, le calcul `now - N heures` ferait glisser le createdAt
-    // côté HIER → les pronos du jour seraient invisibles partout
-    // (les queries filtrent `createdAt >= today midnight`). On clamp
-    // donc à minuit-aujourd'hui (+ N secondes pour préserver l'ordre).
+    // Lancé peu après minuit, `now - N heures` tomberait la veille et les
+    // pronos du jour seraient filtrés (`createdAt >= minuit`) : on borne à
+    // minuit, plus i secondes pour garder l'ordre.
     const todayMidnight = new Date(now);
     todayMidnight.setHours(0, 0, 0, 0);
 
@@ -375,18 +355,14 @@ async function main() {
     console.log(`  ${e.pseudo}: ${historyData.length} history + ${todayData.length} today`);
   }
 
-  // ── Seed Test Subscriptions ──
+  // ── Souscriptions de test ──
   console.log("\nSeeding test subscriptions...");
 
-  // Delete existing test subscriptions. SCOPED aux users seedés
-  // uniquement : un user réel (ex : qui aurait acheté un day pass)
-  // garde ses subscriptions. En mode --reset
-  // c'est un no-op (table déjà vidée par wipeAll()).
+  // Limité aux comptes du seed : les souscriptions réelles sont conservées.
   await prisma.subscription.deleteMany({
     where: { user: { email: { in: SEEDED_EMAILS } } },
   });
 
-  // Get all experts and the test user
   const allExperts = await prisma.expert.findMany({
     select: { id: true, pseudo: true, dayPassPrice: true, monthlyPrice: true },
   });
@@ -394,7 +370,7 @@ async function main() {
 
   if (testUser && allExperts.length >= 3) {
     const subData = [
-      // Recent day passes (varying dates over the last 30 days)
+      // Achats répartis sur les 30 derniers jours
       { userId: testUser.id, expertId: allExperts[0].id, type: "DAY_PASS" as const, daysAgo: 1 },
       { userId: testUser.id, expertId: allExperts[1].id, type: "DAY_PASS" as const, daysAgo: 3 },
       { userId: testUser.id, expertId: allExperts[0].id, type: "DAY_PASS" as const, daysAgo: 5 },
@@ -409,14 +385,13 @@ async function main() {
       { userId: testUser.id, expertId: allExperts[0].id, type: "DAY_PASS" as const, daysAgo: 28 },
     ];
 
-    // Also add purchases from expert accounts (simulating other users buying)
+    // Achats croisés entre comptes experts, pour simuler d'autres acheteurs.
     for (const e of allExperts.slice(0, 3)) {
       const expertUser = await prisma.user.findFirst({
         where: { expert: { id: e.id } },
         select: { id: true },
       });
       if (!expertUser) continue;
-      // Each expert buys from other experts
       for (const other of allExperts.filter((o) => o.id !== e.id).slice(0, 2)) {
         subData.push({
           userId: expertUser.id,
@@ -450,7 +425,7 @@ async function main() {
     console.log(`  Created ${subData.length} test subscriptions`);
   }
 
-  // ── Seed Bookmakers ──
+  // ── Bookmakers ──
   console.log("\nSeeding bookmakers...");
 
   const bookmakerData = [
@@ -497,7 +472,7 @@ async function main() {
     console.log(`  Bookmaker: ${bm.name}`);
   }
 
-  // ── Seed PronoBookmakerOdds for all existing pronos ──
+  // ── Cotes par bookmaker pour tous les pronos ──
   console.log("\nSeeding bookmaker odds...");
 
   const allPronos = await prisma.prono.findMany({
@@ -505,7 +480,7 @@ async function main() {
   });
   await prisma.pronoBookmakerOdds.deleteMany({});
 
-  const oddsVariations = [0.02, -0.03, -0.05]; // Winamax slightly higher, others lower
+  const oddsVariations = [0.02, -0.03, -0.05]; // écart à la cote de l'expert, par bookmaker
   for (const prono of allPronos) {
     for (let i = 0; i < bookmakers.length; i++) {
       await prisma.pronoBookmakerOdds.create({
@@ -520,7 +495,7 @@ async function main() {
 
   console.log(`  Added bookmaker odds for ${allPronos.length} pronos`);
 
-  // ── Print test login links ──
+  // ── Liens de connexion de test ──
   console.log("\n════════════════════════════════════════════════");
   console.log("  TEST LOGIN LINKS (valid 24h, single use)");
   console.log("════════════════════════════════════════════════\n");

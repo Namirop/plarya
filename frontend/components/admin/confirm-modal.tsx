@@ -11,16 +11,13 @@ import { cn } from "@/lib/utils";
 export interface ConfirmModalProps {
   open: boolean;
   onClose: () => void;
-  /** Action exécutée si l'utilisateur confirme. Peut être async — le
-   *  bouton "Confirmer" affiche un spinner pendant l'await et la
-   *  modale ne se ferme qu'après. */
+  /** Peut être async : la modale ne se ferme qu'une fois la promesse résolue. */
   onConfirm: () => Promise<void> | void;
   title: string;
   description: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
-  /** Si "danger", le bouton Confirmer bascule en variant destructive
-   *  (rouge). Sinon variant primary doré. */
+  /** "danger" : bouton de confirmation destructif. */
   variant?: "default" | "danger";
 }
 
@@ -37,8 +34,7 @@ export function ConfirmModal({
   const [submitting, setSubmitting] = useState(false);
 
   function handleClose() {
-    // Si une action est en cours, on bloque la fermeture (sinon on
-    // perdrait le feedback "Confirmer" en cours d'exécution).
+    // Pas de fermeture pendant l'exécution de l'action.
     if (submitting) return;
     onClose();
   }
@@ -50,26 +46,18 @@ export function ConfirmModal({
       await onConfirm();
       onClose();
     } catch {
-      // L'appelant gère ses erreurs dans onConfirm. Si une exception
-      // remonte, on laisse la modale ouverte pour que l'admin
-      // recommence. Le feedback erreur lui-même viendra du toast
-      // global.
+      // L'appelant affiche l'erreur ; la modale reste ouverte pour réessayer.
     } finally {
       setSubmitting(false);
     }
   }
 
-  // a11y : scroll-lock body, focus initial (premier focusable), focus
-  // trap, Escape, restauration du focus à la fermeture — cf.
-  // useModalA11y. handleClose bloque déjà la fermeture pendant submitting.
   const { containerRef } = useModalA11y({ open, onClose: handleClose });
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Overlay — bg-black/80 + blur, click = handleClose (sauf si
-          submitting). Pattern cohérent avec les autres modales. */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
         onClick={handleClose}

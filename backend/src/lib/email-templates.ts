@@ -1,30 +1,18 @@
-// Templates HTML des emails transactionnels Plarya.
+// Templates HTML des emails transactionnels : module pur qui construit
+// `{ subject, html }`, sans dépendance au transport (voir emails.ts).
 //
-// Module PUR : aucune dépendance au transport Resend. Il ne fait que
-// construire `{ subject, html }` — ce qui isole la logique d'envoi
-// (retry, logging) dans emails.ts et garde les templates testables sans
-// clé Resend.
-//
-// Contraintes "email-safe" (Gmail / Apple Mail / Outlook) :
-//  - layout en <table> + styles INLINE (pas de fl/grid, pas de <style>
-//    externe fiable),
-//  - PAS de `background-clip:text` (le gradient doré des titres du site
-//    n'est pas rendu en mail) → bouton en or aplat solide, et logo via
-//    le PNG `email-logo.png` servi par le front (recadré serré depuis
-//    full-logo-remove.png : symbole + wordmark PLARYA dorés, transparent),
-//  - les polices de marque (Mona Sans / Hubot Sans) ne se chargent pas
-//    en mail → stack système. L'identité DA passe par le noir + l'or +
-//    la mise en page, pas par la police.
+// Contraintes des clients mail : mise en page en <table> et styles inline
+// (ni flex/grid ni <style> fiables), pas de `background-clip:text` (logo en
+// PNG `email-logo.png` servi par le front), pas de webfonts (police système).
 
 import { escapeHtml } from "./format";
 
-// `.replace` : retire un éventuel slash final pour ne pas générer d'URL
-// en `//...` (logo email, liens) si la var d'env en contient un.
+// Slash final retiré pour éviter les URL en `//`.
 const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/+$/, "");
 
 const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
-// Palette DA Plarya, valeurs email-safe (hex/rgba inline).
+// Palette du site en valeurs inline (hex/rgba).
 const C = {
   bg: "#000000",
   surface: "#0E0E0E",
@@ -48,8 +36,7 @@ function note(text: string): string {
   return `<p style="margin:18px 0 0;font-family:${FONT};font-size:13px;line-height:1.6;color:${C.muted};">${text}</p>`;
 }
 
-// Bouton CTA "bulletproof" : table + <a> en inline-block, or en aplat,
-// texte noir gras. Centré via align="center" + margin auto.
+// Bouton en table + <a> inline-block : rendu fiable, y compris sous Outlook.
 function button(href: string, label: string): string {
   return `
         <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:26px auto 8px;">
@@ -65,8 +52,7 @@ function secondaryLink(href: string, label: string): string {
   return `<a href="${href}" target="_blank" style="color:${C.gold};text-decoration:underline;font-weight:600;">${label}</a>`;
 }
 
-// Coquille commune : wordmark doré + slogan, carte sombre à filet doré
-// avec liseré doré en tête, footer discret.
+// Gabarit commun : logo, carte de contenu, pied de page.
 function layout(opts: { preheader: string; title: string; body: string }): string {
   const { preheader, title, body } = opts;
   return `<!DOCTYPE html>
@@ -131,19 +117,16 @@ export function buildMagicLinkEmail(params: { link: string }): { subject: string
 }
 
 /**
- * Email "Accès débloqué" avec magic link.
- *
- * Le `magicLinkUrl` reçu DOIT inclure `&redirect=/experts/{expertId}`
- * URL-encoded (construit côté webhook) pour que l'acheteur atterrisse
- * directement sur la page de l'expert. C'est la seule voie d'auth
- * post-paiement pour un acheteur non-loggé.
+ * Email « Accès débloqué ». `magicLinkUrl` doit porter
+ * `redirect=/experts/{expertId}` (encodé) pour ramener l'acheteur sur la page
+ * de l'expert : c'est sa seule voie de connexion après paiement.
  */
 export function buildAccessUnlockedEmail(params: {
   expertPseudo: string;
   expertId: string;
   magicLinkUrl: string;
 }): { subject: string; html: string } {
-  // pseudo = user-controlled (set par l'expert) → escape obligatoire.
+  // Le pseudo est saisi par l'expert : échappement obligatoire.
   const safePseudo = escapeHtml(params.expertPseudo);
   return {
     subject: `Votre accès aux analyses de ${params.expertPseudo} est débloqué`,
@@ -170,7 +153,7 @@ export function buildWinningPronoEmail(params: {
   expertId: string;
   matchName: string;
 }): { subject: string; html: string } {
-  // pseudo + matchName = user-controlled (DB, set par l'expert) → escape.
+  // Pseudo et match sont saisis par l'expert : échappement obligatoire.
   const safePseudo = escapeHtml(params.expertPseudo);
   const safeMatchName = escapeHtml(params.matchName);
   return {

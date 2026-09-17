@@ -19,16 +19,12 @@ import { useExpertApplication } from "../_hooks/use-expert-application";
 
 import { SectionHeader } from "./section-header";
 
-// Aliases locaux pour minimiser les call-sites à modifier (et préserver
-// l'option de surcharger localement si /devenir-expert a besoin d'une
-// variante ultérieure).
 const fieldCls = formDaInputCls;
 const textareaCls = cn(formDaTextareaCls, "min-h-[100px]");
 const labelCls = formDaLabelCls;
 
-// ════════════════ SECTION 3 — FORMULAIRE ════════════════
-// Layout 2 colonnes desktop : form left (col-span-7) + panel preview
-// LIVE right (col-span-5). Mobile : stack 1 col, panel sous le form.
+// Section 3 : formulaire de candidature et aperçu du profil mis à jour en
+// direct (côte à côte en desktop, l'un sous l'autre en mobile).
 export function ApplicationFormSection({ email }: { email: string }) {
   const { pseudo, setPseudo, bio, setBio, sports, toggleSport, error, submitting, handleSubmit } =
     useExpertApplication();
@@ -62,7 +58,6 @@ export function ApplicationFormSection({ email }: { email: string }) {
               </div>
             )}
 
-            {/* Pseudo */}
             <div className="space-y-2">
               <Label htmlFor="pseudo" className={labelCls}>
                 Pseudo <span className="text-foreground/60">*</span>
@@ -76,7 +71,7 @@ export function ApplicationFormSection({ email }: { email: string }) {
               />
             </div>
 
-            {/* Email (auto-rempli, disabled) */}
+            {/* Email du compte, non modifiable ici. */}
             <div className="space-y-2">
               <Label htmlFor="email" className={labelCls}>
                 Email
@@ -90,7 +85,6 @@ export function ApplicationFormSection({ email }: { email: string }) {
               />
             </div>
 
-            {/* Bio */}
             <div className="space-y-2">
               <Label htmlFor="bio" className={labelCls}>
                 Bio
@@ -105,10 +99,7 @@ export function ApplicationFormSection({ email }: { email: string }) {
               />
             </div>
 
-            {/* Sports couverts — tags inline éditoriaux (pas de pill, pas
-                d'emoji). Indicateur "+" muted → "✓" doré sur sélection,
-                avec sous-ligne accent/40 pour le côté "tag éditorial".
-                Cohérent avec le rendu des sports dans la preview navigateur. */}
+            {/* Sports : boutons bascule, même rendu que dans /compte. */}
             <div className="space-y-2">
               <Label className={labelCls}>
                 Sports couverts <span className="text-foreground/60">*</span>
@@ -155,12 +146,8 @@ export function ApplicationFormSection({ email }: { email: string }) {
               </div>
             </div>
 
-            {/* Card prix : 36px de gap au-dessus (mt-9) pour la
-                distinguer des champs (règle "champs → card prix : 32-40px"). */}
             <PricingCard className="!mt-9" />
 
-            {/* CTA principal — DA primary standard (gradient gold +
-                shadow-shine-soft + rounded-[3px] depuis le Button base). */}
             <Button
               type="submit"
               variant="primary"
@@ -171,17 +158,12 @@ export function ApplicationFormSection({ email }: { email: string }) {
               {submitting ? "Redirection vers le paiement…" : "Devenir Expert (39€/trimestre)"}
             </Button>
 
-            {/* Sous-texte de réassurance : 10px sous le CTA (élément lié). */}
             <p className="!mt-2.5 text-center font-body text-[13px] text-muted-foreground">
               Paiement sécurisé via Stripe · Aucun engagement long terme
             </p>
           </form>
         </Reveal>
 
-        {/* ─── Panneau droit : preview LIVE du futur profil expert.
-            Reçoit le state du form (pseudo / bio / sports) et se
-            re-render à chaque modification — l'user voit son profil se
-            construire en temps réel pendant qu'il remplit le form. ─── */}
         <Reveal delay={0.2} className="md:col-span-5">
           <ExpertProfilePreview pseudo={pseudo} bio={bio} sports={sports} />
         </Reveal>

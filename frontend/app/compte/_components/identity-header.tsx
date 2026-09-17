@@ -9,17 +9,12 @@ interface IdentityHeaderProps {
   sportsCount: number;
 }
 
-/**
- * Header de la vue USER : avatar initiale + eyebrow "MON COMPTE" +
- * email + ligne descriptive en prose (remplace les KPI vanity cards).
- */
+/** En-tête de la vue utilisateur : initiale, email et résumé de l'activité. */
 export function IdentityHeader({ email, activeCount, dayPassCount, sportsCount }: IdentityHeaderProps) {
-  // Initiale de fallback. Email vide possible si useUser pas encore
-  // résolu — on rend "—" plutôt qu'une chaîne vide.
+  // Email vide tant que useUser n'a pas répondu.
   const initial = email.charAt(0).toUpperCase() || "—";
 
-  // Ligne descriptive adaptative : chaque item n'apparaît que s'il a une
-  // valeur > 0. Fallback si tout est à 0 (user sans aucun achat).
+  // Seules les valeurs non nulles apparaissent dans le résumé.
   const summaryParts: string[] = [];
   if (activeCount > 0) {
     summaryParts.push(
@@ -36,15 +31,13 @@ export function IdentityHeader({ email, activeCount, dayPassCount, sportsCount }
 
   return (
     <header className={cn(cardCls, "relative overflow-hidden p-6 md:p-8")}>
-      {/* Glow subtil top-left : casse la platitude du fond noir. */}
+      {/* Halo décoratif. */}
       <div
         aria-hidden
         className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-white/[0.03] blur-3xl"
       />
 
       <div className="relative flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:text-left md:gap-6">
-        {/* Avatar initiale neutre — l'eyebrow + l'email suffisent à
-            identifier la page. */}
         <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-surface-elevated font-body text-[24px] font-bold text-foreground sm:size-16 sm:text-[28px] md:size-20 md:text-[32px]">
           {initial}
         </div>

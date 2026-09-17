@@ -2,15 +2,8 @@ import { Check } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
 
-// Card "39€ / trimestre" affichée dans la section §3 (Form). Donne du
-// poids au prix : header avec le prix en gros doré (seul accent doré
-// conservé sur la card), label discret à droite (renouvellement auto),
-// divider neutre, puis 4 bullets check blancs.
-//
-// Le glow doré (border-accent/30 + shadow-shine-soft) a
-// été retiré (effet "néon AI"). La card décolle maintenant par sa
-// nuance de fond surface-3 (un cran au-dessus du form en surface-elevated),
-// avec une border subtle white/10.
+// Prix de l'abonnement expert et avantages inclus, dans le formulaire de
+// candidature ; le prix est le seul élément doré de la carte.
 
 export interface PricingCardProps {
   className?: string;
@@ -20,22 +13,18 @@ const INCLUDED = [
   "Accès au dashboard expert",
   "Publication illimitée d'analyses",
   "Mise en avant dans les listings",
-  "Versements mensuels (80% pour toi)",
+  "Versements mensuels (70% pour toi)",
 ] as const;
 
 export function PricingCard({ className }: PricingCardProps) {
   return (
     <div
       className={cn(
-        // Card nestée dans le formulaire (lui-même en surface-elevated, DA
-        // form publication). bg surface-3 : un cran au-dessus → décollage
-        // dans la palette noire neutre. Border white/10 (neutre).
+        // Un niveau d'élévation au-dessus du formulaire qui la contient.
         "rounded-lg border border-white/10 bg-surface-3 p-6 md:p-7",
         className,
       )}
     >
-      {/* Header : prix + label renouvellement à droite. items-baseline
-          pour aligner le bas du "39€" avec le "Renouvellement…". */}
       <div className="flex items-baseline justify-between gap-3">
         <p className="font-body text-[32px] font-bold leading-none tabular-nums text-accent md:text-[36px]">
           39€{" "}
@@ -48,17 +37,11 @@ export function PricingCard({ className }: PricingCardProps) {
         </p>
       </div>
 
-      {/* Divider neutre — sépare le prix des bénéfices. Espacement
-          resserré (my-3 = 24px total) per règle "20-24px prix → bullets". */}
       <div aria-hidden className="my-3 h-px w-full bg-surface-3" />
 
-      {/* Bullets : 4 inclusions avec check doré. gap-2.5 entre items
-          pour une liste dense mais respirante. */}
       <ul className="space-y-2.5">
         {INCLUDED.map((item) => (
           <li key={item} className="flex items-start gap-2.5">
-            {/* Check neutre — 4 checks dorés alignés diluaient l'accent
-                qui doit rester réservé au prix "39€" en haut. */}
             <Check
               size={16}
               weight="bold"

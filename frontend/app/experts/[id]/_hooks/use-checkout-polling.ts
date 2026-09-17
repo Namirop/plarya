@@ -7,18 +7,10 @@ import { apiPost } from "@/lib/api";
 type PollStatus = "polling" | "success" | "failed" | null;
 
 /**
- * Polling de /subscriptions/check après un retour Stripe pour un user
- * LOGGÉ. Démarre quand `enabled` passe à true. Boucle 15 × 2s = 30s
- * (couvre le pire cas dev : `stripe listen` qui peut mettre 10-20s à
- * relayer le webhook ; en prod le webhook est quasi-instantané).
- *
- * - `onSuccess` est appelé dès que `/subscriptions/check` renvoie
- *   `hasAccess` (le container y pose `subscriptionAccess`).
- * - Après 30s sans succès → status "failed".
- * - `retry()` relance la boucle (bouton "Réessayer" de la modale).
- *
- * AbortController : annule la requête en vol + stoppe la boucle au
- * unmount ou à un retry.
+ * Après un retour de Stripe (utilisateur connecté), interroge
+ * /subscriptions/check toutes les 2 s pendant 30 s, le temps que le webhook
+ * crée l'abonnement (en local, `stripe listen` peut mettre 10 à 20 s).
+ * `retry()` relance la boucle ; démontage et relance annulent la requête en cours.
  */
 export function useCheckoutPolling({
   enabled,
@@ -31,9 +23,7 @@ export function useCheckoutPolling({
 }): { status: PollStatus; retry: () => void } {
   const [status, setStatus] = useState<PollStatus>(null);
   const [nonce, setNonce] = useState(0);
-  // Latest-ref : garde la dernière `onSuccess` sans relancer la boucle de
-  // polling quand son identité change. Écriture en effect (pas en render) —
-  // la ref n'est lue que dans le callback async, post-commit.
+  // Dernière version de `onSuccess`, sans relancer la boucle quand elle change.
   const onSuccessRef = useRef(onSuccess);
   useEffect(() => {
     onSuccessRef.current = onSuccess;
@@ -45,9 +35,7 @@ export function useCheckoutPolling({
     if (!enabled || !expertId) return;
     let cancelled = false;
     const controller = new AbortController();
-    // Reset à "polling" au (re)démarrage de la boucle (mount, ou retry via
-    // nonce après un "failed") — synchronisation avec le lancement d'une
-    // opération async externe, pas une cascade de renders.
+    // Remis à "polling" à chaque (re)démarrage de la boucle.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus("polling");
 
@@ -68,7 +56,7 @@ export function useCheckoutPolling({
           }
         } catch {
           if (cancelled) return;
-          /* ignore — on retentera */
+          /* nouvel essai au tour suivant */
         }
         await new Promise((r) => setTimeout(r, 2000));
         if (cancelled) return;

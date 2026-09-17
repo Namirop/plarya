@@ -8,7 +8,7 @@ import { prisma } from "./prisma";
 const cronLogger = logger.child({ context: "cron" });
 
 export function initCronJobs(): void {
-  // Tous les jours à 10h00 (Europe/Paris)
+  // Tâches planifiées en processus (Europe/Paris). 10h : emails J+1.
   cron.schedule(
     "0 10 * * *",
     async () => {
@@ -22,7 +22,7 @@ export function initCronJobs(): void {
     { timezone: "Europe/Paris" },
   );
 
-  // Chaque jour à minuit (Europe/Paris) : reset viewsToday + isFeatured
+  // Minuit : remise à zéro de viewsToday et isFeatured.
   cron.schedule(
     "0 0 * * *",
     async () => {
@@ -41,9 +41,7 @@ export function initCronJobs(): void {
     { timezone: "Europe/Paris" },
   );
 
-  // Tous les jours à 3h : cleanup des magic-links et sessions
-  // expirés. Sans ce job, ces 2 tables grossissent linéairement
-  // avec le trafic.
+  // 3h : purge des magic-links, sessions et cooldowns de suppression expirés.
   cron.schedule(
     "0 3 * * *",
     async () => {
@@ -53,9 +51,7 @@ export function initCronJobs(): void {
         const [deletedMagicLinks, deletedSessions, deletedCooldowns] = await Promise.all([
           prisma.magicLink.deleteMany({ where: { expiresAt: { lt: now } } }),
           prisma.session.deleteMany({ where: { expiresAt: { lt: now } } }),
-          // Cooldowns post-suppression expirés : on supprime la
-          // trace de l'email. Conforme à l'esprit RGPD (on ne garde
-          // pas indéfiniment un email lié à un user supprimé).
+          // RGPD : l'email d'un compte supprimé n'est pas conservé au-delà du cooldown.
           prisma.deletedEmailCooldown.deleteMany({
             where: { expiresAt: { lt: now } },
           }),
@@ -76,12 +72,7 @@ export function initCronJobs(): void {
     { timezone: "Europe/Paris" },
   );
 
-  // Tous les jours à 3h15 : finalise les suppressions de compte des
-  // experts en pendingDeletionAt dont la dernière sub active a
-  // expiré. Cf. DELETE /auth/me — quand un expert avec subs en
-  // cours demande la suppression, on flag pendingDeletionAt au lieu
-  // de bloquer indéfiniment. Ce cron exécute le soft delete réel
-  // quand plus aucune sub ne le retient.
+  // 3h15 : finalise les suppressions programmées (voir autoDeletePendingExperts).
   cron.schedule(
     "15 3 * * *",
     async () => {
@@ -102,17 +93,9 @@ export function initCronJobs(): void {
 }
 
 /**
- * Pour chaque Expert en pendingDeletionAt (non encore deletedAt),
- * vérifie s'il reste des Subscriptions ACTIVE non expirées :
- *   - oui → on n'y touche pas (sub en cours, le buyer paie pour
- *           du contenu, l'expert reste accessible aux abonnés).
- *   - non → on exécute le soft delete réel (identique à la branche
- *           immédiate de DELETE /auth/me) : Expert.deletedAt,
- *           User.deletedAt + anonymisation email, wipe sessions.
- *
- * Exportée pour permettre un trigger manuel admin si besoin de
- * débloquer un cas particulier (ex : restart du serveur juste après
- * l'expiration d'une sub, on n'attend pas le prochain run cron).
+ * Un expert dont la suppression est programmée (`pendingDeletionAt`) reste
+ * visible de ses abonnés tant qu'une souscription ACTIVE court. Quand il n'en
+ * reste plus, on applique le même soft delete que `DELETE /auth/me`.
  */
 export async function autoDeletePendingExperts(): Promise<void> {
   const now = new Date();
@@ -131,9 +114,7 @@ export async function autoDeletePendingExperts(): Promise<void> {
     return;
   }
 
-  // N+1 éliminé : un seul groupBy compte les subs actives de TOUS les
-  // experts pending d'un coup, au lieu d'un count par expert dans la
-  // boucle.
+  // Un seul groupBy pour tous les experts concernés (pas de requête par expert).
   const pendingExpertIds = pendingExperts.map((e) => e.id);
 
   const subsByExpert = await prisma.subscription.groupBy({
@@ -153,9 +134,7 @@ export async function autoDeletePendingExperts(): Promise<void> {
   let deletedCount = 0;
   let skippedCount = 0;
 
-  // softDeleteUserNow reste séquentiel dans la boucle : chaque
-  // suppression est une transaction Prisma indépendante — paralléliser
-  // saturerait le pool de connexions et compliquerait le log par expert.
+  // Séquentiel : une transaction par suppression, sans saturer le pool.
   for (const expert of pendingExperts) {
     const activeCount = activeCountMap.get(expert.id) ?? 0;
     if (activeCount > 0) {
@@ -164,9 +143,6 @@ export async function autoDeletePendingExperts(): Promise<void> {
     }
 
     try {
-      // Réutilise softDeleteUserNow (account-service) : MÊME logique
-      // que la branche immédiate de DELETE /auth/me. Sans cette
-      // dédup, les deux chemins divergent au fil des refactos.
       await softDeleteUserNow({
         userId: expert.userId,
         email: expert.user.email,
@@ -208,7 +184,7 @@ export async function sendDailyWinningEmails(): Promise<void> {
   yesterdayEnd.setDate(yesterdayEnd.getDate() - 1);
   yesterdayEnd.setHours(23, 59, 59, 999);
 
-  // Pronos marqués WON hier (updatedAt = moment où le résultat a été validé)
+  // Pronos WON mis à jour hier (updatedAt sert de date de validation du résultat).
   const winningPronos = await prisma.prono.findMany({
     where: {
       result: "WON",
@@ -229,7 +205,7 @@ export async function sendDailyWinningEmails(): Promise<void> {
 
   cronLogger.info({ count: winningPronos.length }, "Found winning pronos yesterday");
 
-  // Grouper par expert (1 email/user/expert)
+  // Un email par couple (abonné, expert), même si l'expert a plusieurs pronos gagnants.
   const expertMap = new Map<string, { pseudo: string; matchNames: string[] }>();
   for (const prono of winningPronos) {
     const existing = expertMap.get(prono.expertId);
@@ -243,10 +219,8 @@ export async function sendDailyWinningEmails(): Promise<void> {
     }
   }
 
-  // N+1 éliminé : un seul findMany récupère les subs de TOUS les
-  // experts concernés, puis on groupe par expertId côté JS. Le distinct
-  // porte sur le couple (userId, expertId) — sans expertId, un user
-  // abonné à 2 experts gagnants n'apparaîtrait qu'une fois au total.
+  // Abonnements actifs ou échus depuis hier, en une requête. Le distinct porte
+  // sur (userId, expertId) pour qu'un abonné à deux experts reçoive deux emails.
   const expertIds = Array.from(expertMap.keys());
 
   const subscriptions = await prisma.subscription.findMany({

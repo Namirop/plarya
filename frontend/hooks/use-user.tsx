@@ -10,7 +10,7 @@ interface UserContextValue {
   loading: boolean;
   requestMagicLink: (email: string) => Promise<void>;
   logout: () => void;
-  /** Re-fetch user from session (e.g. after magic link redirect) */
+  /** Recharge l'utilisateur depuis la session (ex. après un magic-link). */
   refreshUser: () => Promise<void>;
 }
 
@@ -20,11 +20,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // setLoading(false) déplacé dans le finally interne plutôt que dans
-  // l'effect (cf. ESLint react-hooks/set-state-in-effect — appeler
-  // setState dans .finally d'une promise lancée par l'effet déclenche
-  // un re-render en cascade). Idempotent : refreshUser remet aussi
-  // loading à false, ce qui est inoffensif (déjà false en steady-state).
+  // setLoading dans fetchUser plutôt que dans l'effet (règle
+  // react-hooks/set-state-in-effect) ; inoffensif lors d'un refreshUser.
   const fetchUser = useCallback(async () => {
     try {
       const data = await apiGet<AuthUser>("/auth/me");
@@ -36,7 +33,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // On mount: check if session cookie exists by calling /auth/me
+  // Au montage : session valide ou non (cookie httpOnly, invisible en JS).
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
@@ -49,7 +46,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       await apiPost<{ message: string }>("/auth/logout", {});
     } catch {
-      // Ignore errors on logout
+      // Déconnexion locale même si l'appel échoue.
     }
     setUser(null);
   }, []);

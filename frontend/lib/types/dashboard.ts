@@ -1,8 +1,4 @@
-// Types partagés entre l'app dashboard et ses composants. Extraits de
-// `app/dashboard/page.tsx` qui les déclarait inline. Ils restent
-// fidèles aux réponses
-// API actuelles (cf. backend `routes/experts.ts`, `routes/pronos.ts`,
-// `routes/bookmakers.ts`).
+// Réponses API utilisées par le dashboard expert (/experts/me, /pronos/mine, /bookmakers).
 
 export interface DashboardExpertStats {
   id: string;

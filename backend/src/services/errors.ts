@@ -1,34 +1,10 @@
 /**
- * Erreurs métier typées exposées par les services.
+ * Erreurs métier des services, traduites en HTTP par handleError.
  *
- * Convention :
- *  - Chaque erreur expose un `code` stable (snake_case) que les
- *    handlers HTTP renvoient au client. Le `code` est DISCRIMINANT par
- *    sous-classe domaine — le frontend doit pouvoir distinguer deux
- *    erreurs partageant le même httpStatus sans matcher sur le message
- *    FR.
- *  - Le `name` est aligné sur le nom de la classe pour faciliter le
- *    log (`logger.error({ err: { name: err.name, ... } })`).
- *  - Le message est en français côté API (cohérent avec le reste du
- *    backend), mais le `code` reste en anglais pour les outils
- *    d'observabilité.
- *
- * Hiérarchie HTTP :
- *    BadRequestError    400 — validation / état métier invalide
- *    UnauthorizedError  401 — pas authentifié
- *    ForbiddenError     403 — authentifié mais pas autorisé
- *    NotFoundError      404 — ressource inexistante (ou cachée)
- *    ConflictError      409 — collision avec une ressource existante
- *
- * Les classes pivot HTTP ci-dessus restent instanciables directement
- * (code générique "bad_request", etc.) pour les erreurs ad hoc qui ne
- * justifient pas une sous-classe domaine dédiée.
- *
- * Pourquoi des classes plutôt qu'un union type `"not_found" | "forbidden"` ?
- * Les classes permettent `err instanceof NotFoundError` dans le handler,
- * qui est plus lisible qu'un switch sur une property et survit aux
- * minifications. Une union type aurait imposé un check string par
- * comparaison de littéral, plus fragile.
+ * Chaque sous-classe porte un `code` stable (snake_case) qui permet au
+ * frontend de distinguer deux erreurs de même statut sans lire le message
+ * (en français). Les classes de base (400, 401, 403, 404, 409) restent
+ * utilisables directement pour les cas ponctuels.
  */
 
 export abstract class ServiceError extends Error {
@@ -36,18 +12,15 @@ export abstract class ServiceError extends Error {
   abstract readonly httpStatus: number;
 
   constructor(message: string, options?: { cause?: unknown }) {
-    // Error.cause (ES2022 / Node 16.9+) propage l'erreur d'origine
-    // (Prisma, Stripe, fetch…) sans perdre la stack, via Error.cause.
+    // `cause` conserve l'erreur d'origine (Prisma, Stripe…) et sa stack.
     super(message, options);
     this.name = this.constructor.name;
   }
 }
 
-// ─── Classes pivot HTTP ────────────────────────────────────────────
-// Le `: string` explicite (vs juste `= "..."`) widen le type au type
-// `string` plutôt qu'au littéral — autorise les sous-classes domaine
-// à override avec un code discriminant. Sans cette annotation, TS
-// narrow à la chaîne littérale et rejette tout override.
+// ─── Classes de base par statut HTTP ───────────────────────────────
+// `code: string` explicite : sans l'annotation, TypeScript infère le type
+// littéral et refuse que les sous-classes le redéfinissent.
 
 export class BadRequestError extends ServiceError {
   readonly code: string = "bad_request";
@@ -74,11 +47,9 @@ export class ConflictError extends ServiceError {
   readonly httpStatus = 409;
 }
 
-// ─── Erreurs domaine ───────────────────────────────────────────────
-// Chaque sous-classe override `code` pour être discriminante. Le
-// httpStatus est hérité du pivot HTTP parent.
+// ─── Erreurs métier (statut hérité de la classe parente) ───────────
 
-// Resource not found (404)
+// 404
 export class ExpertProfileNotFoundError extends NotFoundError {
   readonly code = "expert_profile_not_found";
   constructor() {
@@ -110,7 +81,7 @@ export class NoDeletionToCancelError extends NotFoundError {
   }
 }
 
-// Forbidden (403)
+// 403
 export class NotPronoOwnerError extends ForbiddenError {
   readonly code = "not_prono_owner";
   constructor() {
@@ -123,6 +94,12 @@ export class SubscriptionRequiredError extends ForbiddenError {
     super("Abonnement requis");
   }
 }
+export class ExpertSubscriptionInactiveError extends ForbiddenError {
+  readonly code = "expert_subscription_inactive";
+  constructor() {
+    super("Ton abonnement expert n'est plus actif : renouvelle-le pour publier.");
+  }
+}
 export class PronoSubscriptionRequiredError extends ForbiddenError {
   readonly code = "prono_subscription_required";
   constructor() {
@@ -130,7 +107,7 @@ export class PronoSubscriptionRequiredError extends ForbiddenError {
   }
 }
 
-// Conflict (409) — vraie collision avec ressource existante
+// 409
 export class EmailAlreadyUsedError extends ConflictError {
   readonly code = "email_already_used";
   constructor() {
@@ -138,7 +115,7 @@ export class EmailAlreadyUsedError extends ConflictError {
   }
 }
 
-// Bad request (400) — état métier qui empêche l'action
+// 400 : état métier qui empêche l'action
 export class PseudoTakenError extends BadRequestError {
   readonly code = "pseudo_taken";
   constructor() {
@@ -149,6 +126,18 @@ export class ExpertPendingDeletionError extends BadRequestError {
   readonly code = "expert_pending_deletion";
   constructor() {
     super("Cet expert ne prend plus de nouveaux abonnés. Choisis un autre expert.");
+  }
+}
+export class ExpertUnavailableError extends BadRequestError {
+  readonly code = "expert_unavailable";
+  constructor() {
+    super("Cet expert ne prend plus de nouveaux abonnés. Choisis un autre expert.");
+  }
+}
+export class SubscriptionNotCancellableError extends BadRequestError {
+  readonly code = "subscription_not_cancellable";
+  constructor() {
+    super("Cet abonnement ne peut pas être résilié en ligne. Écris-nous à contact@plarya.com.");
   }
 }
 export class NoUpcomingPronosError extends BadRequestError {
@@ -182,14 +171,9 @@ export class NoScheduledDeletionError extends BadRequestError {
   }
 }
 
-// EmailRequiredError est un cas particulier : la route
-// /checkout/create-session accepte deux voies d'identification —
-// session authentifiée OU email dans le body (guest checkout). Quand
-// aucune des deux n'est fournie, c'est un input manquant (400), PAS
-// un échec d'authentification (401). Renvoyer 401 ici déclenche des
-// intercepteurs HTTP côté client qui redirigent vers /login — ce qui
-// n'est pas l'UX voulue. Le code "email_required" suffit au frontend
-// pour ouvrir la modale email plutôt que rediriger.
+// Paiement anonyme sans email : donnée manquante (400), pas un défaut
+// d'authentification (401) qui ferait réagir le client comme à une session
+// expirée. Le frontend ouvre la saisie d'email sur `email_required`.
 export class EmailRequiredError extends BadRequestError {
   readonly code = "email_required";
   constructor() {

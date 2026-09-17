@@ -1,15 +1,9 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Logo bookmaker partagé par les deux directions de card (ticket 24px,
- * fiche 20px). Les vrais logos ont des ratios très variables (Winamax
- * quasi-carré, Betclic/PMU en bandeau large) — on fixe la HAUTEUR et on
- * laisse la largeur s'adapter (`w-auto`), borné par `max-w` pour ne pas
- * déborder la colonne. `<img>` plain (pas next/image) : gère SVG locaux
- * + raster distants sans la friction de l'optimiseur sur les SVG, et le
- * gain d'optim est négligeable sur des logos de cette taille.
- *
- * Fallback (logoUrl absent) : tuile carrée avec l'initiale.
+ * Logo à hauteur fixe et largeur libre (ratios très variables), borné par
+ * `max-w`. `<img>` plutôt que next/image : SVG locaux et petites images, sans
+ * gain notable de l'optimiseur. Sans logo : tuile avec l'initiale.
  */
 export function BookmakerLogo({
   name,

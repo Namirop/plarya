@@ -5,29 +5,30 @@ import { cn } from "@/lib/utils";
 
 import { cardCls, formatDate } from "../_helpers";
 
+import { CancelSubscriptionButton } from "./cancel-subscription-button";
 import { ExpertAvatar } from "./expert-avatar";
 
-// Durée d'un cycle de facturation mensuel (en ms). Source de vérité
-// pour la barre de progression : elle reflète le CYCLE COURANT (= 30
-// derniers jours avant `expiresAt`), pas la durée totale depuis le 1er
-// abonnement. Sans ça, un user abonné depuis 6 mois verrait sa barre à
-// 95 % alors qu'il vient de renouveler.
+// La barre de progression porte sur le cycle en cours (30 jours avant
+// `expiresAt`), pas sur l'ancienneté de l'abonnement.
 const CYCLE_MS = 30 * 24 * 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-export function ActiveSubscriptionCard({ sub }: { sub: SubscriptionWithExpert }) {
+export function ActiveSubscriptionCard({
+  sub,
+  onCancel,
+}: {
+  sub: SubscriptionWithExpert;
+  onCancel: (id: string) => Promise<void>;
+}) {
   const end = new Date(sub.expiresAt).getTime();
-  // Date.now() au render = impur (lint warning) mais accepté ici : la
-  // barre de progression est cosmétique, une variation au re-render (ms
-  // d'écart) est invisible. Pas de useEffect/state nécessaire.
+  // Date.now() au rendu : acceptable pour une barre purement indicative.
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   const remainingMs = Math.max(0, end - now);
   const remainingPct = Math.min(100, (remainingMs / CYCLE_MS) * 100);
   const daysLeft = Math.max(0, Math.ceil(remainingMs / ONE_DAY_MS));
 
-  // Couleur de la barre selon l'urgence : > 7j doré (nominal), 4-7j
-  // amber (heads-up), ≤ 3j destructive (alerte).
+  // Doré au-delà de 7 jours, ambre de 4 à 7, rouge à 3 jours ou moins.
   let barColorCls = "bg-gradient-gold";
   if (daysLeft <= 3) barColorCls = "bg-destructive";
   else if (daysLeft <= 7) barColorCls = "bg-amber-500";
@@ -44,8 +45,6 @@ export function ActiveSubscriptionCard({ sub }: { sub: SubscriptionWithExpert })
         <ExpertAvatar expert={sub.expert} />
 
         <div className="min-w-0 flex-1">
-          {/* Pseudo seul — pas d'éclair décoratif (bruit visuel sans
-              signification métier, retiré pour la finition anti-IA). */}
           <Link
             href={`/experts/${sub.expertId}`}
             className="block truncate font-body text-h5 text-foreground transition-colors hover:underline underline-offset-4"
@@ -53,8 +52,14 @@ export function ActiveSubscriptionCard({ sub }: { sub: SubscriptionWithExpert })
             {sub.expert.pseudo}
           </Link>
           <p className="mt-1 font-body text-body-16 text-muted-foreground">
-            Abonnement mensuel · {daysLeft} jour{daysLeft > 1 ? "s" : ""} restant
-            {daysLeft > 1 ? "s" : ""}
+            {sub.cancelAtPeriodEnd ? (
+              <>Abonnement résilié · accès jusqu&apos;au {formatDate(sub.expiresAt)}</>
+            ) : (
+              <>
+                Abonnement mensuel · {daysLeft} jour{daysLeft > 1 ? "s" : ""} restant
+                {daysLeft > 1 ? "s" : ""}
+              </>
+            )}
           </p>
         </div>
 
@@ -63,14 +68,22 @@ export function ActiveSubscriptionCard({ sub }: { sub: SubscriptionWithExpert })
         </p>
       </div>
 
-      {/* Barre "temps restant" — rétrécit au fil du cycle (100 % juste
-          après renouvellement, 0 % à expiration). */}
+      {/* Temps restant : 100 % au renouvellement, 0 % à l'échéance. */}
       <div className="mt-5 h-1 w-full overflow-hidden rounded-full bg-surface-elevated/40">
         <div
           className={cn("h-full rounded-full transition-all duration-500", barColorCls)}
           style={{ width: `${remainingPct}%` }}
         />
       </div>
+
+      {sub.canCancel && (
+        <div className="mt-5 flex justify-end">
+          <CancelSubscriptionButton
+            endDateLabel={formatDate(sub.expiresAt)}
+            onConfirm={() => onCancel(sub.id)}
+          />
+        </div>
+      )}
     </article>
   );
 }

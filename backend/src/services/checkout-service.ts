@@ -1,3 +1,4 @@
+import { isExpertSubscriptionActive } from "../lib/expert-access";
 import { logger } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { stripe, STRIPE_APP_TAG } from "../lib/stripe";
@@ -9,39 +10,28 @@ import {
   EmailRequiredError,
   ExpertNotFoundError,
   ExpertPendingDeletionError,
+  ExpertUnavailableError,
   NoUpcomingPronosError,
   PseudoTakenError,
   UserNotFoundError,
 } from "./errors";
 
 /**
- * Service Checkout — orchestration Stripe Checkout (création de
- * sessions) avec les règles métier Plarya.
- *
- * Le service throw des erreurs métier typées (cf. ./errors.ts) ; les
- * routes les mappent vers HTTP via handleError(). Les appels Stripe
- * eux-mêmes peuvent lever des erreurs réseau / 5xx — laissées remonter
- * en non-ServiceError, le handler les log et renvoie 500.
+ * Création des sessions Stripe Checkout selon les règles métier. Les erreurs
+ * métier sont typées (./errors.ts) ; une erreur Stripe ou réseau remonte telle
+ * quelle et produit un 500.
  */
 
-// Slash final retiré → pas de `//experts/...` dans les URLs Stripe.
+// Slash final retiré pour éviter `//experts/...` dans les URL de retour.
 const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/+$/, "");
 
-// Prix de l'abonnement Expert : 39€/trimestre. Centralisé ici plutôt
-// qu'inline dans la session Stripe pour faciliter un changement futur
-// (la valeur n'est PAS persistée côté Expert ou User en DB — c'est
-// purement une config produit côté plateforme).
+// Prix de l'abonnement expert trimestriel : paramètre de la plateforme, non stocké en base.
 const EXPERT_QUARTERLY_PRICE_CENTS = 3900;
 
 /**
- * Récupère le Stripe Customer ID d'un User, ou en crée un si absent.
- * Persiste l'ID en DB (User.stripeCustomerId) pour réutilisation lors
- * des achats suivants — évite les doublons de Customer côté Stripe.
- *
- * Race condition possible (deux checkouts simultanés du même user) :
- * créerait 2 Customers Stripe mais 1 seul gagne le UPDATE en DB.
- * Acceptable en MVP (orphelin Stripe au pire). À renforcer en V2
- * via row lock ou pattern advisory lock Postgres si nécessaire.
+ * Customer Stripe de l'utilisateur, créé et enregistré au premier achat.
+ * Limite connue : deux paiements simultanés peuvent créer deux Customers
+ * (un seul est enregistré, l'autre reste orphelin côté Stripe).
  */
 export async function getOrCreateStripeCustomer(userId: string, email: string): Promise<string> {
   const user = await prisma.user.findUnique({
@@ -63,24 +53,15 @@ export async function getOrCreateStripeCustomer(userId: string, email: string): 
 }
 
 /**
- * Crée une session Stripe Checkout pour l'achat d'un day pass ou
- * d'une subscription mensuelle vers un expert.
+ * Session Checkout pour un pass jour ou un abonnement mensuel. Acheteur
+ * connecté : Customer Stripe réutilisé. Acheteur anonyme : email requis ;
+ * sans compte existant, l'utilisateur est créé par le webhook
+ * checkout.session.completed (billing-service).
  *
- * Flow :
- *  - Caller authentifié : on récupère son email depuis la DB,
- *    on attache un Stripe Customer (créé/réutilisé).
- *  - Caller anonyme : email obligatoire en body. On cherche un User
- *    existant ; si trouvé on attache son Customer, sinon Stripe créera
- *    le Customer et le User sera créé au webhook
- *    checkout.session.completed (cf. webhooks.ts).
- *
- * Erreurs métier :
- *  - EmailRequiredError (401) si caller anonyme sans email
- *  - AlreadySubscribedError (400) si sub ACTIVE en cours
- *  - ExpertNotFoundError (404) si expert n'existe pas ou soft-deleted
- *  - ExpertPendingDeletionError (400) si expert en suppression programmée
- *  - NoUpcomingPronosError (400) si type=DAY_PASS et plus aucune
- *    analyse à venir aujourd'hui
+ * Erreurs : EmailRequiredError (400), AlreadySubscribedError (400),
+ * ExpertNotFoundError (404), ExpertPendingDeletionError et
+ * ExpertUnavailableError (400), NoUpcomingPronosError (400, pass jour sans
+ * analyse à venir).
  */
 export async function createCheckoutSession(
   input: CreateCheckoutInput,
@@ -101,9 +82,7 @@ export async function createCheckoutSession(
     customerEmail = dbUser?.email;
   } else if (bodyEmail) {
     customerEmail = bodyEmail.toLowerCase();
-    // findFirst (et non findUnique) : on filtre sur email + deletedAt
-    // null, donc plus une clé unique stricte. Sans le filtre deletedAt,
-    // un compte soft-deleted serait ré-attaché à un nouveau paiement.
+    // findFirst : le filtre deletedAt évite de rattacher le paiement à un compte supprimé.
     const existingUser = await prisma.user.findFirst({
       where: { email: customerEmail, deletedAt: null },
       select: { id: true },
@@ -139,9 +118,11 @@ export async function createCheckoutSession(
   if (expert.pendingDeletionAt) {
     throw new ExpertPendingDeletionError();
   }
+  if (!isExpertSubscriptionActive(expert)) {
+    throw new ExpertUnavailableError();
+  }
 
-  // 4. Day pass : vérifier qu'au moins une analyse n'a pas commencé.
-  // Sans ce guard, un acheteur late-night paie pour 0 analyse à voir.
+  // 4. Pass jour : au moins une analyse du jour pas encore commencée.
   if (type === "DAY_PASS") {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -163,7 +144,7 @@ export async function createCheckoutSession(
   const isSubscription = type === "MONTHLY";
   const amount = isSubscription ? expert.monthlyPrice : expert.dayPassPrice;
 
-  // `app` : tag multi-projets (compte Stripe partagé) — cf. STRIPE_APP_TAG.
+  // `app` : voir STRIPE_APP_TAG.
   const metadata: Record<string, string> = { app: STRIPE_APP_TAG, expertId, type };
   if (userId) metadata.userId = userId;
   if (customerEmail) metadata.email = customerEmail;
@@ -175,9 +156,8 @@ export async function createCheckoutSession(
 
   const session = await stripe.checkout.sessions.create({
     mode: isSubscription ? "subscription" : "payment",
-    // payment_method_types retiré : Stripe Checkout détecte automatiquement
-    // les méthodes activées sur le compte (card, Apple Pay sur iPhone
-    // Safari, Google Pay sur Android Chrome).
+    // Sans payment_method_types : Checkout propose les moyens de paiement
+    // activés sur le compte (carte, Apple Pay, Google Pay).
     ...(stripeCustomerId ? { customer: stripeCustomerId } : { customer_email: customerEmail }),
     line_items: [
       {
@@ -203,18 +183,12 @@ export async function createCheckoutSession(
 }
 
 /**
- * Crée une session Stripe Checkout pour devenir Expert.
+ * Session Checkout de l'abonnement expert trimestriel. Le profil expert n'est
+ * créé (ou réactivé, si son abonnement était arrêté) qu'au webhook
+ * checkout.session.completed, donc après paiement.
  *
- * Mode subscription récurrent trimestriel (39€/3 mois). L'expert n'est
- * créé en DB qu'au webhook checkout.session.completed (le caller doit
- * payer avant d'obtenir le rôle EXPERT) — cf. webhooks.ts.
- *
- * Erreurs métier :
- *  - AlreadyExpertError (400) si l'user est déjà expert (role EXPERT
- *    ou ligne expert existante — defensive)
- *  - UserNotFoundError (404) si pas d'email (ne devrait jamais arriver
- *    derrière authMiddleware, mais defensive)
- *  - PseudoTakenError (400) si pseudo déjà utilisé
+ * Erreurs : AlreadyExpertError (400, expert à l'abonnement actif),
+ * UserNotFoundError (404), PseudoTakenError (400).
  */
 export async function createBecomeExpertSession(
   userId: string,
@@ -227,7 +201,8 @@ export async function createBecomeExpertSession(
     include: { expert: true },
   });
 
-  if (user?.role === "EXPERT" || user?.expert) {
+  const renewing = !!user?.expert && !user.expert.deletedAt && !isExpertSubscriptionActive(user.expert);
+  if ((user?.role === "EXPERT" || user?.expert) && !renewing) {
     throw new AlreadyExpertError();
   }
 
@@ -236,7 +211,7 @@ export async function createBecomeExpertSession(
   }
 
   const existingPseudo = await prisma.expert.findUnique({ where: { pseudo } });
-  if (existingPseudo) {
+  if (existingPseudo && existingPseudo.userId !== userId) {
     throw new PseudoTakenError();
   }
 

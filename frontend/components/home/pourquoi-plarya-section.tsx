@@ -11,7 +11,6 @@ type Pillar = {
   description: string;
 };
 
-// 3 piliers de réassurance. Wording verbatim de la maquette.
 const PILLARS: Pillar[] = [
   {
     icon: Clock,
@@ -24,8 +23,6 @@ const PILLARS: Pillar[] = [
     description: "Tout est prêt. Choisissez un expert, accédez à ses sélections.",
   },
   {
-    // Même icône carte de crédit que le Trust row du Hero — cohérence
-    // graphique entre les deux blocs de réassurance de la page.
     icon: CreditCard,
     title: "Sans engagements",
     description: "Paiement à l'acte. 3,50€ le jour, sans abonnement obligatoire.",
@@ -34,11 +31,8 @@ const PILLARS: Pillar[] = [
 
 export function PourquoiPlaryaSection() {
   return (
-    // pt-16 = 64 px (gap depuis Experts).
     <section className="pt-16">
       <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
-        {/* Header HORS de la card encadrée (conforme à la maquette). Le
-            "?" est en doré accent — pattern unique à cette section. */}
         <MarketingSectionTitle
           title={
             <>
@@ -47,32 +41,22 @@ export function PourquoiPlaryaSection() {
           }
         />
 
-        {/* Card encadrée : fond noir 40 %, radius 16.
-            Gap header → card = 24 px (mt-6) pour cohérence avec les autres
-            sections. Mobile : padding 32px + stack vertical. Desktop :
-            padding 88×40 + row horizontale. */}
         <div className="mt-6 rounded-2xl bg-black/40 p-8 md:px-[60px] md:py-5">
-          {/* Mobile : flex-col + dividers horizontaux. Desktop : flex-row
-              + dividers verticaux. Le DividerVertical accepte une prop
-              orientation pour gérer les deux cas. */}
+          {/* Séparateurs horizontaux en mobile, verticaux en desktop. */}
           <div className="flex flex-col items-stretch justify-center gap-8 md:flex-row md:items-center md:gap-12">
             {PILLARS.map((pillar, i) => (
               <Fragment key={pillar.title}>
                 {i > 0 && (
                   <>
-                    {/* Divider horizontal mobile (192 px centré) */}
                     <DividerVertical
                       height={192}
                       orientation="horizontal"
                       className="self-center md:hidden"
                     />
-                    {/* Divider vertical desktop */}
                     <DividerVertical height={192} className="hidden md:block" />
                   </>
                 )}
                 <div className="flex flex-col items-start">
-                  {/* size 24 mobile / 30 desktop : aligne avec le bump
-                      typo mobile (titre passé en text-h5 vs h4 desktop). */}
                   <pillar.icon className="size-6 md:size-[30px] text-muted-foreground" />
                   <h3 className="mt-4 md:mt-6 font-body text-h5 md:text-h4 text-foreground">
                     {pillar.title}

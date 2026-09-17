@@ -5,9 +5,7 @@ export const magicLinkRequestSchema = z.object({
 });
 
 export const resendAccessUnlockedSchema = z.object({
-  // Stripe checkout session id (cs_xxx) — retrouvé dans l'URL du
-  // retour Stripe ?stripe_session_id=cs_xxx puis transmis ici par
-  // le bouton "Renvoyer" de la modale email-gate.
+  // ID de session Checkout (cs_…), lu dans l'URL de retour Stripe.
   stripeSessionId: z.string().min(1, "stripeSessionId requis"),
 });
 

@@ -12,28 +12,22 @@ export interface ToastProps {
   message: string;
   variant: ToastVariant;
   onClose: () => void;
-  /** Auto-dismiss après N ms. Défaut 5000. 0 ou null = pas d'auto-dismiss. */
+  /** Fermeture automatique après N ms ; 0 la désactive. */
   duration?: number;
 }
 
-// Bordure gauche colorée selon le ton. Le reste de la card reste
-// neutre (background DS) — la sémantique est portée uniquement par
-// l'accent à gauche.
+// Le ton n'est porté que par la bordure gauche.
 const VARIANT_BORDERS: Record<ToastVariant, string> = {
   error: "border-l-destructive",
   success: "border-l-green-500",
   info: "border-l-accent",
 };
 
-// Toast unitaire — slide-in from right via setState au mount (pas
-// de dépendance à une lib d'animation externe). Auto-dismiss via
-// setTimeout. Bouton X manuel toujours dispo.
 export function Toast({ message, variant, onClose, duration = 5000 }: ToastProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // Trigger animation au prochain frame (sinon CSS ne voit pas
-    // la transition entre les 2 états).
+    // Différé pour que la transition CSS d'entrée se déclenche.
     const t = window.setTimeout(() => setVisible(true), 10);
     return () => window.clearTimeout(t);
   }, []);

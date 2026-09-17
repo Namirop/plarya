@@ -10,23 +10,10 @@ import { getLeague } from "@/lib/sports";
 import type { Prono } from "@/lib/types/dashboard";
 import { cn } from "@/lib/utils";
 
-// ───────────────────────────────────────────────────────────────────
-// Boutons résultat — pattern "appuyé" (raised button) cohérent avec
-// le screenshot de référence (All Envs / 14D). Recette :
-//  - Background gradient subtle (lighter top → darker bottom)
-//  - Inset highlight 1px en haut (effet "lumière du dessus")
-//  - Outer shadow 1px en bas (effet "épaisseur physique")
-//  - À l'active : inversion des shadows + translate-y 1px (effet press)
-// Boutons rendus FULL-BLEED dans la card : rounded-none, touchent les
-// bords du bas et des côtés (la card a overflow-hidden + rounded-2xl,
-// donc les coins inférieurs sont clippés au rayon de la card).
-// ───────────────────────────────────────────────────────────────────
-
-// h-12 + leading-none : taille explicite + ligne de texte serrée
-// pour neutraliser les différences de métriques entre "Gagné" (qui
-// a deux descendeurs "g" + accent "é") et "Perdu" (capitale P + x-height
-// uniquement) — sans leading-none, le centrage vertical des deux
-// boutons était optiquement décalé d'un pixel.
+// Boutons de résultat en relief (dégradé vertical, reflet intérieur en haut,
+// enfoncement au clic), bord à bord en pied de carte : la carte en
+// overflow-hidden arrondit leurs coins. `leading-none` aligne verticalement
+// « Gagné » et « Perdu » malgré des métriques de glyphes différentes.
 const RESULT_BUTTON_BASE = cn(
   "relative inline-flex h-12 w-full items-center justify-center gap-2",
   "px-4 font-body text-body-16 font-semibold leading-none cursor-pointer",
@@ -51,9 +38,7 @@ const RESULT_BUTTON_LOSS = cn(
   "active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)]",
 );
 
-// Indicateur full-bleed quand l'analyse est validée (WON/LOST) — barre
-// horizontale colorée pleine largeur posée au pied de la card, même
-// gabarit que les boutons d'action (cohérence visuelle).
+// Résultat déjà saisi : bandeau coloré à la place des boutons.
 const RESULT_INDICATOR_BASE = cn(
   "flex w-full items-center justify-center gap-2 px-4 py-3",
   "font-body text-body-16 font-semibold",
@@ -61,19 +46,13 @@ const RESULT_INDICATOR_BASE = cn(
 const RESULT_INDICATOR_WIN = "bg-green-500/15 text-green-400";
 const RESULT_INDICATOR_LOSS = "bg-red-500/15 text-red-400";
 
-// Bouton modifier — icône seule sur mobile en top-right corner, icône
-// + texte sur desktop (responsive). Posé en absolute pour ne pas
-// occuper de place dans le flow du contenu.
+// « Modifier » en haut à droite : icône seule en mobile, icône et texte en desktop.
 const EDIT_BUTTON = cn(
   "absolute right-3 top-3 z-10 inline-flex items-center gap-1.5",
   "rounded-lg border border-white/10 bg-black/40 backdrop-blur",
   "p-2 md:px-3 md:py-2 font-body text-body-16 text-muted-foreground",
   "transition-colors duration-200 hover:border-white/20 hover:text-foreground cursor-pointer",
 );
-
-// ───────────────────────────────────────────────────────────────────
-// Composant principal
-// ───────────────────────────────────────────────────────────────────
 
 export interface AnalysesListProps {
   pronos: Prono[];
@@ -125,10 +104,6 @@ export function AnalysesList({ pronos, onResult }: AnalysesListProps) {
   );
 }
 
-// ───────────────────────────────────────────────────────────────────
-// Sous-composants
-// ───────────────────────────────────────────────────────────────────
-
 interface AnalysisCardProps {
   prono: Prono;
   showActionButtons: boolean;
@@ -152,23 +127,17 @@ function AnalysisCard({
     minute: "2-digit",
   });
 
-  // Le bouton modifier s'affiche uniquement quand l'analyse est validée
-  // (WON ou LOST) ET qu'on n'est pas en train d'éditer. Sur mobile :
-  // icône seule (top-right). Sur desktop : icône + texte.
+  // Modification possible une fois le résultat saisi, hors édition en cours.
   const showEditButton = prono.result !== "PENDING" && !isEditing;
 
   return (
     <li
       className={cn(
         "group relative overflow-hidden rounded-2xl border border-surface-2",
-        // Gradient diagonal subtle (cohérence mockup Hero Devenir Expert).
         "bg-[linear-gradient(135deg,rgba(20,18,18,0.55)_0%,rgba(10,9,9,0.65)_100%)]",
         "transition-colors duration-200 hover:border-surface-4",
       )}
     >
-      {/* Bouton modifier — absolute top-right, icône seule en mobile,
-          icône + texte en desktop. z-10 pour passer au-dessus du
-          contenu (rare cas où le titre wrap proche du corner). */}
       {showEditButton && (
         <button
           type="button"
@@ -181,17 +150,13 @@ function AnalysisCard({
         </button>
       )}
 
-      {/* Contenu padded. pr en desktop pour éviter le chevauchement
-          avec le bouton modifier qui est en top-right. */}
       <div
         className={cn(
           "flex flex-col gap-3 p-4 md:p-6",
-          // pr supplémentaire quand le bouton modifier desktop est
-          // affiché (icone + texte = ~110px de large).
+          // Réserve la place du bouton « Modifier » en desktop.
           showEditButton && "md:pr-[140px]",
         )}
       >
-        {/* Header : match + étoile dorée si "analyse du jour" */}
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="font-body text-h5 text-foreground">{prono.matchName}</h3>
           {prono.isFeatured && (
@@ -199,13 +164,11 @@ function AnalysisCard({
           )}
         </div>
 
-        {/* Pick + cote. */}
         <p className="font-body text-body-16 text-foreground">
           {prono.pick} <span className="text-muted-foreground">— </span>
           <span className="text-foreground">@{prono.odds}</span>
         </p>
 
-        {/* Ligue + heure de début du match. */}
         {(leagueLabel || prono.startTime) && (
           <p className="font-body text-body-16 text-muted-foreground">
             {leagueLabel}
@@ -214,25 +177,17 @@ function AnalysisCard({
           </p>
         )}
 
-        {/* Teasing. */}
         <p className="font-body text-body-16 text-muted-foreground">
           {TEASING_LABELS[prono.teasing] || prono.teasing}
         </p>
 
-        {/* Argumentaire. */}
         {prono.argument && (
           <p className="font-body text-body-16 leading-relaxed text-foreground">{prono.argument}</p>
         )}
 
-        {/* Date de publication. */}
         <p className="font-body text-[14px] text-muted-foreground/70">Publié le {publishedAt}</p>
       </div>
 
-      {/* ─── Zone actions FULL-BLEED ───
-          Les boutons/indicateurs touchent les bords gauche, droit et
-          bas de la card. Pas de padding wrapper, pas de divider — les
-          gradients colorés des boutons sont assez forts pour faire
-          séparation visuelle avec le contenu. */}
       {showActionButtons ? (
         <div className="grid grid-cols-2 border-t border-white/[0.06]">
           <button
@@ -251,11 +206,7 @@ function AnalysisCard({
             className={cn(RESULT_BUTTON_BASE, RESULT_BUTTON_LOSS)}
           >
             <span className="inline-flex items-center gap-2 leading-none">
-              {/* X nudgé de +1px : son optical center = geometric center
-                  (icône parfaitement symétrique), contrairement au
-                  Check dont la masse visuelle est dans le bas (la
-                  pointe du V). Sans ce nudge, × paraissait optiquement
-                  plus haut que ✓ malgré un alignement CSS identique. */}
+              {/* Décalé d'1 px : le × paraît plus haut que le ✓ à alignement égal. */}
               <X className="size-4 shrink-0 translate-y-[1px]" weight="bold" />
               <span>Perdu</span>
             </span>
@@ -278,11 +229,6 @@ function AnalysisCard({
               </>
             ) : (
               <>
-                {/* X nudgé de +1px : son optical center = geometric center
-                  (icône parfaitement symétrique), contrairement au
-                  Check dont la masse visuelle est dans le bas (la
-                  pointe du V). Sans ce nudge, × paraissait optiquement
-                  plus haut que ✓ malgré un alignement CSS identique. */}
                 <X className="size-4 shrink-0 translate-y-[1px]" weight="bold" />
                 <span>Perdu</span>
               </>

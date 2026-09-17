@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
+
 import { ConfidentialitySection } from "@/components/account/confidentiality-section";
 import { useUser } from "@/hooks/use-user";
+import { apiPost } from "@/lib/api";
 import type { SubscriptionWithExpert } from "@/lib/types/account";
 import { cn } from "@/lib/utils";
 
@@ -13,8 +16,20 @@ import { EmptyState } from "./empty-state";
 import { HistoryRow } from "./history-row";
 import { IdentityHeader } from "./identity-header";
 
-export function UserView({ subscriptions }: { subscriptions: SubscriptionWithExpert[] }) {
+export function UserView({
+  subscriptions: initialSubscriptions,
+}: {
+  subscriptions: SubscriptionWithExpert[];
+}) {
   const { user } = useUser();
+  const [subscriptions, setSubscriptions] = useState(initialSubscriptions);
+
+  async function handleCancel(id: string) {
+    await apiPost(`/subscriptions/${id}/cancel`, {});
+    setSubscriptions((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, cancelAtPeriodEnd: true, canCancel: false } : s)),
+    );
+  }
 
   const monthlyActive = subscriptions.filter(
     (s) => s.type === "MONTHLY" && isActiveSubscription(s),
@@ -24,13 +39,12 @@ export function UserView({ subscriptions }: { subscriptions: SubscriptionWithExp
   );
   const dayPasses = subscriptions.filter((s) => s.type === "DAY_PASS");
 
-  // Historique = day-passes + abos expirés, tri chrono desc.
+  // Historique : pass jour et abonnements terminés, du plus récent au plus ancien.
   const history = [...dayPasses, ...monthlyExpired].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 
-  // KPI "Sports suivis" : sports uniques agrégés depuis tous les experts
-  // suivis (plus parlant que "Total dépensé", ton guilt-inducing).
+  // Sports distincts couverts par les experts suivis.
   const uniqueSports = new Set<string>();
   subscriptions.forEach((s) => s.expert.sports.forEach((sp) => uniqueSports.add(sp)));
 
@@ -56,17 +70,15 @@ export function UserView({ subscriptions }: { subscriptions: SubscriptionWithExp
         ) : (
           <div className="mt-6 space-y-4">
             {monthlyActive.map((sub) => (
-              <ActiveSubscriptionCard key={sub.id} sub={sub} />
+              <ActiveSubscriptionCard key={sub.id} sub={sub} onCancel={handleCancel} />
             ))}
           </div>
         )}
 
-        {/* TODO : bouton de résiliation in-app + endpoint backend
-            DELETE /subscriptions/:id. Pour le MVP, on garde l'opt-out
-            par email (mention discrète volontaire — pas un CTA). */}
-        {monthlyActive.length > 0 && (
+        {/* Abonnement sans abonnement Stripe associé : résiliation par email. */}
+        {monthlyActive.some((s) => !s.canCancel && !s.cancelAtPeriodEnd) && (
           <p className="mt-6 font-body text-body-16 text-muted-foreground">
-            Pour résilier un abonnement, écris-nous à{" "}
+            Pour résilier un abonnement sans bouton de résiliation, écris-nous à{" "}
             <a
               href="mailto:contact@plarya.com"
               className="text-foreground transition-colors hover:underline underline-offset-4"

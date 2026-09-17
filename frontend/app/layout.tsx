@@ -1,8 +1,5 @@
-// Polices locales (SIL Open Font License, usage commercial libre) :
-//   - Mona Sans  (body)              → public/fonts/Mona-Sans.woff2 (variable)
-//   - Hubot Sans (display marketing) → public/fonts/Hubot-Sans.ttf
-// display: "swap" pour éviter le FOIT et garder un LCP rapide même si la
-// police met du temps à charger.
+// Polices locales sous licence SIL OFL : Mona Sans (texte), Hubot Sans (titres).
+// display "swap" : le texte s'affiche avant le chargement de la police.
 
 import localFont from "next/font/local";
 
@@ -61,8 +58,7 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: `${SITE_NAME} — Analyses sportives par des experts`,
     description: SITE_DESCRIPTION,
-    // L'OG image est auto-résolue par Next via app/opengraph-image.tsx
-    // (ou app/opengraph-image.{png,jpg}).
+    // Pas d'image OG globale : seules les pages expert en génèrent une.
   },
   twitter: {
     card: "summary_large_image",
@@ -85,8 +81,7 @@ export const metadata: Metadata = {
   },
 };
 
-// JSON-LD Organization : carte d'identité Plarya pour les rich
-// results Google (Knowledge Graph candidate, brand panel, etc.).
+// Données structurées Organization et WebSite (résultats enrichis).
 const organizationLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
@@ -96,9 +91,7 @@ const organizationLd = {
   description: SITE_DESCRIPTION,
 };
 
-// JSON-LD WebSite : marque le site comme entité, permet à Google
-// d'afficher le nom propre dans les SERP (au lieu du domaine brut).
-// Pas de SearchAction : la recherche /experts?q= n'existe pas.
+// Pas de SearchAction : le site n'a pas de recherche.
 const websiteLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
@@ -115,8 +108,7 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${monaSans.variable} ${hubotSans.variable}`}>
       <body className="min-h-screen flex flex-col">
-        {/* JSON-LD site-wide. dangerouslySetInnerHTML OK :
-            le payload est 100 % contrôlé serveur, pas d'input user. */}
+        {/* Contenu statique, échappé par serializeJsonLd. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: serializeJsonLd(organizationLd) }}
