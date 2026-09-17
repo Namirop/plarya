@@ -10,7 +10,9 @@ const DRAFT_KEY = "plarya-analysis-draft";
  * à la fermeture de l'onglet. Restauré dans un effet et non à l'initialisation
  * du state, pour éviter un écart d'hydratation avec le rendu serveur.
  */
-export function useDraftStorage<T extends object>(initialValue: T): {
+export function useDraftStorage<T extends object>(
+  initialValue: T,
+): {
   draft: T;
   setDraft: (value: T | ((prev: T) => T)) => void;
   clearDraft: () => void;

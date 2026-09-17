@@ -7,11 +7,7 @@ import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/hooks/use-user";
-import {
-  formDaInputCls,
-  formDaInputInvalid,
-  formDaLabelCls,
-} from "@/lib/form-da";
+import { formDaInputCls, formDaInputInvalid, formDaLabelCls } from "@/lib/form-da";
 import { cn } from "@/lib/utils";
 
 // Retour d'un magic-link en erreur (l'API redirige ici avec `?error=`) :

@@ -8,11 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Reveal } from "@/components/ui/reveal";
 import { Textarea } from "@/components/ui/textarea";
 import { SPORT_LABELS, stripSportEmoji } from "@/lib/constants";
-import {
-  formDaInputCls,
-  formDaLabelCls,
-  formDaTextareaCls,
-} from "@/lib/form-da";
+import { formDaInputCls, formDaLabelCls, formDaTextareaCls } from "@/lib/form-da";
 import { cn } from "@/lib/utils";
 
 import { useExpertApplication } from "../_hooks/use-expert-application";
@@ -30,10 +26,7 @@ export function ApplicationFormSection({ email }: { email: string }) {
     useExpertApplication();
 
   return (
-    <section
-      id="candidature"
-      className="mx-auto mt-20 w-full max-w-[1080px] px-4 md:mt-24 md:px-8"
-    >
+    <section id="candidature" className="mx-auto mt-20 w-full max-w-[1080px] px-4 md:mt-24 md:px-8">
       <Reveal>
         <SectionHeader
           eyebrow="Étape finale"
@@ -76,13 +69,7 @@ export function ApplicationFormSection({ email }: { email: string }) {
               <Label htmlFor="email" className={labelCls}>
                 Email
               </Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                disabled
-                className={fieldCls}
-              />
+              <Input id="email" type="email" value={email} disabled className={fieldCls} />
             </div>
 
             <div className="space-y-2">

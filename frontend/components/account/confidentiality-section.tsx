@@ -133,8 +133,8 @@ export function ConfidentialitySection() {
           </h2>
         </div>
         <p className="mt-3 font-body text-body-16 text-muted-foreground">
-          Conformément au RGPD, tu peux à tout moment exporter ou supprimer tes données. Les
-          données de facturation sont conservées séparément, selon les obligations légales.
+          Conformément au RGPD, tu peux à tout moment exporter ou supprimer tes données. Les données
+          de facturation sont conservées séparément, selon les obligations légales.
         </p>
 
         {/* Suppression déjà programmée : bandeau à la place des tuiles. */}
@@ -215,9 +215,9 @@ export function ConfidentialitySection() {
                       {deletionStatus?.activeSubscriptions} abonné
                       {(deletionStatus?.activeSubscriptions ?? 0) > 1 ? "s" : ""}
                     </strong>{" "}
-                    actif{(deletionStatus?.activeSubscriptions ?? 0) > 1 ? "s" : ""}. La
-                    suppression sera <strong className="text-foreground">programmée</strong> et
-                    deviendra effective le{" "}
+                    actif{(deletionStatus?.activeSubscriptions ?? 0) > 1 ? "s" : ""}. La suppression
+                    sera <strong className="text-foreground">programmée</strong> et deviendra
+                    effective le{" "}
                     <strong className="text-foreground">
                       {formatDate(deletionStatus?.lastSubExpiresAt)}
                     </strong>
@@ -305,4 +305,3 @@ function SettingsTile({
     </div>
   );
 }
-

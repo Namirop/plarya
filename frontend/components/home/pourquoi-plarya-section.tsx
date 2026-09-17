@@ -33,13 +33,7 @@ export function PourquoiPlaryaSection() {
   return (
     <section className="pt-16">
       <div className="mx-auto w-full max-w-content px-6 sm:px-8 lg:px-0">
-        <MarketingSectionTitle
-          title={
-            <>
-              Pourquoi Plarya ?
-            </>
-          }
-        />
+        <MarketingSectionTitle title={<>Pourquoi Plarya ?</>} />
 
         <div className="mt-6 rounded-2xl bg-black/40 p-8 md:px-[60px] md:py-5">
           {/* Séparateurs horizontaux en mobile, verticaux en desktop. */}

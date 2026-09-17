@@ -26,7 +26,9 @@ export function HistoryRow({ sub }: { sub: SubscriptionWithExpert }) {
         </p>
       </div>
 
-      <p className="shrink-0 font-body text-body-18 text-foreground">{isMonthly ? "29€" : "3,50€"}</p>
+      <p className="shrink-0 font-body text-body-18 text-foreground">
+        {isMonthly ? "29€" : "3,50€"}
+      </p>
     </div>
   );
 }

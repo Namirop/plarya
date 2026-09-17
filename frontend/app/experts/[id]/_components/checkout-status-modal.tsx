@@ -84,7 +84,13 @@ export function CheckoutStatusModal({
             </p>
 
             <div className="mt-6 space-y-3">
-              <Button type="button" variant="primary" size="lg" onClick={onRetry} className="w-full">
+              <Button
+                type="button"
+                variant="primary"
+                size="lg"
+                onClick={onRetry}
+                className="w-full"
+              >
                 Réessayer
               </Button>
 

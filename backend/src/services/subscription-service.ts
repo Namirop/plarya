@@ -4,10 +4,7 @@ import { cancelSubscriptionAtPeriodEnd } from "../lib/stripe-subscriptions";
 import { ExpertProfileNotFoundError, SubscriptionNotCancellableError } from "./errors";
 
 /** Abonnement actif et non échu de l'utilisateur sur cet expert. */
-export async function hasActiveSubscription(
-  userId: string,
-  expertId: string,
-): Promise<boolean> {
+export async function hasActiveSubscription(userId: string, expertId: string): Promise<boolean> {
   const sub = await prisma.subscription.findFirst({
     where: {
       userId,
@@ -24,9 +21,7 @@ export async function hasActiveSubscription(
  * Polling anonyme après paiement : indique seulement si le webhook a créé
  * l'abonnement de cette session Stripe, sans autre donnée.
  */
-export async function isCheckoutSessionReady(
-  stripeSessionId: string,
-): Promise<boolean> {
+export async function isCheckoutSessionReady(stripeSessionId: string): Promise<boolean> {
   const sub = await prisma.subscription.findUnique({
     where: { stripeSessionId },
     select: { id: true },
@@ -75,7 +70,14 @@ export async function listOwnSubscriptions(userId: string) {
 export async function cancelOwnSubscription(userId: string, subscriptionId: string) {
   const sub = await prisma.subscription.findFirst({
     where: { id: subscriptionId, userId },
-    select: { id: true, type: true, status: true, expiresAt: true, stripeSubId: true, cancelAtPeriodEnd: true },
+    select: {
+      id: true,
+      type: true,
+      status: true,
+      expiresAt: true,
+      stripeSubId: true,
+      cancelAtPeriodEnd: true,
+    },
   });
 
   if (
@@ -105,7 +107,14 @@ export async function cancelOwnSubscription(userId: string, subscriptionId: stri
 export async function cancelOwnExpertSubscription(userId: string) {
   const expert = await prisma.expert.findUnique({
     where: { userId },
-    select: { id: true, deletedAt: true, subStatus: true, subExpiresAt: true, stripeSubId: true, subCancelAtPeriodEnd: true },
+    select: {
+      id: true,
+      deletedAt: true,
+      subStatus: true,
+      subExpiresAt: true,
+      stripeSubId: true,
+      subCancelAtPeriodEnd: true,
+    },
   });
 
   if (!expert || expert.deletedAt) {

@@ -70,7 +70,10 @@ export function CookieBanner() {
           <h2 id="cookie-banner-title" className="font-body text-h5 font-bold text-foreground">
             Cookies
           </h2>
-          <p id="cookie-banner-desc" className="mt-1.5 font-body text-body-16 text-muted-foreground">
+          <p
+            id="cookie-banner-desc"
+            className="mt-1.5 font-body text-body-16 text-muted-foreground"
+          >
             Plarya utilise uniquement des cookies essentiels nécessaires au fonctionnement du site
             (authentification, session). Pas d&apos;analytics, pas de tracking tiers. En savoir plus
             dans notre{" "}

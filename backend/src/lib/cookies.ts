@@ -9,10 +9,7 @@ import type { CookieOptions } from "express";
 
 const IS_PROD = process.env.NODE_ENV === "production";
 
-const SAME_SITE = ((process.env.COOKIE_SAMESITE || "lax").toLowerCase() as
-  | "lax"
-  | "none"
-  | "strict");
+const SAME_SITE = (process.env.COOKIE_SAMESITE || "lax").toLowerCase() as "lax" | "none" | "strict";
 
 // Les navigateurs rejettent un cookie `SameSite=None` sans `Secure`.
 const SECURE = IS_PROD || SAME_SITE === "none";

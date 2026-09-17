@@ -42,12 +42,7 @@ export function PricingCard({ className }: PricingCardProps) {
       <ul className="space-y-2.5">
         {INCLUDED.map((item) => (
           <li key={item} className="flex items-start gap-2.5">
-            <Check
-              size={16}
-              weight="bold"
-              className="mt-1 shrink-0 text-foreground"
-              aria-hidden
-            />
+            <Check size={16} weight="bold" className="mt-1 shrink-0 text-foreground" aria-hidden />
             <span className="font-body text-body-16 text-foreground">{item}</span>
           </li>
         ))}

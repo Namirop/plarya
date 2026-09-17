@@ -220,7 +220,9 @@ export async function updateOwnExpertProfile(
  * sans abonnement expert actif. La limite (6, sauf `all`) est appliquée en
  * mémoire : la table reste petite.
  */
-export async function listPublicExperts(options: { all: boolean }): Promise<PublicExpertListItem[]> {
+export async function listPublicExperts(options: {
+  all: boolean;
+}): Promise<PublicExpertListItem[]> {
   const experts = await prisma.expert.findMany({
     where: { deletedAt: null, pendingDeletionAt: null, ...activeExpertSubscriptionWhere() },
     orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }],

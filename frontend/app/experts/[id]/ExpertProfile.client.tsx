@@ -87,7 +87,11 @@ export function ExpertProfileClient({ initialExpert }: ExpertProfileClientProps)
   useEffect(() => {
     if (!user || !id) return;
     const controller = new AbortController();
-    apiPost<{ hasAccess: boolean }>("/subscriptions/check", { expertId: id }, { signal: controller.signal })
+    apiPost<{ hasAccess: boolean }>(
+      "/subscriptions/check",
+      { expertId: id },
+      { signal: controller.signal },
+    )
       .then((data) => {
         if (!controller.signal.aborted) setSubscriptionAccess(data.hasAccess);
       })

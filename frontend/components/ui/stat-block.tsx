@@ -36,9 +36,7 @@ export function StatBlock({
       <p
         className={cn(
           "font-display font-bold leading-[0.95] tabular-nums",
-          compact
-            ? "text-[36px] md:text-[48px]"
-            : "text-[56px] md:text-[72px]",
+          compact ? "text-[36px] md:text-[48px]" : "text-[56px] md:text-[72px]",
           valueAccent ? "text-accent" : "text-foreground",
         )}
       >

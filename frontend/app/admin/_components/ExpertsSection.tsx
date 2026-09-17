@@ -130,13 +130,7 @@ export function ExpertsSection({
             <p className="font-body text-body-16 text-muted-foreground">Aucun expert enregistré</p>
           </div>
         ) : (
-          <Reorder.Group
-            as="ul"
-            axis="y"
-            values={order}
-            onReorder={setOrder}
-            className="space-y-2"
-          >
+          <Reorder.Group as="ul" axis="y" values={order} onReorder={setOrder} className="space-y-2">
             {order.map((t, i) => (
               <Reorder.Item
                 key={t.id}

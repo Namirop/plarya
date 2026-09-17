@@ -95,8 +95,8 @@ export function WarningModal({
         </h2>
 
         <p className="mt-3 font-body text-body-16 text-muted-foreground">
-          Ce message s&apos;affiche sur le profil public de l&apos;expert. Laissez le champ vide pour
-          retirer l&apos;avertissement.
+          Ce message s&apos;affiche sur le profil public de l&apos;expert. Laissez le champ vide
+          pour retirer l&apos;avertissement.
         </p>
 
         <textarea

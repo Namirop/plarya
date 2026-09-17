@@ -12,10 +12,7 @@ export function DecorativeDivider() {
         className="h-px flex-1 md:flex-none md:w-[185px] opacity-60"
         style={{ background: NEUTRAL_LINE_FADE }}
       />
-      <span
-        aria-hidden
-        className="mx-[13px] size-[6px] shrink-0 rounded-full bg-foreground/40"
-      />
+      <span aria-hidden className="mx-[13px] size-[6px] shrink-0 rounded-full bg-foreground/40" />
       <span
         aria-hidden
         className="h-px flex-1 md:flex-none md:w-[185px] opacity-60"

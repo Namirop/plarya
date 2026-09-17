@@ -31,8 +31,7 @@
   --color-border-subtle: #2a2a2a;
 
   /* ── Polices : Mona Sans (texte) et Hubot Sans (titres), via next/font/local ── */
-  --font-display:
-    var(--font-hubot-sans), "Hubot Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-hubot-sans), "Hubot Sans", ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-mona-sans), "Mona Sans", ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-mona-sans), "Mona Sans", ui-sans-serif, system-ui, sans-serif;
 
@@ -229,8 +228,7 @@ body::after {
    pas nativement les emojis drapeaux. */
 .flag-emoji {
   font-family:
-    "Twemoji Country Flags", "Apple Color Emoji", "Segoe UI Emoji",
-    "Noto Color Emoji", sans-serif;
+    "Twemoji Country Flags", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
 }
 
 /* Masque les flèches des champs numériques */

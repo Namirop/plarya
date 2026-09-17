@@ -314,7 +314,13 @@ export function Step1BetDetails({ values, errors, bookmakers, onChange, onContin
 
       {/* ─── 6. Continuer ─── */}
       <div className="mt-4 flex justify-end">
-        <Button type="button" variant="primary" size="md" onClick={onContinue} disabled={!canContinue}>
+        <Button
+          type="button"
+          variant="primary"
+          size="md"
+          onClick={onContinue}
+          disabled={!canContinue}
+        >
           Continuer
           <span aria-hidden>→</span>
         </Button>

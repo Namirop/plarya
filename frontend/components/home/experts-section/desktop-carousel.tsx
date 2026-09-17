@@ -74,7 +74,9 @@ export function DesktopCarousel({ experts }: { experts: (ExpertCardProps & { id:
               aria-label={`Aller à la page ${i + 1}`}
               className={cn(
                 "size-[10px] rounded-full transition-all duration-200 cursor-pointer",
-                i === activePage ? "bg-foreground" : "bg-muted-foreground opacity-40 hover:opacity-70",
+                i === activePage
+                  ? "bg-foreground"
+                  : "bg-muted-foreground opacity-40 hover:opacity-70",
               )}
             />
           ))}

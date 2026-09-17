@@ -201,7 +201,8 @@ export async function createBecomeExpertSession(
     include: { expert: true },
   });
 
-  const renewing = !!user?.expert && !user.expert.deletedAt && !isExpertSubscriptionActive(user.expert);
+  const renewing =
+    !!user?.expert && !user.expert.deletedAt && !isExpertSubscriptionActive(user.expert);
   if ((user?.role === "EXPERT" || user?.expert) && !renewing) {
     throw new AlreadyExpertError();
   }

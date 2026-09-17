@@ -53,7 +53,13 @@ export function CancelSubscriptionButton({
         >
           Garder
         </Button>
-        <Button type="button" variant="secondary" size="md" onClick={handleConfirm} disabled={loading}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="md"
+          onClick={handleConfirm}
+          disabled={loading}
+        >
           {loading ? "Résiliation…" : "Confirmer la résiliation"}
         </Button>
       </div>

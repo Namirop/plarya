@@ -21,7 +21,10 @@ type ExpertSubscriptionState = {
  *  - ACTIVE : abonnement en cours, échéance (grâce comprise) non dépassée ;
  *  - EXPIRED : abonnement arrêté côté Stripe.
  */
-export function isExpertSubscriptionActive(expert: ExpertSubscriptionState, now = new Date()): boolean {
+export function isExpertSubscriptionActive(
+  expert: ExpertSubscriptionState,
+  now = new Date(),
+): boolean {
   if (expert.subStatus === "FREE") return true;
   if (expert.subStatus === "EXPIRED") return false;
   if (!expert.subExpiresAt) return true;

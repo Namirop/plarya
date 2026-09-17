@@ -181,7 +181,10 @@ export async function listPronosPaginated(input: PaginationQuery): Promise<Pagin
   };
 }
 
-export async function overridePronoResult(pronoId: string, input: UpdateResultInput): Promise<Prono> {
+export async function overridePronoResult(
+  pronoId: string,
+  input: UpdateResultInput,
+): Promise<Prono> {
   const prono = await prisma.prono.findUnique({ where: { id: pronoId } });
   if (!prono) {
     throw new PronoNotFoundError();
@@ -387,7 +390,15 @@ export async function buildSalesCsv(input: SalesExportQuery): Promise<{
     const amountStr = (amount / 100).toFixed(2).replace(".", ",");
     const expertShareStr = (expertShare / 100).toFixed(2).replace(".", ",");
     const platformShareStr = (platformShare / 100).toFixed(2).replace(".", ",");
-    return [date, s.user.email, s.expert.pseudo, s.type, `${amountStr}€`, `${expertShareStr}€`, `${platformShareStr}€`]
+    return [
+      date,
+      s.user.email,
+      s.expert.pseudo,
+      s.type,
+      `${amountStr}€`,
+      `${expertShareStr}€`,
+      `${platformShareStr}€`,
+    ]
       .map(csvCell)
       .join(",");
   });

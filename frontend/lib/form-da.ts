@@ -29,8 +29,7 @@ export const formDaTextareaCls = cn(
 export const formDaLabelCls =
   "block font-body text-[11px] uppercase tracking-[0.15em] text-muted-foreground";
 
-export const formDaInputInvalid =
-  "border-destructive/60 focus-visible:border-destructive";
+export const formDaInputInvalid = "border-destructive/60 focus-visible:border-destructive";
 
 /** Champs des modales (connexion, email de paiement, suppression de compte). */
 export const formDaModalInputCls = cn(

@@ -42,9 +42,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
 
       {/* Référence à communiquer au support. */}
       {error.digest && (
-        <p className="mt-4 font-mono text-[12px] text-muted-foreground/50">
-          Réf. {error.digest}
-        </p>
+        <p className="mt-4 font-mono text-[12px] text-muted-foreground/50">Réf. {error.digest}</p>
       )}
 
       <div className="mt-8 flex flex-wrap items-center justify-center gap-4">

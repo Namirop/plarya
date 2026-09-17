@@ -48,10 +48,7 @@ export function SectionTitle({ title, cta, className, ctaClassName }: SectionTit
     <div className={cn("flex w-full items-center justify-between gap-6", className)}>
       <div className="flex items-center gap-4">
         {/* Barre neutre : le doré est réservé aux titres de l'accueil. */}
-        <span
-          aria-hidden
-          className="block h-[28px] md:h-[32px] w-px shrink-0 bg-foreground"
-        />
+        <span aria-hidden className="block h-[28px] md:h-[32px] w-px shrink-0 bg-foreground" />
         <h2 className="font-body font-bold text-[22px] leading-none md:text-[28px] text-foreground">
           {title}
         </h2>

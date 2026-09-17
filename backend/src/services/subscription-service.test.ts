@@ -10,7 +10,11 @@ vi.mock("../lib/prisma", () => ({ prisma }));
 vi.mock("../lib/stripe-subscriptions", () => stripeSubscriptions);
 
 import { SubscriptionNotCancellableError } from "./errors";
-import { cancelOwnExpertSubscription, cancelOwnSubscription, listOwnSubscriptions } from "./subscription-service";
+import {
+  cancelOwnExpertSubscription,
+  cancelOwnSubscription,
+  listOwnSubscriptions,
+} from "./subscription-service";
 
 const future = () => new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
 
@@ -62,7 +66,9 @@ describe("cancelOwnSubscription", () => {
 
   it("n'enregistre rien si Stripe échoue", async () => {
     prisma.subscription.findFirst.mockResolvedValue(activeMonthly());
-    stripeSubscriptions.cancelSubscriptionAtPeriodEnd.mockRejectedValueOnce(new Error("stripe down"));
+    stripeSubscriptions.cancelSubscriptionAtPeriodEnd.mockRejectedValueOnce(
+      new Error("stripe down"),
+    );
 
     await expect(cancelOwnSubscription("user_1", "sub_1")).rejects.toThrow("stripe down");
     expect(prisma.subscription.update).not.toHaveBeenCalled();
@@ -84,7 +90,9 @@ describe("cancelOwnExpertSubscription", () => {
 
     await cancelOwnExpertSubscription("user_1");
 
-    expect(stripeSubscriptions.cancelSubscriptionAtPeriodEnd).toHaveBeenCalledWith("sub_stripe_exp");
+    expect(stripeSubscriptions.cancelSubscriptionAtPeriodEnd).toHaveBeenCalledWith(
+      "sub_stripe_exp",
+    );
     expect(prisma.expert.update).toHaveBeenCalledWith({
       where: { id: "exp_1" },
       data: { subCancelAtPeriodEnd: true },
@@ -92,7 +100,11 @@ describe("cancelOwnExpertSubscription", () => {
   });
 
   it("refuse un compte expert offert (FREE)", async () => {
-    prisma.expert.findUnique.mockResolvedValue({ ...activeExpert(), subStatus: "FREE", stripeSubId: null });
+    prisma.expert.findUnique.mockResolvedValue({
+      ...activeExpert(),
+      subStatus: "FREE",
+      stripeSubId: null,
+    });
 
     await expect(cancelOwnExpertSubscription("user_1")).rejects.toBeInstanceOf(
       SubscriptionNotCancellableError,

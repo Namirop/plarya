@@ -3,8 +3,8 @@
 import { useEffect, useRef, type RefObject } from "react";
 
 const FOCUSABLE_SELECTOR =
-  'a[href], area[href], input:not([disabled]), select:not([disabled]), ' +
-  'textarea:not([disabled]), button:not([disabled]), iframe, object, embed, ' +
+  "a[href], area[href], input:not([disabled]), select:not([disabled]), " +
+  "textarea:not([disabled]), button:not([disabled]), iframe, object, embed, " +
   '[tabindex]:not([tabindex="-1"]), [contenteditable]';
 
 interface UseModalA11yOptions {
@@ -85,9 +85,9 @@ export function useModalA11y({
       }
       if (e.key !== "Tab" || !root) return;
 
-      const focusables = Array.from(
-        root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-      ).filter((el) => el.offsetParent !== null); // éléments visibles
+      const focusables = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (el) => el.offsetParent !== null,
+      ); // éléments visibles
 
       if (focusables.length === 0) return;
       const first = focusables[0];

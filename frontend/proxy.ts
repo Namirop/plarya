@@ -56,8 +56,7 @@ function isValidBasicAuth(authorization: string): boolean {
   if (separator === -1) return false;
 
   return (
-    decoded.slice(0, separator) === expectedUser &&
-    decoded.slice(separator + 1) === expectedPass
+    decoded.slice(0, separator) === expectedUser && decoded.slice(separator + 1) === expectedPass
   );
 }
 

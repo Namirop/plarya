@@ -10,7 +10,12 @@ interface IdentityHeaderProps {
 }
 
 /** En-tête de la vue utilisateur : initiale, email et résumé de l'activité. */
-export function IdentityHeader({ email, activeCount, dayPassCount, sportsCount }: IdentityHeaderProps) {
+export function IdentityHeader({
+  email,
+  activeCount,
+  dayPassCount,
+  sportsCount,
+}: IdentityHeaderProps) {
   // Email vide tant que useUser n'a pas répondu.
   const initial = email.charAt(0).toUpperCase() || "—";
 
@@ -25,7 +30,9 @@ export function IdentityHeader({ email, activeCount, dayPassCount, sportsCount }
     summaryParts.push(`${dayPassCount} achat${dayPassCount > 1 ? "s" : ""} au total`);
   }
   if (sportsCount > 0) {
-    summaryParts.push(`${sportsCount} sport${sportsCount > 1 ? "s" : ""} suivi${sportsCount > 1 ? "s" : ""}`);
+    summaryParts.push(
+      `${sportsCount} sport${sportsCount > 1 ? "s" : ""} suivi${sportsCount > 1 ? "s" : ""}`,
+    );
   }
   const summary = summaryParts.length > 0 ? summaryParts.join(" · ") : "Aucun achat pour l'instant";
 

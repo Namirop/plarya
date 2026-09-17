@@ -21,7 +21,10 @@ export async function sendAccessUnlockedEmail(
   magicLinkUrl: string,
 ): Promise<void> {
   const { subject, html } = buildAccessUnlockedEmail({ expertPseudo, expertId, magicLinkUrl });
-  await sendEmailWithRetry({ from: EMAIL_FROM, to: email, subject, html }, { kind: "access_unlocked" });
+  await sendEmailWithRetry(
+    { from: EMAIL_FROM, to: email, subject, html },
+    { kind: "access_unlocked" },
+  );
 }
 
 export async function sendWinningPronoEmail(
@@ -31,5 +34,8 @@ export async function sendWinningPronoEmail(
   matchName: string,
 ): Promise<void> {
   const { subject, html } = buildWinningPronoEmail({ expertPseudo, expertId, matchName });
-  await sendEmailWithRetry({ from: EMAIL_FROM, to: email, subject, html }, { kind: "winning_prono" });
+  await sendEmailWithRetry(
+    { from: EMAIL_FROM, to: email, subject, html },
+    { kind: "winning_prono" },
+  );
 }

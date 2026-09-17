@@ -130,7 +130,10 @@ app.use("/tipsters", (req, res) => {
 // Filet final : erreur JSON plutôt que la page HTML d'Express. Les 4
 // paramètres sont requis pour qu'Express le traite en gestionnaire d'erreurs.
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
-  logger.error({ err, method: req.method, path: req.path }, "Unhandled error reached global handler");
+  logger.error(
+    { err, method: req.method, path: req.path },
+    "Unhandled error reached global handler",
+  );
   if (res.headersSent) return;
   res.status(500).json({ error: "Erreur serveur" });
 });

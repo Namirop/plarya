@@ -150,7 +150,9 @@ export function DomainsSection({ activeDomain = null, onDomainSelect }: DomainsS
               }}
               className={cn(
                 "size-[8px] rounded-full transition-all duration-200 cursor-pointer",
-                i === activeIndex ? "bg-foreground" : "bg-muted-foreground opacity-40 hover:opacity-70",
+                i === activeIndex
+                  ? "bg-foreground"
+                  : "bg-muted-foreground opacity-40 hover:opacity-70",
               )}
             />
           ))}

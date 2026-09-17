@@ -26,8 +26,8 @@ export default function NotFound() {
       </h1>
 
       <p className="mt-3 max-w-[480px] font-body text-body-16 leading-[1.55] text-muted-foreground">
-        Le lien est peut-être expiré, ou la page a été déplacée. Reviens à l&apos;accueil ou
-        explore les experts.
+        Le lien est peut-être expiré, ou la page a été déplacée. Reviens à l&apos;accueil ou explore
+        les experts.
       </p>
 
       <div className="mt-8 flex flex-wrap items-center justify-center gap-4">

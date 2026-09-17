@@ -11,9 +11,7 @@ import { InfoScreen } from "@/components/ui/info-screen";
 // (succès / annulation). Chacun remplace toute la page.
 
 function PageShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mx-auto w-full max-w-[872px] px-4 py-10 md:px-8 md:py-16">{children}</div>
-  );
+  return <div className="mx-auto w-full max-w-[872px] px-4 py-10 md:px-8 md:py-16">{children}</div>;
 }
 
 // ── État 1 : chargement de la session ────────────────────────

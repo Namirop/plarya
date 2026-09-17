@@ -52,79 +52,79 @@ export function ExpertProfileMockup({ className }: ExpertProfileMockupProps) {
             "shadow-[0_12px_40px_-8px_rgba(0,0,0,0.6)]",
           )}
         >
-        {/* ─── Header : photo réelle + indicateur live + pseudo + badge ─── */}
-        <div className="flex items-center gap-3">
-          <div className="relative shrink-0">
-            <Image
-              src="/profile2.png"
-              alt=""
-              width={48}
-              height={48}
-              className="size-12 rounded-full object-cover"
-            />
-            <span
-              aria-hidden
-              className="absolute -bottom-0.5 -right-0.5 block size-3 rounded-full border-2 border-surface-2 bg-green-500"
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-body text-body-18 font-bold text-foreground">BetKing</p>
-            <span className="mt-2 inline-flex items-center rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 font-body text-[11px] font-semibold uppercase tracking-wider text-accent">
-              Expert
-            </span>
-          </div>
-        </div>
-
-        {/* ─── Sports — tags inline éditoriaux (cohérence preview navigateur).
-            Pas de pill, pas d'emoji. ✓ doré + underline accent/40. ─── */}
-        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1">
-          {SPORTS.map((label) => (
-            <span
-              key={label}
-              className="inline-flex items-baseline gap-1.5 font-body text-[14px] text-foreground"
-            >
-              <span aria-hidden className="text-[12px] leading-none text-accent">
-                ✓
-              </span>
-              <span className="underline decoration-accent/40 decoration-1 underline-offset-4">
-                {label}
-              </span>
-            </span>
-          ))}
-        </div>
-
-        {/* ─── Stats row ─── */}
-        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-surface-3 pt-4">
-          {STATS.map((s) => (
-            <div key={s.label} className="flex flex-col items-center text-center">
-              <p className="font-body text-[22px] font-bold leading-none tabular-nums text-foreground">
-                {s.value}
-              </p>
-              <p className="mt-1.5 font-body text-[11px] uppercase tracking-wider text-muted-foreground">
-                {s.label}
-              </p>
+          {/* ─── Header : photo réelle + indicateur live + pseudo + badge ─── */}
+          <div className="flex items-center gap-3">
+            <div className="relative shrink-0">
+              <Image
+                src="/profile2.png"
+                alt=""
+                width={48}
+                height={48}
+                className="size-12 rounded-full object-cover"
+              />
+              <span
+                aria-hidden
+                className="absolute -bottom-0.5 -right-0.5 block size-3 rounded-full border-2 border-surface-2 bg-green-500"
+              />
             </div>
-          ))}
-        </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-body text-body-18 font-bold text-foreground">BetKing</p>
+              <span className="mt-2 inline-flex items-center rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 font-body text-[11px] font-semibold uppercase tracking-wider text-accent">
+                Expert
+              </span>
+            </div>
+          </div>
 
-        {/* ─── Mini analyse du jour ─── */}
-        <div className="mt-5 rounded-xl border border-surface-3 bg-black/40 p-4">
-          <p className="font-body text-[11px] uppercase tracking-wider text-muted-foreground">
-            Aujourd&apos;hui · 16:30
-          </p>
-          <span className="mt-2 inline-flex items-center rounded-md border border-surface-3 bg-black px-2 py-0.5 font-body text-[10px] font-semibold uppercase tracking-wider text-foreground">
-            Pick solide
-          </span>
-          <p className="mt-3 font-body text-body-16 font-semibold text-foreground">
-            PSG vs Marseille
-          </p>
-          <p className="mt-1 font-body text-body-14 text-muted-foreground">Plus de 2,5 buts</p>
-          <div className="mt-3 flex items-baseline justify-between gap-2">
-            <p className="font-body text-[18px] font-bold text-accent">@2.10</p>
-            <p className="font-body text-body-14 text-muted-foreground">Cote moyenne : 1.92</p>
+          {/* ─── Sports — tags inline éditoriaux (cohérence preview navigateur).
+            Pas de pill, pas d'emoji. ✓ doré + underline accent/40. ─── */}
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1">
+            {SPORTS.map((label) => (
+              <span
+                key={label}
+                className="inline-flex items-baseline gap-1.5 font-body text-[14px] text-foreground"
+              >
+                <span aria-hidden className="text-[12px] leading-none text-accent">
+                  ✓
+                </span>
+                <span className="underline decoration-accent/40 decoration-1 underline-offset-4">
+                  {label}
+                </span>
+              </span>
+            ))}
+          </div>
+
+          {/* ─── Stats row ─── */}
+          <div className="mt-5 grid grid-cols-3 gap-2 border-t border-surface-3 pt-4">
+            {STATS.map((s) => (
+              <div key={s.label} className="flex flex-col items-center text-center">
+                <p className="font-body text-[22px] font-bold leading-none tabular-nums text-foreground">
+                  {s.value}
+                </p>
+                <p className="mt-1.5 font-body text-[11px] uppercase tracking-wider text-muted-foreground">
+                  {s.label}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* ─── Mini analyse du jour ─── */}
+          <div className="mt-5 rounded-xl border border-surface-3 bg-black/40 p-4">
+            <p className="font-body text-[11px] uppercase tracking-wider text-muted-foreground">
+              Aujourd&apos;hui · 16:30
+            </p>
+            <span className="mt-2 inline-flex items-center rounded-md border border-surface-3 bg-black px-2 py-0.5 font-body text-[10px] font-semibold uppercase tracking-wider text-foreground">
+              Pick solide
+            </span>
+            <p className="mt-3 font-body text-body-16 font-semibold text-foreground">
+              PSG vs Marseille
+            </p>
+            <p className="mt-1 font-body text-body-14 text-muted-foreground">Plus de 2,5 buts</p>
+            <div className="mt-3 flex items-baseline justify-between gap-2">
+              <p className="font-body text-[18px] font-bold text-accent">@2.10</p>
+              <p className="font-body text-body-14 text-muted-foreground">Cote moyenne : 1.92</p>
+            </div>
           </div>
         </div>
-      </div>
       </CardTilt>
     </div>
   );

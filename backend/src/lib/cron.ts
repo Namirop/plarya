@@ -127,9 +127,7 @@ export async function autoDeletePendingExperts(): Promise<void> {
     _count: { _all: true },
   });
 
-  const activeCountMap = new Map(
-    subsByExpert.map((row) => [row.expertId, row._count._all]),
-  );
+  const activeCountMap = new Map(subsByExpert.map((row) => [row.expertId, row._count._all]));
 
   let deletedCount = 0;
   let skippedCount = 0;

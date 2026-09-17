@@ -129,9 +129,9 @@ export function DeleteAccountModal({
           </p>
         ) : (
           <p className="mt-3 font-body text-body-16 leading-[1.5] text-muted-foreground">
-            Cette action est{" "}
-            <strong className="font-semibold text-foreground">irréversible</strong>. Tape ton email
-            (<span className="font-mono font-semibold text-foreground">{userEmail}</span>) pour
+            Cette action est <strong className="font-semibold text-foreground">irréversible</strong>
+            . Tape ton email (
+            <span className="font-mono font-semibold text-foreground">{userEmail}</span>) pour
             confirmer.
           </p>
         )}

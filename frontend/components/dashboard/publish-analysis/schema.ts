@@ -21,10 +21,9 @@ export const step1Schema = z.object({
 });
 
 export const step2Schema = z.object({
-  argument: z.string().refine(
-    (v) => v.trim().length >= 20,
-    "L'analyse doit contenir au moins 20 caractères",
-  ),
+  argument: z
+    .string()
+    .refine((v) => v.trim().length >= 20, "L'analyse doit contenir au moins 20 caractères"),
 });
 
 // Schéma complet ; le formulaire valide étape par étape (« Continuer », « Publier »).

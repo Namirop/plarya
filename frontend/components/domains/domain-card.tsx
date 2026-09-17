@@ -52,52 +52,51 @@ export function DomainCard({
           // overflow-hidden rogne le zoom de l'image au survol.
           !isComingSoon &&
             "transition-all duration-500 ease-out md:group-hover:-translate-y-3 md:group-hover:shadow-[0_0_12px_0_rgba(223,185,104,0.4)]",
-          isSelected &&
-            "ring-1 ring-accent/60 shadow-[0_6px_32px_-8px_rgba(223,185,104,0.35)]",
+          isSelected && "ring-1 ring-accent/60 shadow-[0_6px_32px_-8px_rgba(223,185,104,0.35)]",
         )}
       >
-      <Image
-        src={image}
-        alt={title}
-        fill
-        sizes="(max-width: 1280px) 272px, 360px"
-        className={cn(
-          "object-cover transition-transform duration-700 ease-out",
-          !isComingSoon && "md:group-hover:scale-110",
-          isComingSoon && "grayscale brightness-50",
-        )}
-        style={{
-          maskImage: IMAGE_FADE_MASK,
-          WebkitMaskImage: IMAGE_FADE_MASK,
-        }}
-      />
+        <Image
+          src={image}
+          alt={title}
+          fill
+          sizes="(max-width: 1280px) 272px, 360px"
+          className={cn(
+            "object-cover transition-transform duration-700 ease-out",
+            !isComingSoon && "md:group-hover:scale-110",
+            isComingSoon && "grayscale brightness-50",
+          )}
+          style={{
+            maskImage: IMAGE_FADE_MASK,
+            WebkitMaskImage: IMAGE_FADE_MASK,
+          }}
+        />
 
-      <h3 className="absolute left-[21px] top-[152px] xl:left-[34px] xl:top-[155px] font-body text-[26px] xl:text-h3 uppercase text-foreground">
-        {title}
-      </h3>
+        <h3 className="absolute left-[21px] top-[152px] xl:left-[34px] xl:top-[155px] font-body text-[26px] xl:text-h3 uppercase text-foreground">
+          {title}
+        </h3>
 
-      <p className="absolute left-[23px] top-[196px] xl:left-[36px] xl:top-[209px] whitespace-pre-line font-body text-body-16 leading-[1.2] text-muted-foreground">
-        {displayedSubtitle}
-      </p>
+        <p className="absolute left-[23px] top-[196px] xl:left-[36px] xl:top-[209px] whitespace-pre-line font-body text-body-16 leading-[1.2] text-muted-foreground">
+          {displayedSubtitle}
+        </p>
 
-      {/* Bouton décoratif hors tabulation : le clic est porté par le
+        {/* Bouton décoratif hors tabulation : le clic est porté par le
           conteneur (évite un double arrêt de tabulation). */}
-      <div className="absolute left-[21px] top-[264px] xl:left-[34px] xl:top-[271px]">
-        {isComingSoon ? (
-          <Button variant="white" disabled tabIndex={-1}>
-            Voir les analyses
-          </Button>
-        ) : (
-          <Button
-            variant="primary"
-            tabIndex={-1}
-            className={onClick ? "pointer-events-none" : undefined}
-          >
-            Voir les analyses
-            <ArrowRight className="size-4" />
-          </Button>
-        )}
-      </div>
+        <div className="absolute left-[21px] top-[264px] xl:left-[34px] xl:top-[271px]">
+          {isComingSoon ? (
+            <Button variant="white" disabled tabIndex={-1}>
+              Voir les analyses
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              tabIndex={-1}
+              className={onClick ? "pointer-events-none" : undefined}
+            >
+              Voir les analyses
+              <ArrowRight className="size-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
