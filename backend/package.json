@@ -24,8 +24,8 @@
   "license": "UNLICENSED",
   "type": "commonjs",
   "dependencies": {
-    "@prisma/adapter-pg": "^7.10.0",
-    "@prisma/client": "^7.10.0",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
@@ -48,7 +48,7 @@
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.23.1",
     "prettier": "^3.9.6",
-    "prisma": "^7.10.0",
+    "prisma": "^7.10.1",
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",
     "vitest": "^5.0.1"
